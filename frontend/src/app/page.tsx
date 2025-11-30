@@ -356,11 +356,9 @@ useEffect(() => {
     setEventsLoading(true);
     try {
       const url = new URL(EVENT_ENDPOINT);
-      // Если выбран календарь, фильтруем по нему, иначе загружаем все доступные события
+      // Не фильтруем по calendar_id, чтобы получить все доступные события
       // (включая события, где пользователь является участником, но не имеет доступа к календарю)
-      if (selectedCalendarId) {
-        url.searchParams.set("calendar_id", selectedCalendarId);
-      }
+      // Backend уже правильно фильтрует события
       url.searchParams.set("from", rangeStart.toISOString());
       url.searchParams.set("to", rangeEnd.toISOString());
       const response = await authFetch(url.toString(), { cache: "no-store" });
@@ -368,7 +366,12 @@ useEffect(() => {
         throw new Error("Не удалось получить события");
       }
       const data: EventRecord[] = await response.json();
-      setEvents(data);
+      // Если выбран календарь, фильтруем события на frontend для отображения
+      // Но все события загружены, включая события участника
+      const filteredEvents = selectedCalendarId
+        ? data.filter((e) => e.calendar_id === selectedCalendarId)
+        : data;
+      setEvents(filteredEvents);
       setEventsError(null);
     } catch (err) {
       setEventsError(
