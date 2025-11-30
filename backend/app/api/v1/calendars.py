@@ -300,6 +300,7 @@ def update_calendar_member(
     "/{calendar_id}/members/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Remove calendar member",
+    response_model=None,
 )
 def delete_calendar_member(
     calendar_id: UUID,
