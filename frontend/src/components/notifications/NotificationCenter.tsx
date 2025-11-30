@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Notification } from "@/types/notification.types";
 
 interface NotificationCenterProps {
@@ -23,6 +24,9 @@ export function NotificationCenter({
   onDelete,
   onEventClick,
 }: NotificationCenterProps) {
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "event_invited":
@@ -73,6 +77,47 @@ export function NotificationCenter({
     }).format(date);
   };
 
+  const handleMarkAsRead = async (notificationId: string) => {
+    setProcessingIds((prev) => new Set(prev).add(notificationId));
+    try {
+      await onMarkAsRead(notificationId);
+    } catch (err) {
+      console.error("Failed to mark as read:", err);
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notificationId);
+        return next;
+      });
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setMarkingAllAsRead(true);
+    try {
+      await onMarkAllAsRead();
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    } finally {
+      setMarkingAllAsRead(false);
+    }
+  };
+
+  const handleDelete = async (notificationId: string) => {
+    if (!confirm("Вы уверены, что хотите удалить это уведомление?")) {
+      return;
+    }
+    setDeletingId(notificationId);
+    try {
+      await onDelete(notificationId);
+    } catch (err) {
+      console.error("Failed to delete:", err);
+      alert("Не удалось удалить уведомление");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_80px_rgba(15,23,42,0.35)] flex flex-col">
@@ -89,10 +134,11 @@ export function NotificationCenter({
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={onMarkAllAsRead}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                onClick={handleMarkAllAsRead}
+                disabled={markingAllAsRead}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Отметить все прочитанными
+                {markingAllAsRead ? "Обработка..." : "Отметить все прочитанными"}
               </button>
             )}
             <button
@@ -164,18 +210,20 @@ export function NotificationCenter({
                         {!notification.is_read && (
                           <button
                             type="button"
-                            onClick={() => onMarkAsRead(notification.id)}
-                            className="text-xs text-slate-500 hover:text-slate-700"
+                            onClick={() => handleMarkAsRead(notification.id)}
+                            disabled={processingIds.has(notification.id)}
+                            className="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            Отметить прочитанным
+                            {processingIds.has(notification.id) ? "Обработка..." : "Отметить прочитанным"}
                           </button>
                         )}
                         <button
                           type="button"
-                          onClick={() => onDelete(notification.id)}
-                          className="text-xs text-red-500 hover:text-red-700 ml-auto"
+                          onClick={() => handleDelete(notification.id)}
+                          disabled={deletingId === notification.id}
+                          className="text-xs text-red-500 hover:text-red-700 ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Удалить
+                          {deletingId === notification.id ? "Удаление..." : "Удалить"}
                         </button>
                       </div>
                     </div>

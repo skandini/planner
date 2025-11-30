@@ -19,6 +19,7 @@ import { EventModal } from "@/components/events/EventModal";
 import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
   addDays,
@@ -64,9 +65,14 @@ export default function Home() {
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState<EventDraft>(DEFAULT_EVENT_FORM);
@@ -372,57 +378,6 @@ useEffect(() => {
     loadEvents();
   }, [loadEvents]);
 
-  const loadNotifications = useCallback(async () => {
-    if (!accessToken) {
-      return;
-    }
-    setNotificationsLoading(true);
-    try {
-      const response = await authFetch(`${NOTIFICATION_ENDPOINT}/`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        throw new Error("Не удалось загрузить уведомления");
-      }
-      const data: Notification[] = await response.json();
-      setNotifications(data);
-    } catch (err) {
-      console.error("Failed to load notifications:", err);
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, [accessToken, authFetch]);
-
-  const loadUnreadCount = useCallback(async () => {
-    if (!accessToken) {
-      return;
-    }
-    try {
-      const response = await authFetch(`${NOTIFICATION_ENDPOINT}/unread-count`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        return;
-      }
-      const data: { count: number } = await response.json();
-      setUnreadCount(data.count);
-    } catch (err) {
-      console.error("Failed to load unread count:", err);
-    }
-  }, [accessToken, authFetch]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadNotifications();
-      loadUnreadCount();
-      // Обновляем уведомления каждые 30 секунд
-      const interval = setInterval(() => {
-        loadNotifications();
-        loadUnreadCount();
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, loadNotifications, loadUnreadCount]);
 
   const loadCalendarMembers = useCallback(async () => {
     if (!selectedCalendarId || !accessToken) {
@@ -1491,56 +1446,9 @@ useEffect(() => {
             loading={notificationsLoading}
             unreadCount={unreadCount}
             onClose={() => setIsNotificationCenterOpen(false)}
-            onMarkAsRead={async (notificationId: string) => {
-              try {
-                const response = await authFetch(
-                  `${NOTIFICATION_ENDPOINT}/${notificationId}`,
-                  {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ is_read: true }),
-                  },
-                );
-                if (response.ok) {
-                  await loadNotifications();
-                  await loadUnreadCount();
-                }
-              } catch (err) {
-                console.error("Failed to mark notification as read:", err);
-              }
-            }}
-            onMarkAllAsRead={async () => {
-              try {
-                const response = await authFetch(
-                  `${NOTIFICATION_ENDPOINT}/mark-all-read`,
-                  {
-                    method: "PATCH",
-                  },
-                );
-                if (response.ok) {
-                  await loadNotifications();
-                  await loadUnreadCount();
-                }
-              } catch (err) {
-                console.error("Failed to mark all as read:", err);
-              }
-            }}
-            onDelete={async (notificationId: string) => {
-              try {
-                const response = await authFetch(
-                  `${NOTIFICATION_ENDPOINT}/${notificationId}`,
-                  {
-                    method: "DELETE",
-                  },
-                );
-                if (response.ok) {
-                  await loadNotifications();
-                  await loadUnreadCount();
-                }
-              } catch (err) {
-                console.error("Failed to delete notification:", err);
-              }
-            }}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+            onDelete={deleteNotification}
             onEventClick={(eventId: string) => {
               const event = events.find((e) => e.id === eventId);
               if (event) {

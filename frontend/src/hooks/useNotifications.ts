@@ -53,6 +53,20 @@ export function useNotifications() {
     [authFetch, loadNotifications, loadUnreadCount],
   );
 
+  const markAllAsRead = useCallback(
+    async () => {
+      try {
+        await notificationApi.markAllAsRead(authFetch);
+        await loadNotifications();
+        await loadUnreadCount();
+      } catch (err) {
+        console.error("Failed to mark all notifications as read:", err);
+        throw err;
+      }
+    },
+    [authFetch, loadNotifications, loadUnreadCount],
+  );
+
   const deleteNotification = useCallback(
     async (notificationId: string) => {
       try {
@@ -61,6 +75,7 @@ export function useNotifications() {
         await loadUnreadCount();
       } catch (err) {
         console.error("Failed to delete notification:", err);
+        throw err;
       }
     },
     [authFetch, loadNotifications, loadUnreadCount],
@@ -71,6 +86,7 @@ export function useNotifications() {
     unreadCount,
     loading,
     markAsRead,
+    markAllAsRead,
     deleteNotification,
     refresh: loadNotifications,
   };
