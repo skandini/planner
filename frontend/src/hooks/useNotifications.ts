@@ -2,14 +2,19 @@ import { useCallback, useState, useEffect } from "react";
 import type { Notification } from "@/types/notification.types";
 import { notificationApi } from "@/lib/api/notificationApi";
 import { useAuthenticatedFetch } from "@/lib/api/baseApi";
+import { useAuth } from "@/context/AuthContext";
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const authFetch = useAuthenticatedFetch();
+  const { accessToken } = useAuth();
 
   const loadNotifications = useCallback(async () => {
+    if (!accessToken) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await notificationApi.list(authFetch);
@@ -19,26 +24,36 @@ export function useNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, accessToken]);
 
   const loadUnreadCount = useCallback(async () => {
+    if (!accessToken) {
+      return;
+    }
     try {
       const count = await notificationApi.getUnreadCount(authFetch);
       setUnreadCount(count);
     } catch (err) {
       console.error("Failed to load unread count:", err);
     }
-  }, [authFetch]);
+  }, [authFetch, accessToken]);
 
   useEffect(() => {
+    if (!accessToken) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     loadNotifications();
     loadUnreadCount();
     const interval = setInterval(() => {
-      loadNotifications();
-      loadUnreadCount();
+      if (accessToken) {
+        loadNotifications();
+        loadUnreadCount();
+      }
     }, 30000);
     return () => clearInterval(interval);
-  }, [loadNotifications, loadUnreadCount]);
+  }, [loadNotifications, loadUnreadCount, accessToken]);
 
   const markAsRead = useCallback(
     async (notificationId: string) => {
