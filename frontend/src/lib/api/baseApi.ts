@@ -34,20 +34,34 @@ export function useAuthenticatedFetch(): AuthenticatedFetch {
         });
         
         try {
+          // Создаем объект опций для fetch
           const fetchOptions: RequestInit = {
-            ...init,
-            headers,
-            // Явно указываем mode для CORS
+            method: init.method,
+            headers: headers,
             mode: "cors",
-            // Для DELETE запросов не используем credentials, чтобы избежать preflight
-            credentials: init.method === "DELETE" ? "omit" : "include",
+            credentials: "omit", // Всегда omit для избежания preflight проблем
+            cache: init.cache || "no-store",
           };
+          
+          // Добавляем body только если он есть
+          if (init.body) {
+            fetchOptions.body = init.body;
+          }
+          
+          console.log(`[API] Fetch options for ${init.method || "GET"} ${url}:`, {
+            method: fetchOptions.method,
+            hasHeaders: !!fetchOptions.headers,
+            hasBody: !!fetchOptions.body,
+            mode: fetchOptions.mode,
+            credentials: fetchOptions.credentials,
+          });
           
           const response = await fetch(input, fetchOptions);
           console.log(`[API] Response for ${init.method || "GET"} ${url}:`, {
             status: response.status,
             statusText: response.statusText,
             ok: response.ok,
+            headers: Object.fromEntries(response.headers.entries()),
           });
           
           return response;
