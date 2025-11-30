@@ -30,7 +30,11 @@ export const eventApi = {
       cache: "no-store",
     });
     if (!response.ok) {
-      throw new Error("Не удалось получить событие");
+      if (response.status === 404) {
+        throw new Error("Событие не найдено. Возможно, оно было удалено.");
+      }
+      const errorText = await response.text().catch(() => "Неизвестная ошибка");
+      throw new Error(`Не удалось получить событие: ${errorText}`);
     }
     return response.json();
   },

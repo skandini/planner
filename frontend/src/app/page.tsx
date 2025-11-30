@@ -1459,7 +1459,10 @@ useEffect(() => {
                   event = await eventApi.get(authFetch, eventId);
                 } catch (err) {
                   console.error("Failed to load event:", err);
-                  alert("Не удалось загрузить событие. Возможно, оно было удалено.");
+                  const errorMessage = err instanceof Error 
+                    ? err.message 
+                    : "Не удалось загрузить событие";
+                  alert(`Ошибка: ${errorMessage}`);
                   return;
                 }
               }
