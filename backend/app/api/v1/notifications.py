@@ -51,6 +51,39 @@ def get_unread_count(
     return {"count": count}
 
 
+@router.patch("/mark-all-read", summary="Mark all notifications as read")
+def mark_all_read(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Mark all user's notifications as read."""
+    try:
+        statement = select(Notification).where(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False,
+            Notification.is_deleted == False,  # Исключаем удаленные
+        )
+        notifications = session.exec(statement).all()
+        
+        now = datetime.utcnow()
+        for notification in notifications:
+            notification.is_read = True
+            notification.read_at = now
+            session.add(notification)
+        
+        session.commit()
+        return {"marked": len(notifications)}
+    except Exception as e:
+        import traceback
+        error_msg = f"Error marking all notifications as read: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=error_msg
+        )
+
+
 @router.patch(
     "/{notification_id}",
     response_model=NotificationRead,
@@ -109,39 +142,6 @@ def update_notification(
     except Exception as e:
         import traceback
         error_msg = f"Error updating notification {notification_id}: {str(e)}"
-        print(f"[ERROR] {error_msg}")
-        print(traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=error_msg
-        )
-
-
-@router.patch("/mark-all-read", summary="Mark all notifications as read")
-def mark_all_read(
-    session: SessionDep,
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    """Mark all user's notifications as read."""
-    try:
-        statement = select(Notification).where(
-            Notification.user_id == current_user.id,
-            Notification.is_read == False,
-            Notification.is_deleted == False,  # Исключаем удаленные
-        )
-        notifications = session.exec(statement).all()
-        
-        now = datetime.utcnow()
-        for notification in notifications:
-            notification.is_read = True
-            notification.read_at = now
-            session.add(notification)
-        
-        session.commit()
-        return {"marked": len(notifications)}
-    except Exception as e:
-        import traceback
-        error_msg = f"Error marking all notifications as read: {str(e)}"
         print(f"[ERROR] {error_msg}")
         print(traceback.format_exc())
         raise HTTPException(
