@@ -53,24 +53,36 @@ def get_user_calendar_role(
     calendar: Calendar,
     user: User,
 ) -> str | None:
-    if calendar.owner_id == user.id:
-        return "owner"
+    try:
+        if calendar.owner_id == user.id:
+            return "owner"
 
-    membership = session.exec(
-        select(CalendarMember).where(
-            CalendarMember.calendar_id == calendar.id,
-            CalendarMember.user_id == user.id,
-        )
-    ).one_or_none()
-    
-    if membership is None:
-        return None
-    
-    # Убеждаемся, что membership это объект CalendarMember
-    if not hasattr(membership, 'role'):
-        return None
-    
-    return membership.role
+        membership = session.exec(
+            select(CalendarMember).where(
+                CalendarMember.calendar_id == calendar.id,
+                CalendarMember.user_id == user.id,
+            )
+        ).one_or_none()
+        
+        if membership is None:
+            return None
+        
+        # Убеждаемся, что membership это объект CalendarMember
+        if not hasattr(membership, 'role'):
+            print(f"[WARNING] Membership object doesn't have 'role' attribute: {type(membership)}")
+            return None
+        
+        role = getattr(membership, 'role', None)
+        if role is None:
+            print(f"[WARNING] Membership role is None for calendar {calendar.id}, user {user.id}")
+            return None
+        
+        return role
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Error in get_user_calendar_role: {str(e)}")
+        print(traceback.format_exc())
+        raise
 
 
 def add_calendar_member(
