@@ -62,7 +62,15 @@ def get_user_calendar_role(
             CalendarMember.user_id == user.id,
         )
     ).one_or_none()
-    return membership.role if membership else None
+    
+    if membership is None:
+        return None
+    
+    # Убеждаемся, что membership это объект CalendarMember
+    if not hasattr(membership, 'role'):
+        return None
+    
+    return membership.role
 
 
 def add_calendar_member(
