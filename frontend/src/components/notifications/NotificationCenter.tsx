@@ -98,6 +98,8 @@ export function NotificationCenter({
       await onMarkAllAsRead();
     } catch (err) {
       console.error("Failed to mark all as read:", err);
+      const errorMessage = err instanceof Error ? err.message : "Не удалось отметить все уведомления как прочитанные";
+      alert(`Ошибка: ${errorMessage}`);
     } finally {
       setMarkingAllAsRead(false);
     }

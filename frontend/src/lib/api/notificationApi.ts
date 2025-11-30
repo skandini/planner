@@ -41,9 +41,23 @@ export const notificationApi = {
   async markAllAsRead(authFetch: AuthenticatedFetch): Promise<void> {
     const response = await authFetch(`${NOTIFICATION_ENDPOINT}/mark-all-read`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
     });
     if (!response.ok) {
-      throw new Error("Не удалось отметить все уведомления как прочитанные");
+      let errorText = "Неизвестная ошибка";
+      try {
+        const text = await response.text();
+        errorText = text || errorText;
+      } catch {
+        // Игнорируем ошибку чтения текста
+      }
+      throw new Error(`Не удалось отметить все уведомления как прочитанные: ${response.status} ${errorText}`);
+    }
+    // Проверяем, что ответ успешный (может быть пустой или с данными)
+    try {
+      await response.json();
+    } catch {
+      // Игнорируем, если ответ пустой
     }
   },
 
