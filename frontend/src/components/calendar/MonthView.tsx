@@ -13,7 +13,6 @@ interface MonthViewProps {
   loading: boolean;
   accent: string;
   onEventClick: (event: EventRecord) => void;
-  rooms: Room[];
 }
 
 export function MonthView({
@@ -24,7 +23,6 @@ export function MonthView({
   loading,
   accent,
   onEventClick,
-  rooms: _rooms,
 }: MonthViewProps) {
   const currentMonth = selectedDate.getMonth();
 
