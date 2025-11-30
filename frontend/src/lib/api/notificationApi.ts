@@ -42,6 +42,7 @@ export const notificationApi = {
     const response = await authFetch(`${NOTIFICATION_ENDPOINT}/mark-all-read`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}), // Отправляем пустой объект, так как FastAPI требует body для PATCH
     });
     if (!response.ok) {
       let errorText = "Неизвестная ошибка";
