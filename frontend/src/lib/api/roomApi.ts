@@ -7,7 +7,6 @@ export const roomApi = {
   async list(authFetch: AuthenticatedFetch): Promise<Room[]> {
     const response = await authFetch(ROOM_ENDPOINT, { cache: "no-store" });
     if (!response.ok) {
-      const errorText = await response.text();
       throw new Error(`Не удалось загрузить переговорки: ${response.status}`);
     }
     return response.json();

@@ -1,5 +1,5 @@
 import type { Calendar, CalendarMember, CalendarDraft } from "@/types/calendar.types";
-import type { ConflictEntry } from "@/types/event.types";
+import type { ConflictEntry, EventRecord } from "@/types/event.types";
 import type { AuthenticatedFetch } from "./baseApi";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
 
@@ -92,7 +92,7 @@ export const calendarApi = {
     userId: string,
     from: string,
     to: string,
-  ): Promise<any[]> {
+  ): Promise<EventRecord[]> {
     const url = `${CALENDAR_ENDPOINT}${calendarId}/members/${userId}/availability?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
     const response = await authFetch(url, { cache: "no-store" });
     if (!response.ok) {

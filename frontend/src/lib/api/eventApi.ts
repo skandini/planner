@@ -27,7 +27,7 @@ export const eventApi = {
     data: EventDraft,
     calendarId: string,
   ): Promise<EventRecord> {
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       calendar_id: calendarId,
       title: data.title,
       description: data.description || null,
@@ -66,7 +66,7 @@ export const eventApi = {
     data: Partial<EventDraft>,
     scope: "single" | "series" = "single",
   ): Promise<EventRecord> {
-    const payload: any = {};
+    const payload: Record<string, unknown> = {};
     if (data.title !== undefined) payload.title = data.title;
     if (data.description !== undefined) payload.description = data.description || null;
     if (data.location !== undefined) payload.location = data.location || null;
