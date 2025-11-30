@@ -12,6 +12,8 @@ interface NotificationCenterProps {
   onMarkAllAsRead: () => Promise<void>;
   onDelete: (notificationId: string) => Promise<void>;
   onEventClick: (eventId: string) => void;
+  onUpdateParticipantStatus?: (eventId: string, status: string) => Promise<void>;
+  currentUserId?: string;
 }
 
 export function NotificationCenter({
@@ -23,10 +25,13 @@ export function NotificationCenter({
   onMarkAllAsRead,
   onDelete,
   onEventClick,
+  onUpdateParticipantStatus,
+  currentUserId,
 }: NotificationCenterProps) {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "event_invited":
@@ -121,6 +126,30 @@ export function NotificationCenter({
     }
   };
 
+  const handleParticipantStatus = async (eventId: string, status: string) => {
+    if (!onUpdateParticipantStatus) return;
+    const key = `${eventId}-${status}`;
+    setUpdatingStatus((prev) => new Set(prev).add(key));
+    try {
+      await onUpdateParticipantStatus(eventId, status);
+      // Автоматически отмечаем уведомление как прочитанное после ответа
+      const notification = notifications.find((n) => n.event_id === eventId && n.type === "event_invited");
+      if (notification && !notification.is_read) {
+        await onMarkAsRead(notification.id);
+      }
+    } catch (err) {
+      console.error("Failed to update participant status:", err);
+      const errorMessage = err instanceof Error ? err.message : "Не удалось обновить статус";
+      alert(`Ошибка: ${errorMessage}`);
+    } finally {
+      setUpdatingStatus((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_80px_rgba(15,23,42,0.35)] flex flex-col">
@@ -200,7 +229,35 @@ export function NotificationCenter({
                           <div className="h-2 w-2 rounded-full bg-lime-500 flex-shrink-0 mt-1" />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-3">
+                      <div className="flex items-center gap-2 mt-3 flex-wrap">
+                        {notification.event_id && notification.type === "event_invited" && onUpdateParticipantStatus && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleParticipantStatus(notification.event_id!, "accepted")}
+                              disabled={updatingStatus.has(`${notification.event_id}-accepted`)}
+                              className="rounded-lg bg-lime-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-lime-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {updatingStatus.has(`${notification.event_id}-accepted`) ? "..." : "✓ Принять"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleParticipantStatus(notification.event_id!, "tentative")}
+                              disabled={updatingStatus.has(`${notification.event_id}-tentative`)}
+                              className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {updatingStatus.has(`${notification.event_id}-tentative`) ? "..." : "? Под вопросом"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleParticipantStatus(notification.event_id!, "declined")}
+                              disabled={updatingStatus.has(`${notification.event_id}-declined`)}
+                              className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {updatingStatus.has(`${notification.event_id}-declined`) ? "..." : "✕ Отклонить"}
+                            </button>
+                          </div>
+                        )}
                         {notification.event_id && (
                           <button
                             type="button"

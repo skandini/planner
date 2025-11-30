@@ -15,6 +15,8 @@ interface WeekViewProps {
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
   onTimeSlotClick?: (date: Date, startTime: Date, endTime: Date) => void;
+  onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
+  currentUserEmail?: string;
 }
 
 export function WeekView({
@@ -26,6 +28,8 @@ export function WeekView({
   rooms,
   onEventMove,
   onTimeSlotClick,
+  onUpdateParticipantStatus,
+  currentUserEmail,
 }: WeekViewProps) {
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 40; // Высота одного часа в пикселях
@@ -552,6 +556,57 @@ export function WeekView({
                           {event.location}
                         </p>
                       )}
+                      {onUpdateParticipantStatus && currentUserEmail && event.participants && (() => {
+                        const currentParticipant = event.participants?.find(
+                          (p) => p.email === currentUserEmail
+                        );
+                        const needsAction = currentParticipant && 
+                          (currentParticipant.response_status === "needs_action" || !currentParticipant.response_status);
+                        if (!needsAction) return null;
+                        return (
+                          <div className="mt-1 flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (currentParticipant) {
+                                  onUpdateParticipantStatus(event.id, currentParticipant.user_id, "accepted");
+                                }
+                              }}
+                              className="flex-1 rounded bg-lime-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:bg-lime-400"
+                              title="Принять"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (currentParticipant) {
+                                  onUpdateParticipantStatus(event.id, currentParticipant.user_id, "tentative");
+                                }
+                              }}
+                              className="flex-1 rounded bg-amber-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:bg-amber-400"
+                              title="Под вопросом"
+                            >
+                              ?
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (currentParticipant) {
+                                  onUpdateParticipantStatus(event.id, currentParticipant.user_id, "declined");
+                                }
+                              }}
+                              className="flex-1 rounded bg-red-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:bg-red-400"
+                              title="Отклонить"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}

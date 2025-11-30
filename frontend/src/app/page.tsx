@@ -1362,6 +1362,16 @@ useEffect(() => {
               onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date) => {
                 openEventModal(date, undefined, startTime, endTime);
               } : undefined}
+              onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
+                try {
+                  const { eventApi } = await import("@/lib/api/eventApi");
+                  await eventApi.updateParticipantStatus(authFetch, eventId, userId, status);
+                  await loadEvents();
+                } catch (err) {
+                  console.error("Failed to update participant status:", err);
+                }
+              }}
+              currentUserEmail={userEmail || undefined}
             />
               </div>
           )}
@@ -1465,6 +1475,41 @@ useEffect(() => {
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
             onDelete={deleteNotification}
+            onUpdateParticipantStatus={async (eventId: string, status: string) => {
+              try {
+                // Получаем ID текущего пользователя из события
+                const event = events.find((e) => e.id === eventId);
+                if (!event || !event.participants) {
+                  // Если событие не найдено, загружаем его
+                  const { eventApi } = await import("@/lib/api/eventApi");
+                  const loadedEvent = await eventApi.get(authFetch, eventId);
+                  if (!loadedEvent.participants) {
+                    throw new Error("Не удалось найти участников события");
+                  }
+                  // Находим текущего пользователя по email
+                  const currentParticipant = loadedEvent.participants.find(
+                    (p) => p.email === userEmail
+                  );
+                  if (!currentParticipant) {
+                    throw new Error("Вы не являетесь участником этого события");
+                  }
+                  await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
+                } else {
+                  // Находим текущего пользователя по email
+                  const currentParticipant = event.participants.find(
+                    (p) => p.email === userEmail
+                  );
+                  if (!currentParticipant) {
+                    throw new Error("Вы не являетесь участником этого события");
+                  }
+                  await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
+                }
+                await loadEvents();
+              } catch (err) {
+                console.error("Failed to update participant status:", err);
+                throw err;
+              }
+            }}
             onEventClick={async (eventId: string) => {
               // Сначала ищем событие в загруженных событиях
               let event = events.find((e) => e.id === eventId);
