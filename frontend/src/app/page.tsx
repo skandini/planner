@@ -1493,6 +1493,7 @@ useEffect(() => {
                   if (!currentParticipant) {
                     throw new Error("Вы не являетесь участником этого события");
                   }
+                  const { eventApi } = await import("@/lib/api/eventApi");
                   await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
                 } else {
                   // Находим текущего пользователя по email
@@ -1502,6 +1503,7 @@ useEffect(() => {
                   if (!currentParticipant) {
                     throw new Error("Вы не являетесь участником этого события");
                   }
+                  const { eventApi } = await import("@/lib/api/eventApi");
                   await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
                 }
                 await loadEvents();
