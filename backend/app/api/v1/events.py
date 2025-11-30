@@ -320,11 +320,23 @@ def get_event(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> EventRead:
-    event = session.get(Event, event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-    ensure_calendar_access(session, event.calendar_id, current_user)
-    return _serialize_event_with_participants(session, event)
+    try:
+        event = session.get(Event, event_id)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        ensure_calendar_access(session, event.calendar_id, current_user)
+        return _serialize_event_with_participants(session, event)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_msg = f"Error getting event {event_id}: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=error_msg
+        )
 
 
 @router.put("/{event_id}", response_model=EventRead, summary="Update event")
