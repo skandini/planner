@@ -324,7 +324,24 @@ def get_event(
         event = session.get(Event, event_id)
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
-        ensure_calendar_access(session, event.calendar_id, current_user)
+        
+        # Проверяем доступ: либо доступ к календарю, либо участник события
+        try:
+            ensure_calendar_access(session, event.calendar_id, current_user)
+        except HTTPException:
+            # Если нет доступа к календарю, проверяем, является ли пользователь участником события
+            participant = session.exec(
+                select(EventParticipant).where(
+                    EventParticipant.event_id == event_id,
+                    EventParticipant.user_id == current_user.id,
+                )
+            ).one_or_none()
+            if not participant:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access to calendar denied"
+                )
+        
         return _serialize_event_with_participants(session, event)
     except HTTPException:
         raise
