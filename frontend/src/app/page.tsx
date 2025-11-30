@@ -349,14 +349,18 @@ useEffect(() => {
   }, [users, userSearchQuery]);
 
   const loadEvents = useCallback(async () => {
-    if (!selectedCalendarId || !accessToken) {
+    if (!accessToken) {
       setEvents([]);
       return;
     }
     setEventsLoading(true);
     try {
       const url = new URL(EVENT_ENDPOINT);
-      url.searchParams.set("calendar_id", selectedCalendarId);
+      // Если выбран календарь, фильтруем по нему, иначе загружаем все доступные события
+      // (включая события, где пользователь является участником, но не имеет доступа к календарю)
+      if (selectedCalendarId) {
+        url.searchParams.set("calendar_id", selectedCalendarId);
+      }
       url.searchParams.set("from", rangeStart.toISOString());
       url.searchParams.set("to", rangeEnd.toISOString());
       const response = await authFetch(url.toString(), { cache: "no-store" });
