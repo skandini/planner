@@ -1477,35 +1477,30 @@ useEffect(() => {
             onDelete={deleteNotification}
             onUpdateParticipantStatus={async (eventId: string, status: string) => {
               try {
+                const { eventApi } = await import("@/lib/api/eventApi");
                 // Получаем ID текущего пользователя из события
                 const event = events.find((e) => e.id === eventId);
+                let currentParticipant;
                 if (!event || !event.participants) {
                   // Если событие не найдено, загружаем его
-                  const { eventApi } = await import("@/lib/api/eventApi");
                   const loadedEvent = await eventApi.get(authFetch, eventId);
                   if (!loadedEvent.participants) {
                     throw new Error("Не удалось найти участников события");
                   }
                   // Находим текущего пользователя по email
-                  const currentParticipant = loadedEvent.participants.find(
+                  currentParticipant = loadedEvent.participants.find(
                     (p) => p.email === userEmail
                   );
-                  if (!currentParticipant) {
-                    throw new Error("Вы не являетесь участником этого события");
-                  }
-                  const { eventApi } = await import("@/lib/api/eventApi");
-                  await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
                 } else {
                   // Находим текущего пользователя по email
-                  const currentParticipant = event.participants.find(
+                  currentParticipant = event.participants.find(
                     (p) => p.email === userEmail
                   );
-                  if (!currentParticipant) {
-                    throw new Error("Вы не являетесь участником этого события");
-                  }
-                  const { eventApi } = await import("@/lib/api/eventApi");
-                  await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
                 }
+                if (!currentParticipant) {
+                  throw new Error("Вы не являетесь участником этого события");
+                }
+                await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
                 await loadEvents();
               } catch (err) {
                 console.error("Failed to update participant status:", err);
