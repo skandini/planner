@@ -366,10 +366,18 @@ useEffect(() => {
         throw new Error("Не удалось получить события");
       }
       const data: EventRecord[] = await response.json();
-      // Если выбран календарь, фильтруем события на frontend для отображения
-      // Но все события загружены, включая события участника
+      // Если выбран календарь, показываем события из этого календаря
+      // ИЛИ события, где пользователь является участником (даже если они в другом календаре)
       const filteredEvents = selectedCalendarId
-        ? data.filter((e) => e.calendar_id === selectedCalendarId)
+        ? data.filter((e) => {
+            // События из выбранного календаря
+            if (e.calendar_id === selectedCalendarId) return true;
+            // События, где пользователь является участником (даже из другого календаря)
+            if (e.participants && userEmail) {
+              return e.participants.some((p) => p.email === userEmail);
+            }
+            return false;
+          })
         : data;
       setEvents(filteredEvents);
       setEventsError(null);
