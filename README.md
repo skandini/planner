@@ -1,24 +1,32 @@
-# Классическое приложение «Сапёр»
+# Planner
 
-В папке находятся статические файлы, которые реализуют классический сапёр с тремя стандартными уровнями (Новичок, Любитель, Профессионал) и настраиваемым режимом.
+Planner for Corestone - Corporate Calendar Application
 
-## Запуск
+A full-stack application for managing calendars, events, rooms, and notifications with authentication and user management.
 
-1. Откройте папку проекта (`c:\testprj`) в любом статическом сервере или просто дважды щёлкните `index.html`.
-2. В браузере выбранного устройства появится поле игры.
+## Project Structure
 
-## Возможности
+- `backend/` - FastAPI backend with SQLAlchemy models, API routes, and database migrations
+- `frontend/` - Next.js frontend with TypeScript and Tailwind CSS
 
-- Первое нажатие всегда безопасно — мины расставляются только после него.
-- Отображаются количество оставшихся мин и таймер.
-- Правая кнопка мыши (или долгий тап на мобильных устройствах) ставит флажок.
-- Настраиваемые размеры поля и число мин.
+## Features
 
-## Структура
+- Calendar management
+- Event scheduling
+- Room booking
+- User authentication
+- Notifications
+- Organization management
+- Event participants and recurrence
 
-- `index.html` — разметка приложения.
-- `styles.css` — оформление.
-- `main.js` — игровая логика.
+## Getting Started
 
+See the individual README files in the `backend/` and `frontend/` directories for setup instructions.
 
+### Backend
 
+See [backend/README.md](backend/README.md) for backend setup instructions.
+
+### Frontend
+
+See [frontend/README.md](frontend/README.md) for frontend setup instructions.
