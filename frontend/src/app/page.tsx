@@ -5,157 +5,12 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
-
-
-type ViewMode = "week" | "month";
-type CalendarRole = "owner" | "editor" | "viewer";
-
-type Calendar = {
-  id: string;
-  name: string;
-  description: string | null;
-  timezone: string;
-  color: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  owner_id: string | null;
-  current_user_role: CalendarRole | null;
-};
-
-type CalendarMember = {
-  calendar_id: string;
-  user_id: string;
-  email: string;
-  full_name: string | null;
-  role: string;
-  added_at: string;
-};
-
-type UserProfile = {
-  id: string;
-  email: string;
-  full_name: string | null;
-};
-
-type Room = {
-  id: string;
-  name: string;
-  description: string | null;
-  capacity: number;
-  location: string | null;
-  equipment: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type EventParticipant = {
-  user_id: string;
-  email: string;
-  full_name: string | null;
-  response_status: string;
-};
-
-type Notification = {
-  id: string;
-  user_id: string;
-  event_id: string | null;
-  type: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-  read_at: string | null;
-};
-
-type TimelineRowData = {
-  id: string;
-  label: string;
-  meta?: string | null;
-  availability: EventRecord[];
-  loading: boolean;
-  type: "room" | "participant";
-};
-
-type ParticipantProfile = {
-  user_id: string;
-  label: string;
-  email: string;
-  membership?: CalendarMember;
-};
-
-type PendingMoveContext = {
-  event: EventRecord;
-  newStart: Date;
-  newEnd: Date;
-};
-
-type RecurrenceRule = {
-  frequency: "daily" | "weekly" | "monthly";
-  interval: number;
-  count?: number;
-  until?: string;
-};
-
-type EventRecord = {
-  id: string;
-  calendar_id: string;
-  room_id: string | null;
-  title: string;
-  description: string | null;
-  location: string | null;
-  timezone: string;
-  starts_at: string;
-  ends_at: string;
-  all_day: boolean;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  participants?: EventParticipant[];
-  recurrence_rule?: RecurrenceRule | null;
-  recurrence_parent_id?: string | null;
-};
-
-type ConflictEvent = {
-  id: string;
-  title: string;
-  starts_at: string;
-  ends_at: string;
-  room_id: string | null;
-};
-
-type ConflictEntry = {
-  type: "room" | "participant";
-  resource_id: string | null;
-  resource_label: string;
-  slot_start: string;
-  slot_end: string;
-  events: ConflictEvent[];
-};
-
-type CalendarDraft = {
-  name: string;
-  description: string;
-  timezone: string;
-  color: string;
-};
-
-type EventDraft = {
-  title: string;
-  description: string;
-  location: string;
-  room_id: string | null;
-  starts_at: string;
-  ends_at: string;
-  all_day: boolean;
-  participant_ids: string[];
-  recurrence_enabled: boolean;
-  recurrence_frequency: "daily" | "weekly" | "monthly";
-  recurrence_interval: number;
-  recurrence_count?: number;
-  recurrence_until: string;
-};
+import type { Calendar, CalendarMember, CalendarDraft, CalendarRole } from "@/types/calendar.types";
+import type { EventRecord, EventDraft, ConflictEntry } from "@/types/event.types";
+import type { UserProfile, EventParticipant, ParticipantProfile } from "@/types/user.types";
+import type { Room } from "@/types/room.types";
+import type { Notification } from "@/types/notification.types";
+import type { ViewMode, TimelineRowData, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
 
 const DEFAULT_FORM_STATE: CalendarDraft = {
   name: "",
@@ -916,10 +771,19 @@ useEffect(() => {
       })();
 
       setEventForm({
-        ...DEFAULT_EVENT_FORM,
+        title: "",
+        description: "",
+        location: "",
         room_id: null,
         starts_at: toLocalString(start),
         ends_at: toLocalString(end),
+        all_day: false,
+        participant_ids: [],
+        recurrence_enabled: false,
+        recurrence_frequency: "weekly",
+        recurrence_interval: 1,
+        recurrence_count: undefined,
+        recurrence_until: "",
       });
       setEditingEventId(null);
       setEditingRecurrenceInfo(null);
