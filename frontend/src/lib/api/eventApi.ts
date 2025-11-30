@@ -33,6 +33,9 @@ export const eventApi = {
       if (response.status === 404) {
         throw new Error("Событие не найдено. Возможно, оно было удалено.");
       }
+      if (response.status === 403) {
+        throw new Error("Нет доступа к календарю, в котором находится это событие.");
+      }
       const errorText = await response.text().catch(() => "Неизвестная ошибка");
       throw new Error(`Не удалось получить событие: ${errorText}`);
     }
