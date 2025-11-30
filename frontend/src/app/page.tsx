@@ -9,7 +9,6 @@ import type { Calendar, CalendarMember, CalendarDraft, CalendarRole } from "@/ty
 import type { EventRecord, EventDraft, ConflictEntry } from "@/types/event.types";
 import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
-import type { Notification } from "@/types/notification.types";
 import type { ViewMode, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
 import { WeekView } from "@/components/calendar/WeekView";
 import { MonthView } from "@/components/calendar/MonthView";
