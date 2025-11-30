@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from uuid import UUID
+
+from sqlmodel import Session
+
+from app.models import Event, Notification, User
+
+
+def create_notification(
+    session: Session,
+    user_id: UUID,
+    type: str,
+    title: str,
+    message: str,
+    event_id: UUID | None = None,
+) -> Notification:
+    """Create a notification for a user."""
+    notification = Notification(
+        user_id=user_id,
+        event_id=event_id,
+        type=type,
+        title=title,
+        message=message,
+    )
+    session.add(notification)
+    return notification
+
+
+def notify_event_invited(
+    session: Session,
+    user_id: UUID,
+    event: Event,
+    inviter_name: str | None = None,
+) -> None:
+    """Notify user about event invitation."""
+    inviter_text = f" от {inviter_name}" if inviter_name else ""
+    create_notification(
+        session=session,
+        user_id=user_id,
+        type="event_invited",
+        title="Приглашение на встречу",
+        message=f"Вас пригласили на встречу «{event.title}»{inviter_text}",
+        event_id=event.id,
+    )
+
+
+def notify_event_updated(
+    session: Session,
+    user_id: UUID,
+    event: Event,
+    updater_name: str | None = None,
+) -> None:
+    """Notify user about event update."""
+    updater_text = f" {updater_name}" if updater_name else ""
+    create_notification(
+        session=session,
+        user_id=user_id,
+        type="event_updated",
+        title="Встреча изменена",
+        message=f"Встреча «{event.title}» была изменена{updater_text}",
+        event_id=event.id,
+    )
+
+
+def notify_event_cancelled(
+    session: Session,
+    user_id: UUID,
+    event: Event,
+    canceller_name: str | None = None,
+) -> None:
+    """Notify user about event cancellation."""
+    canceller_text = f" {canceller_name}" if canceller_name else ""
+    create_notification(
+        session=session,
+        user_id=user_id,
+        type="event_cancelled",
+        title="Встреча отменена",
+        message=f"Встреча «{event.title}» была отменена{canceller_text}",
+        event_id=event.id,
+    )
+
+
+def create_reminder_notification(
+    session: Session,
+    user_id: UUID,
+    event: Event,
+    reminder_minutes: int = 15,
+) -> Notification:
+    """Create a reminder notification for an event."""
+    return create_notification(
+        session=session,
+        user_id=user_id,
+        type="event_reminder",
+        title="Напоминание о встрече",
+        message=f"Через {reminder_minutes} минут: «{event.title}»",
+        event_id=event.id,
+    )
+
+
+def schedule_reminders_for_event(
+    session: Session,
+    event: Event,
+    reminder_minutes: list[int] | None = None,
+) -> None:
+    """Schedule reminder notifications for all event participants."""
+    from sqlmodel import select
+    from app.models import EventParticipant
+    
+    if reminder_minutes is None:
+        reminder_minutes = [15, 60, 1440]  # 15 мин, 1 час, 1 день
+    
+    # Get all participants
+    statement = select(EventParticipant).where(EventParticipant.event_id == event.id)
+    participants = session.exec(statement).all()
+    
+    event_start = event.starts_at
+    if event_start.tzinfo:
+        event_start = event_start.replace(tzinfo=None)
+    
+    now = datetime.utcnow()
+    
+    for participant in participants:
+        for reminder_mins in reminder_minutes:
+            reminder_time = event_start - timedelta(minutes=reminder_mins)
+            # Only schedule if reminder time is in the future
+            if reminder_time > now:
+                create_reminder_notification(
+                    session=session,
+                    user_id=participant.user_id,
+                    event=event,
+                    reminder_minutes=reminder_mins,
+                )
+

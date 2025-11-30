@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Классический Сапёр</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>Сапёр</h1>
+        <p>Классический режим: открой все клетки, избегая мин.</p>
+      </header>
+
+      <section class="controls">
+        <label class="control">
+          Сложность:
+          <select id="difficulty">
+            <option value="beginner">Новичок (9×9 / 10 мин)</option>
+            <option value="intermediate">Любитель (16×16 / 40 мин)</option>
+            <option value="expert">Профессионал (30×16 / 99 мин)</option>
+            <option value="custom">Своя</option>
+          </select>
+        </label>
+        <label class="control" id="custom-width">
+          Ширина:
+          <input type="number" min="5" max="40" value="10" />
+        </label>
+        <label class="control" id="custom-height">
+          Высота:
+          <input type="number" min="5" max="30" value="10" />
+        </label>
+        <label class="control" id="custom-mines">
+          Мины:
+          <input type="number" min="1" max="300" value="15" />
+        </label>
+        <button id="new-game">Новая игра</button>
+      </section>
+
+      <section class="status-bar">
+        <div>⛳ Осталось мин: <span id="mines-left">0</span></div>
+        <div>⏱ Время: <span id="timer">0</span> c</div>
+        <div id="game-message"></div>
+      </section>
+
+      <section id="board" role="grid" aria-label="Поле Сапёра"></section>
+    </div>
+
+    <script src="main.js" defer></script>
+  </body>
+</html>
+
