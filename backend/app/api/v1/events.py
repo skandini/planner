@@ -208,8 +208,16 @@ def list_events(
         calendar_access_condition(current_user.id)
     )
 
+    # Также включаем события, где пользователь является участником, даже без доступа к календарю
+    participant_events_subquery = select(EventParticipant.event_id).where(
+        EventParticipant.user_id == current_user.id
+    )
+
     statement = select(Event).where(
-        Event.calendar_id.in_(accessible_calendars_subquery)
+        or_(
+            Event.calendar_id.in_(accessible_calendars_subquery),
+            Event.id.in_(participant_events_subquery)
+        )
     )
     if filter_expr is not None:
         statement = statement.where(filter_expr)
@@ -583,7 +591,25 @@ def update_participant_status(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    ensure_calendar_access(session, event.calendar_id, current_user)
+    # Проверяем, что пользователь обновляет свой собственный статус
+    if user_id != current_user.id:
+        # Если обновляет чужой статус, нужен доступ к календарю
+        ensure_calendar_access(session, event.calendar_id, current_user)
+    else:
+        # Если обновляет свой статус, проверяем, что он является участником
+        participant_check = session.exec(
+            select(EventParticipant).where(
+                and_(
+                    EventParticipant.event_id == event_id,
+                    EventParticipant.user_id == current_user.id,
+                )
+            )
+        ).first()
+        if not participant_check:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a participant of this event"
+            )
 
     participant = session.exec(
         select(EventParticipant).where(
