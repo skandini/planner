@@ -17,26 +17,64 @@ export function useAuthenticatedFetch(): AuthenticatedFetch {
         const headers = new Headers(init.headers as HeadersInit | undefined);
         headers.set("Authorization", `Bearer ${token}`);
         
-        // Убираем Content-Type для DELETE запросов без тела
+        // Для DELETE запросов без тела не устанавливаем Content-Type
+        // Это важно для CORS preflight запросов
         if (init.method === "DELETE" && !init.body) {
-          headers.delete("Content-Type");
+          // Не добавляем Content-Type для DELETE без тела
+          if (headers.has("Content-Type")) {
+            headers.delete("Content-Type");
+          }
         }
         
         const url = typeof input === "string" ? input : input.toString();
-        console.log(`[API] ${init.method || "GET"} ${url}`);
+        console.log(`[API] ${init.method || "GET"} ${url}`, {
+          method: init.method,
+          hasBody: !!init.body,
+          headers: Object.fromEntries(headers.entries()),
+        });
         
         try {
-          const response = await fetch(input, { ...init, headers });
+          const fetchOptions: RequestInit = {
+            ...init,
+            headers,
+            // Явно указываем mode для CORS
+            mode: "cors",
+            // Для DELETE запросов не используем credentials, чтобы избежать preflight
+            credentials: init.method === "DELETE" ? "omit" : "include",
+          };
+          
+          const response = await fetch(input, fetchOptions);
+          console.log(`[API] Response for ${init.method || "GET"} ${url}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+          });
+          
           return response;
         } catch (error) {
           // Обработка сетевых ошибок (CORS, сеть недоступна и т.д.)
-          console.error(`[API Error] Failed to fetch: ${url}`, error);
+          console.error(`[API Error] Failed to fetch: ${url}`, {
+            error,
+            method: init.method,
+            errorType: error?.constructor?.name,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          });
           
           // Проверяем различные типы сетевых ошибок
           if (error instanceof TypeError) {
             if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
+              // Проверяем, может быть это CORS проблема
+              const isCorsError = error.message.includes("CORS") || 
+                                 error.message.includes("cross-origin");
+              
+              if (isCorsError) {
+                throw new Error(
+                  `Ошибка CORS при запросе к ${url}. Проверьте настройки CORS на сервере.`
+                );
+              }
+              
               throw new Error(
-                `Не удалось подключиться к серверу. Проверьте, что сервер запущен по адресу ${url.split("/api")[0] || url}`
+                `Не удалось подключиться к серверу. Проверьте, что сервер запущен и доступен. URL: ${url}`
               );
             }
             throw new Error(`Ошибка сети: ${error.message}`);

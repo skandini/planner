@@ -112,7 +112,8 @@ export function NotificationCenter({
       await onDelete(notificationId);
     } catch (err) {
       console.error("Failed to delete:", err);
-      alert("Не удалось удалить уведомление");
+      const errorMessage = err instanceof Error ? err.message : "Не удалось удалить уведомление";
+      alert(`Ошибка: ${errorMessage}`);
     } finally {
       setDeletingId(null);
     }
