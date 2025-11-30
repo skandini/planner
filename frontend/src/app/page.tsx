@@ -1448,8 +1448,22 @@ useEffect(() => {
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
             onDelete={deleteNotification}
-            onEventClick={(eventId: string) => {
-              const event = events.find((e) => e.id === eventId);
+            onEventClick={async (eventId: string) => {
+              // Сначала ищем событие в загруженных событиях
+              let event = events.find((e) => e.id === eventId);
+              
+              // Если не найдено, загружаем событие по ID
+              if (!event) {
+                try {
+                  const { eventApi } = await import("@/lib/api/eventApi");
+                  event = await eventApi.get(authFetch, eventId);
+                } catch (err) {
+                  console.error("Failed to load event:", err);
+                  alert("Не удалось загрузить событие. Возможно, оно было удалено.");
+                  return;
+                }
+              }
+              
               if (event) {
                 openEventModal(undefined, event);
                 setIsNotificationCenterOpen(false);

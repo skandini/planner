@@ -22,6 +22,19 @@ export const eventApi = {
     return response.json();
   },
 
+  async get(
+    authFetch: AuthenticatedFetch,
+    eventId: string,
+  ): Promise<EventRecord> {
+    const response = await authFetch(`${EVENT_ENDPOINT}${eventId}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error("Не удалось получить событие");
+    }
+    return response.json();
+  },
+
   async create(
     authFetch: AuthenticatedFetch,
     data: EventDraft,
