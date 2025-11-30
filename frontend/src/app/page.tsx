@@ -11,153 +11,39 @@ import type { UserProfile, EventParticipant, ParticipantProfile } from "@/types/
 import type { Room } from "@/types/room.types";
 import type { Notification } from "@/types/notification.types";
 import type { ViewMode, TimelineRowData, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
-
-const DEFAULT_FORM_STATE: CalendarDraft = {
-  name: "",
-  description: "",
-  timezone: "Europe/Moscow",
-  color: "#2563eb",
-};
-
-const DEFAULT_EVENT_FORM: EventDraft = {
-  title: "",
-  description: "",
-  location: "",
-  room_id: null,
-  starts_at: "",
-  ends_at: "",
-  all_day: false,
-  participant_ids: [],
-  recurrence_enabled: false,
-  recurrence_frequency: "weekly",
-  recurrence_interval: 1,
-  recurrence_count: undefined,
-  recurrence_until: "",
-};
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
-
-const CALENDAR_ENDPOINT = `${API_BASE_URL}/calendars/`;
-const EVENT_ENDPOINT = `${API_BASE_URL}/events/`;
-const NOTIFICATION_ENDPOINT = `${API_BASE_URL}/notifications`;
-const ROOM_ENDPOINT = `${API_BASE_URL}/rooms/`;
-const USERS_ENDPOINT = `${API_BASE_URL}/users/`;
-const MINUTES_IN_DAY = 24 * 60;
-const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-const ROLE_LABELS: Record<CalendarRole, string> = {
-  owner: "Владелец",
-  editor: "Редактор",
-  viewer: "Наблюдатель",
-};
-const WORKDAY_START_HOUR = 8;
-const WORKDAY_END_HOUR = 20;
-const SLOT_DURATION_MINUTES = 30;
+import {
+  startOfWeek,
+  addDays,
+  addMonths,
+  getMonthGridDays,
+  formatDate,
+  parseUTC,
+  inputToDate,
+  toLocalString,
+  toUTCString,
+  toUTCDateISO,
+} from "@/lib/utils/dateUtils";
+import {
+  API_BASE_URL,
+  CALENDAR_ENDPOINT,
+  EVENT_ENDPOINT,
+  NOTIFICATION_ENDPOINT,
+  ROOM_ENDPOINT,
+  USERS_ENDPOINT,
+  MINUTES_IN_DAY,
+  WEEKDAY_LABELS,
+  ROLE_LABELS,
+  WORKDAY_START_HOUR,
+  WORKDAY_END_HOUR,
+  SLOT_DURATION_MINUTES,
+  DEFAULT_FORM_STATE,
+  DEFAULT_EVENT_FORM,
+} from "@/lib/constants";
 
 type AuthenticatedFetch = (
   input: RequestInfo | URL,
   init?: RequestInit,
 ) => Promise<Response>;
-
-const startOfWeek = (date: Date) => {
-  const result = new Date(date);
-  const day = result.getDay();
-  const diff = (day === 0 ? -6 : 1) - day; // начинаем с понедельника
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
-  return result;
-};
-
-const addDays = (date: Date, amount: number) => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + amount);
-  return result;
-};
-
-const startOfMonth = (date: Date) => {
-  const result = new Date(date);
-  result.setDate(1);
-  result.setHours(0, 0, 0, 0);
-  return result;
-};
-
-const addMonths = (date: Date, amount: number) => {
-  const result = new Date(date);
-  result.setMonth(result.getMonth() + amount);
-  return result;
-};
-
-const getMonthGridDays = (date: Date) => {
-  const firstDay = startOfMonth(date);
-  const gridStart = startOfWeek(firstDay);
-  return Array.from({ length: 42 }, (_, idx) => addDays(gridStart, idx));
-};
-
-const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat("ru-RU", options).format(date);
-
-// Простая функция: парсит UTC строку в Date
-// Простая функция: парсит UTC строку в Date (явно указываем UTC)
-const parseUTC = (utcStr: string): Date => {
-  const utcString = utcStr.endsWith("Z") ? utcStr : utcStr + "Z";
-  return new Date(utcString);
-};
-
-const inputToDate = (
-  value: string,
-  {
-    allDay,
-    endOfDay = false,
-  }: {
-    allDay: boolean;
-    endOfDay?: boolean;
-  },
-) => {
-  if (!value) {
-    return null;
-  }
-  const hasTime = value.includes("T");
-  const normalized =
-    allDay && !hasTime
-      ? `${value}${endOfDay ? "T23:59:59" : "T00:00:00"}`
-      : value;
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return date;
-};
-
-// Простая функция: конвертирует UTC Date в строку для datetime-local (локальное время)
-const toLocalString = (date: Date): string => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d}T${h}:${min}`;
-};
-
-// Простая функция: конвертирует локальное время из datetime-local в UTC ISO
-const toUTCString = (localStr: string): string => {
-  // datetime-local input возвращает строку в формате "YYYY-MM-DDTHH:mm"
-  // Когда мы создаём new Date() из такой строки БЕЗ указания timezone,
-  // браузер интерпретирует её как локальное время
-  
-  // Простое решение: создаём Date из строки напрямую
-  // Браузер автоматически интерпретирует "YYYY-MM-DDTHH:mm" как локальное время
-  const localDate = new Date(localStr);
-  
-  if (isNaN(localDate.getTime())) {
-    throw new Error(`Invalid date: ${localStr}`);
-  }
-  
-  // toISOString() автоматически конвертирует локальное время в UTC
-  return localDate.toISOString();
-};
-
-const toUTCDateISO = (date: Date) =>
-  new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
 
 export default function Home() {
   const [calendars, setCalendars] = useState<Calendar[]>([]);
@@ -437,32 +323,6 @@ useEffect(() => {
   const rangeStart = viewMode === "week" ? weekStart : monthGridStart;
   const rangeEnd = viewMode === "week" ? weekEnd : monthGridEnd;
 
-  const dashboardStats = useMemo(() => {
-    const weekCount = events.filter((event) => {
-      const start = parseUTC(event.starts_at);
-      return start >= weekStart && start < weekEnd;
-    }).length;
-    const recurringCount = events.filter(
-      (event) => Boolean(event.recurrence_rule || event.recurrence_parent_id),
-    ).length;
-    const roomsInUse = new Set<string>();
-    const peopleInvolved = new Set<string>();
-    events.forEach((event) => {
-      if (event.room_id) {
-        roomsInUse.add(event.room_id);
-      }
-      event.participants?.forEach((participant) =>
-        peopleInvolved.add(participant.user_id),
-      );
-    });
-
-    return {
-      weekCount,
-      recurringCount,
-      roomsInUse: roomsInUse.size,
-      peopleInvolved: peopleInvolved.size,
-    };
-  }, [events, weekEnd, weekStart]);
 
   const filteredUsers = useMemo(() => {
     if (!userSearchQuery.trim()) {
@@ -1800,13 +1660,6 @@ function WeekView({
       // Вычисляем примерную высоту окна с учетом всех секций
       const hasDescription = event.description && event.description.trim().length > 0;
       const hasRoom = event.room_id;
-      const participantsCount = event.participants?.length || 0;
-      const baseHeight = 120; // Заголовок и отступы
-      const descriptionHeight = hasDescription ? 60 : 0;
-      const roomHeight = hasRoom ? 40 : 0;
-      const participantsHeight = participantsCount > 0 ? Math.min(participantsCount * 50 + 40, 200) : 0;
-      const tooltipHeight = baseHeight + descriptionHeight + roomHeight + participantsHeight;
-      
       // Позиционируем справа от события, если есть место, иначе слева
       const spaceOnRight = window.innerWidth - rect.right;
       const spaceOnLeft = rect.left;
@@ -1888,7 +1741,8 @@ function WeekView({
       
       // Создаем звуковой сигнал (короткий бип)
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const audioContext = new AudioContextClass();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
@@ -3758,15 +3612,6 @@ function UnifiedAvailabilityTimeline({
     return fallback;
   }, [referenceDate, selectionRange.start]);
 
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">
-        Добавьте переговорку или выберите участников, чтобы увидеть таймлайн
-        занятости.
-      </div>
-    );
-  }
-
   const timeSlots = useMemo(() => {
     const totalSlots =
       ((WORKDAY_END_HOUR - WORKDAY_START_HOUR) * 60) / SLOT_DURATION_MINUTES;
@@ -3791,6 +3636,15 @@ function UnifiedAvailabilityTimeline({
     () => rows.filter((row) => row.id !== "placeholder"),
     [rows],
   );
+
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">
+        Добавьте переговорку или выберите участников, чтобы увидеть таймлайн
+        занятости.
+      </div>
+    );
+  }
 
   const buildSlotTimes = (slotIndex: number) => {
     const slot = timeSlots[slotIndex];
