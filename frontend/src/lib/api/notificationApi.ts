@@ -48,14 +48,53 @@ export const notificationApi = {
   },
 
   async delete(authFetch: AuthenticatedFetch, notificationId: string): Promise<void> {
-    const response = await authFetch(
-      `${NOTIFICATION_ENDPOINT}/${notificationId}`,
-      {
+    // Убеждаемся, что notificationId не пустой
+    if (!notificationId || notificationId.trim() === "") {
+      throw new Error("ID уведомления не может быть пустым");
+    }
+
+    // Формируем URL правильно (NOTIFICATION_ENDPOINT уже содержит базовый путь)
+    const url = `${NOTIFICATION_ENDPOINT}/${notificationId}`;
+    console.log(`[NotificationAPI] Deleting notification: ${notificationId}`, url);
+    
+    try {
+      const response = await authFetch(url, {
         method: "DELETE",
-      },
-    );
-    if (!response.ok) {
-      throw new Error("Не удалось удалить уведомление");
+        // Не передаем headers явно, чтобы baseApi мог их правильно обработать
+      });
+      
+      console.log(`[NotificationAPI] Delete response status: ${response.status}`);
+      
+      // 204 No Content - успешное удаление без тела ответа
+      if (response.status === 204 || response.status === 200) {
+        return;
+      }
+      
+      // Ошибка
+      let errorText = "Неизвестная ошибка";
+      try {
+        const text = await response.text();
+        errorText = text || errorText;
+      } catch {
+        // Игнорируем ошибку чтения текста
+      }
+      
+      throw new Error(`Не удалось удалить уведомление: ${response.status} ${errorText}`);
+    } catch (error) {
+      console.error(`[NotificationAPI] Delete error for ${notificationId}:`, error);
+      
+      // Если это уже Error с понятным сообщением, пробрасываем его
+      if (error instanceof Error) {
+        // Проверяем, не связана ли ошибка с сетью/CORS
+        if (error.message.includes("Failed to fetch") || error.message.includes("fetch")) {
+          throw new Error(
+            `Не удалось подключиться к серверу. Проверьте, что сервер запущен и доступен.`
+          );
+        }
+        throw error;
+      }
+      
+      throw new Error(`Не удалось удалить уведомление: ${String(error)}`);
     }
   },
 };
