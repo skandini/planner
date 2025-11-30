@@ -18,6 +18,7 @@ import { EventModal } from "@/components/events/EventModal";
 import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { CalendarMembersManager } from "@/components/calendar/CalendarMembersManager";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -73,6 +74,7 @@ export default function Home() {
     deleteNotification,
   } = useNotifications();
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [isMembersManagerOpen, setIsMembersManagerOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState<EventDraft>(DEFAULT_EVENT_FORM);
   const [isEventSubmitting, setIsEventSubmitting] = useState(false);
@@ -1036,16 +1038,31 @@ useEffect(() => {
                       </p>
                     </div>
                     {calendar.current_user_role === "owner" && (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-red-200 bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-red-600 transition hover:bg-red-50 flex-shrink-0"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDeleteCalendar(calendar.id);
-                        }}
-                      >
-                        ✕
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 transition hover:bg-slate-50"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedCalendarId(calendar.id);
+                            setIsMembersManagerOpen(true);
+                          }}
+                          title="Управление участниками"
+                        >
+                          👥
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-red-200 bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-red-600 transition hover:bg-red-50"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteCalendar(calendar.id);
+                          }}
+                          title="Удалить календарь"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     )}
                   </div>
                 </li>
@@ -1471,6 +1488,17 @@ useEffect(() => {
                 openEventModal(undefined, event);
                 setIsNotificationCenterOpen(false);
               }
+            }}
+          />
+        )}
+        {isMembersManagerOpen && selectedCalendar && (
+          <CalendarMembersManager
+            calendar={selectedCalendar}
+            authFetch={authFetch}
+            onClose={() => setIsMembersManagerOpen(false)}
+            onUpdate={() => {
+              loadCalendarMembers();
+              loadCalendars();
             }}
           />
         )}

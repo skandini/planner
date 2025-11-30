@@ -65,9 +65,48 @@ export const calendarApi = {
       },
     );
     if (!response.ok) {
-      throw new Error("Не удалось добавить участника");
+      const errorText = await response.text().catch(() => "Неизвестная ошибка");
+      throw new Error(`Не удалось добавить участника: ${errorText}`);
     }
     return response.json();
+  },
+
+  async updateMemberRole(
+    authFetch: AuthenticatedFetch,
+    calendarId: string,
+    userId: string,
+    role: string,
+  ): Promise<CalendarMember> {
+    const response = await authFetch(
+      `${CALENDAR_ENDPOINT}${calendarId}/members/${userId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      },
+    );
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Неизвестная ошибка");
+      throw new Error(`Не удалось изменить роль участника: ${errorText}`);
+    }
+    return response.json();
+  },
+
+  async removeMember(
+    authFetch: AuthenticatedFetch,
+    calendarId: string,
+    userId: string,
+  ): Promise<void> {
+    const response = await authFetch(
+      `${CALENDAR_ENDPOINT}${calendarId}/members/${userId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Неизвестная ошибка");
+      throw new Error(`Не удалось удалить участника: ${errorText}`);
+    }
   },
 
   async getConflicts(

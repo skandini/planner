@@ -54,6 +54,10 @@ class CalendarMemberCreate(BaseModel):
     role: str = "viewer"
 
 
+class CalendarMemberUpdate(BaseModel):
+    role: str
+
+
 class CalendarReadWithRole(CalendarRead):
     current_user_role: Optional[str] = None
     members: list[CalendarMemberRead] = []

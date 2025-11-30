@@ -15,6 +15,7 @@ from app.schemas import (
     CalendarCreate,
     CalendarMemberCreate,
     CalendarMemberRead,
+    CalendarMemberUpdate,
     CalendarReadWithRole,
     CalendarUpdate,
     ConflictEntry,
@@ -235,6 +236,103 @@ def create_calendar_member(
         email=target_user.email,
         full_name=target_user.full_name,
     )
+
+
+@router.patch(
+    "/{calendar_id}/members/{user_id}",
+    response_model=CalendarMemberRead,
+    summary="Update calendar member role",
+)
+def update_calendar_member(
+    calendar_id: UUID,
+    user_id: UUID,
+    payload: CalendarMemberUpdate,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> CalendarMemberRead:
+    """Update calendar member role (only owner can do this)."""
+    ensure_calendar_access(session, calendar_id, current_user, required_role="owner")
+    
+    # Нельзя изменить роль владельца календаря
+    calendar = session.get(Calendar, calendar_id)
+    if calendar and calendar.owner_id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change owner role"
+        )
+    
+    membership = session.exec(
+        select(CalendarMember).where(
+            CalendarMember.calendar_id == calendar_id,
+            CalendarMember.user_id == user_id,
+        )
+    ).one_or_none()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar member not found"
+        )
+    
+    membership.role = payload.role
+    session.add(membership)
+    session.commit()
+    session.refresh(membership)
+    
+    target_user = session.get(User, user_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return CalendarMemberRead(
+        calendar_id=calendar_id,
+        user_id=user_id,
+        role=membership.role,
+        added_at=membership.added_at,
+        email=target_user.email,
+        full_name=target_user.full_name,
+    )
+
+
+@router.delete(
+    "/{calendar_id}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove calendar member",
+)
+def delete_calendar_member(
+    calendar_id: UUID,
+    user_id: UUID,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Remove calendar member (only owner can do this)."""
+    ensure_calendar_access(session, calendar_id, current_user, required_role="owner")
+    
+    # Нельзя удалить владельца календаря
+    calendar = session.get(Calendar, calendar_id)
+    if calendar and calendar.owner_id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove calendar owner"
+        )
+    
+    membership = session.exec(
+        select(CalendarMember).where(
+            CalendarMember.calendar_id == calendar_id,
+            CalendarMember.user_id == user_id,
+        )
+    ).one_or_none()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar member not found"
+        )
+    
+    session.delete(membership)
+    session.commit()
 
 
 @router.get(
