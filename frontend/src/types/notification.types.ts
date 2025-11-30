@@ -6,7 +6,9 @@ export type Notification = {
   title: string;
   message: string;
   is_read: boolean;
+  is_deleted: boolean;
   created_at: string;
   read_at: string | null;
+  deleted_at: string | null;
 };
 

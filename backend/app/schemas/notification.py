@@ -22,13 +22,16 @@ class NotificationRead(NotificationBase):
     user_id: UUID
     event_id: UUID | None
     is_read: bool
+    is_deleted: bool
     created_at: datetime
     read_at: datetime | None
+    deleted_at: datetime | None
 
     model_config = {"from_attributes": True}
 
 
 class NotificationUpdate(BaseModel):
-    is_read: bool
+    is_read: bool | None = None
+    is_deleted: bool | None = None
 
 

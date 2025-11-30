@@ -53,44 +53,36 @@ export const notificationApi = {
       throw new Error("ID уведомления не может быть пустым");
     }
 
-    // Формируем URL правильно (NOTIFICATION_ENDPOINT уже содержит базовый путь)
+    // Используем PATCH для мягкого удаления вместо DELETE (избегаем CORS проблем)
     const url = `${NOTIFICATION_ENDPOINT}/${notificationId}`;
-    console.log(`[NotificationAPI] Deleting notification: ${notificationId}`, url);
+    console.log(`[NotificationAPI] Soft deleting notification: ${notificationId}`, url);
     
     try {
       const response = await authFetch(url, {
-        method: "DELETE",
-        // Не передаем headers явно, чтобы baseApi мог их правильно обработать
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_deleted: true }),
       });
       
-      console.log(`[NotificationAPI] Delete response status: ${response.status}`);
+      console.log(`[NotificationAPI] Soft delete response status: ${response.status}`);
       
-      // 204 No Content - успешное удаление без тела ответа
-      if (response.status === 204 || response.status === 200) {
-        return;
+      if (!response.ok) {
+        let errorText = "Неизвестная ошибка";
+        try {
+          const text = await response.text();
+          errorText = text || errorText;
+        } catch {
+          // Игнорируем ошибку чтения текста
+        }
+        throw new Error(`Не удалось удалить уведомление: ${response.status} ${errorText}`);
       }
       
-      // Ошибка
-      let errorText = "Неизвестная ошибка";
-      try {
-        const text = await response.text();
-        errorText = text || errorText;
-      } catch {
-        // Игнорируем ошибку чтения текста
-      }
-      
-      throw new Error(`Не удалось удалить уведомление: ${response.status} ${errorText}`);
+      // PATCH возвращает обновленное уведомление
+      await response.json();
     } catch (error) {
       console.error(`[NotificationAPI] Delete error for ${notificationId}:`, error);
       
-      // Если это уже Error с понятным сообщением, пробрасываем его
       if (error instanceof Error) {
-        // Проверяем, не связана ли ошибка с сетью/CORS
-        if (error.message.includes("Failed to fetch") || error.message.includes("fetch")) {
-          throw new Error(
-            `Не удалось подключиться к серверу. Проверьте, что сервер запущен и доступен.`
-          );
-        }
         throw error;
       }
       

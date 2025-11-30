@@ -18,7 +18,9 @@ class Notification(SQLModel, table=True):
     title: str = Field(max_length=255)
     message: str = Field(max_length=1000)
     is_read: bool = Field(default=False, index=True)
+    is_deleted: bool = Field(default=False, index=True)  # Мягкое удаление
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
     read_at: datetime | None = Field(default=None, nullable=True)
+    deleted_at: datetime | None = Field(default=None, nullable=True)
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 
 from app.api.deps import get_current_user
@@ -22,7 +22,10 @@ def list_notifications(
     limit: int = Query(default=50, ge=1, le=100, description="Maximum number of notifications"),
 ) -> List[NotificationRead]:
     """Get user's notifications."""
-    statement = select(Notification).where(Notification.user_id == current_user.id)
+    statement = select(Notification).where(
+        Notification.user_id == current_user.id,
+        Notification.is_deleted == False,  # Исключаем удаленные
+    )
     
     if unread_only:
         statement = statement.where(Notification.is_read == False)
@@ -41,6 +44,7 @@ def get_unread_count(
     statement = select(Notification).where(
         Notification.user_id == current_user.id,
         Notification.is_read == False,
+        Notification.is_deleted == False,  # Исключаем удаленные
     )
     count = len(session.exec(statement).all())
     return {"count": count}
@@ -57,7 +61,7 @@ def update_notification(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> NotificationRead:
-    """Update notification (mark as read/unread)."""
+    """Update notification (mark as read/unread or soft delete)."""
     notification = session.get(Notification, notification_id)
     if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
@@ -65,11 +69,21 @@ def update_notification(
     if notification.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not your notification")
     
-    notification.is_read = data.is_read
-    if data.is_read and not notification.read_at:
-        notification.read_at = datetime.utcnow()
-    elif not data.is_read:
-        notification.read_at = None
+    # Обновляем is_read если передан
+    if data.is_read is not None:
+        notification.is_read = data.is_read
+        if data.is_read and not notification.read_at:
+            notification.read_at = datetime.utcnow()
+        elif not data.is_read:
+            notification.read_at = None
+    
+    # Мягкое удаление
+    if data.is_deleted is not None:
+        notification.is_deleted = data.is_deleted
+        if data.is_deleted and not notification.deleted_at:
+            notification.deleted_at = datetime.utcnow()
+        elif not data.is_deleted:
+            notification.deleted_at = None
     
     session.add(notification)
     session.commit()
@@ -86,6 +100,7 @@ def mark_all_read(
     statement = select(Notification).where(
         Notification.user_id == current_user.id,
         Notification.is_read == False,
+        Notification.is_deleted == False,  # Исключаем удаленные
     )
     notifications = session.exec(statement).all()
     
@@ -99,22 +114,7 @@ def mark_all_read(
     return {"marked": len(notifications)}
 
 
-@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_notification(
-    notification_id: str,
-    session: SessionDep,
-    current_user: User = Depends(get_current_user),
-) -> Response:
-    """Delete notification."""
-    notification = session.get(Notification, notification_id)
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    
-    if notification.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not your notification")
-    
-    session.delete(notification)
-    session.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+# DELETE endpoint удален - используем мягкое удаление через PATCH с is_deleted=true
+# Это позволяет избежать проблем с CORS для DELETE запросов
 
 
