@@ -62,33 +62,52 @@ def update_notification(
     current_user: User = Depends(get_current_user),
 ) -> NotificationRead:
     """Update notification (mark as read/unread or soft delete)."""
-    notification = session.get(Notification, notification_id)
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    
-    if notification.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not your notification")
-    
-    # Обновляем is_read если передан
-    if data.is_read is not None:
-        notification.is_read = data.is_read
-        if data.is_read and not notification.read_at:
-            notification.read_at = datetime.utcnow()
-        elif not data.is_read:
-            notification.read_at = None
-    
-    # Мягкое удаление
-    if data.is_deleted is not None:
-        notification.is_deleted = data.is_deleted
-        if data.is_deleted and not notification.deleted_at:
-            notification.deleted_at = datetime.utcnow()
-        elif not data.is_deleted:
+    try:
+        notification = session.get(Notification, notification_id)
+        if not notification:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        
+        if notification.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not your notification")
+        
+        # Обновляем is_read если передан
+        if data.is_read is not None:
+            notification.is_read = data.is_read
+            if data.is_read and not notification.read_at:
+                notification.read_at = datetime.utcnow()
+            elif not data.is_read:
+                notification.read_at = None
+        
+        # Мягкое удаление
+        if data.is_deleted is not None:
+            notification.is_deleted = data.is_deleted
+            if data.is_deleted and not notification.deleted_at:
+                notification.deleted_at = datetime.utcnow()
+            elif not data.is_deleted:
+                notification.deleted_at = None
+        
+        session.add(notification)
+        session.commit()
+        session.refresh(notification)
+        
+        # Убеждаемся, что все поля присутствуют
+        if not hasattr(notification, 'is_deleted'):
+            notification.is_deleted = False
+        if not hasattr(notification, 'deleted_at'):
             notification.deleted_at = None
-    
-    session.add(notification)
-    session.commit()
-    session.refresh(notification)
-    return notification
+            
+        return notification
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_msg = f"Error updating notification {notification_id}: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=error_msg
+        )
 
 
 @router.patch("/mark-all-read", summary="Mark all notifications as read")
