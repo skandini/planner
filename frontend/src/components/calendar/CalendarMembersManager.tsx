@@ -206,45 +206,61 @@ export function CalendarMembersManager({
               </p>
             ) : (
               <div className="space-y-2">
-                {members.map((member) => (
-                  <div
-                    key={member.user_id}
-                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {member.full_name || member.email}
-                      </p>
-                      <p className="text-xs text-slate-500">{member.email}</p>
+                {members.map((member) => {
+                  const isOwner = member.user_id === calendar.owner_id;
+                  return (
+                    <div
+                      key={member.user_id}
+                      className={`flex items-center justify-between rounded-lg border p-3 ${
+                        isOwner
+                          ? "border-lime-300 bg-lime-50"
+                          : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {member.full_name || member.email}
+                          </p>
+                          {isOwner && (
+                            <span className="rounded-full bg-lime-500 px-2 py-0.5 text-[0.65rem] font-semibold text-white">
+                              Владелец
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500">{member.email}</p>
+                      </div>
+                      {!isOwner && (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={member.role}
+                            onChange={(e) =>
+                              handleUpdateRole(
+                                member.user_id,
+                                e.target.value as CalendarRole,
+                              )
+                            }
+                            disabled={updatingMemberId === member.user_id}
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 outline-none focus:border-lime-500 disabled:opacity-60"
+                          >
+                            <option value="viewer">Наблюдатель</option>
+                            <option value="editor">Редактор</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(member.user_id)}
+                            disabled={removingMemberId === member.user_id}
+                            className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {removingMemberId === member.user_id
+                              ? "Удаление..."
+                              : "Удалить"}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={member.role}
-                        onChange={(e) =>
-                          handleUpdateRole(
-                            member.user_id,
-                            e.target.value as CalendarRole,
-                          )
-                        }
-                        disabled={updatingMemberId === member.user_id}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 outline-none focus:border-lime-500 disabled:opacity-60"
-                      >
-                        <option value="viewer">Наблюдатель</option>
-                        <option value="editor">Редактор</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        disabled={removingMemberId === member.user_id}
-                        className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {removingMemberId === member.user_id
-                          ? "Удаление..."
-                          : "Удалить"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
