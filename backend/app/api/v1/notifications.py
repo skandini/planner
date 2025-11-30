@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import List
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
@@ -63,7 +64,13 @@ def update_notification(
 ) -> NotificationRead:
     """Update notification (mark as read/unread or soft delete)."""
     try:
-        notification = session.get(Notification, notification_id)
+        # Конвертируем строку в UUID
+        try:
+            notification_uuid = UUID(notification_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid notification ID format")
+        
+        notification = session.get(Notification, notification_uuid)
         if not notification:
             raise HTTPException(status_code=404, detail="Notification not found")
         
