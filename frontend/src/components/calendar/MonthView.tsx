@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import type { EventRecord } from "@/types/event.types";
-import type { Room } from "@/types/room.types";
 import { addDays, parseUTC } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
@@ -25,7 +24,7 @@ export function MonthView({
   loading,
   accent,
   onEventClick,
-  rooms,
+  rooms: _rooms,
 }: MonthViewProps) {
   const currentMonth = selectedDate.getMonth();
 

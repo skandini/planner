@@ -2,21 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import type { Calendar, CalendarMember, CalendarDraft, CalendarRole } from "@/types/calendar.types";
 import type { EventRecord, EventDraft, ConflictEntry } from "@/types/event.types";
-import type { UserProfile, EventParticipant, ParticipantProfile } from "@/types/user.types";
+import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { Notification } from "@/types/notification.types";
-import type { ViewMode, TimelineRowData, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
+import type { ViewMode, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
 import { WeekView } from "@/components/calendar/WeekView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
-import { ParticipantsSection } from "@/components/participants/ParticipantsSection";
-import { UnifiedAvailabilityTimeline } from "@/components/availability/UnifiedAvailabilityTimeline";
-import { ConflictSummary } from "@/components/availability/ConflictSummary";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import {
   startOfWeek,
@@ -25,7 +22,6 @@ import {
   getMonthGridDays,
   formatDate,
   parseUTC,
-  inputToDate,
   toLocalString,
   toUTCString,
   toUTCDateISO,
@@ -37,8 +33,6 @@ import {
   NOTIFICATION_ENDPOINT,
   ROOM_ENDPOINT,
   USERS_ENDPOINT,
-  MINUTES_IN_DAY,
-  WEEKDAY_LABELS,
   ROLE_LABELS,
   WORKDAY_START_HOUR,
   WORKDAY_END_HOUR,
@@ -2245,7 +2239,7 @@ function MoveSeriesDialog({
 
 
 function UserAvailabilityView({
-  userId,
+  userId: _userId,
   user,
   availability,
   loading,
@@ -2257,7 +2251,7 @@ function UserAvailabilityView({
   addToCalendarError,
   addToCalendarLoading,
 }: {
-  userId: string;
+  userId: string; // Используется для идентификации, но не используется в теле функции
   user: UserProfile | null;
   availability: EventRecord[];
   loading: boolean;
