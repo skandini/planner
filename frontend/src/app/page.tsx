@@ -266,20 +266,6 @@ export default function Home() {
     loadRooms();
   }, [loadCalendars, loadRooms]);
 
-  // Автоматическое обновление событий каждые 30 секунд
-  useEffect(() => {
-    if (!accessToken) {
-      return;
-    }
-    loadEvents();
-    const interval = setInterval(() => {
-      if (accessToken) {
-        loadEvents();
-      }
-    }, 30000); // Обновляем каждые 30 секунд
-    return () => clearInterval(interval);
-  }, [loadEvents, accessToken, rangeStart, rangeEnd]);
-
 useEffect(() => {
   loadUsers();
 }, [loadUsers]);
