@@ -504,15 +504,20 @@ export function EventModal({
                 </p>
               </div>
               <div className="space-y-2">
-                {editingEvent.participants.map((participant) => (
-                  <ParticipantStatusItem
-                    key={participant.user_id}
-                    participant={participant}
-                    eventId={editingEvent.id}
-                    onUpdateStatus={onUpdateParticipantStatus}
-                    canManage={canManageEvents}
-                  />
-                ))}
+                {editingEvent.participants.map((participant) => {
+                  const isCurrentUser = participant.email === currentUserEmail;
+                  return (
+                    <ParticipantStatusItem
+                      key={participant.user_id}
+                      participant={participant}
+                      eventId={editingEvent.id}
+                      onUpdateStatus={onUpdateParticipantStatus}
+                      canManage={canManageEvents}
+                      isCurrentUser={isCurrentUser}
+                      currentUserEmail={currentUserEmail}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
