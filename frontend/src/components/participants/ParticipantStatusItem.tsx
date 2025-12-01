@@ -8,6 +8,8 @@ interface ParticipantStatusItemProps {
   eventId: string;
   onUpdateStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
   canManage: boolean;
+  isCurrentUser?: boolean;
+  currentUserEmail?: string;
 }
 
 export function ParticipantStatusItem({
@@ -15,6 +17,8 @@ export function ParticipantStatusItem({
   eventId,
   onUpdateStatus,
   canManage,
+  isCurrentUser = false,
+  currentUserEmail,
 }: ParticipantStatusItemProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const statusLabels: Record<string, string> = {
@@ -44,6 +48,7 @@ export function ParticipantStatusItem({
   };
 
   const currentStatus = participant.response_status || "needs_action";
+  const needsResponse = isCurrentUser && (currentStatus === "needs_action" || currentStatus === "pending" || !currentStatus);
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -53,7 +58,37 @@ export function ParticipantStatusItem({
         </p>
         <p className="text-xs text-slate-500 truncate">{participant.email}</p>
       </div>
-      {canManage ? (
+      {needsResponse && onUpdateStatus ? (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => handleStatusChange("accepted")}
+            disabled={isUpdating}
+            className="rounded-lg bg-lime-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-lime-400 disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Принять"
+          >
+            ✓ Принять
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStatusChange("tentative")}
+            disabled={isUpdating}
+            className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Под вопросом"
+          >
+            ? Под вопросом
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStatusChange("declined")}
+            disabled={isUpdating}
+            className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-400 disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Отклонить"
+          >
+            ✕ Отклонить
+          </button>
+        </div>
+      ) : canManage ? (
         <div className="flex items-center gap-2 flex-shrink-0">
           <select
             value={currentStatus}
