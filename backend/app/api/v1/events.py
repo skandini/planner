@@ -647,6 +647,7 @@ def update_participant_status(
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
 
+    old_status = participant.response_status
     participant.response_status = data.response_status
     session.add(participant)
     session.commit()
@@ -655,6 +656,19 @@ def update_participant_status(
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Уведомляем организатора календаря об изменении статуса участника
+    # (только если статус действительно изменился и это не сам организатор)
+    calendar = session.get(Calendar, event.calendar_id)
+    if calendar and calendar.owner_id and calendar.owner_id != user_id and old_status != data.response_status:
+        notify_participant_response(
+            session=session,
+            event=event,
+            participant=user,
+            response_status=data.response_status,
+            calendar_owner_id=calendar.owner_id,
+        )
+        session.commit()
 
     return EventParticipantRead(
         user_id=participant.user_id,
