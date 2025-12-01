@@ -305,6 +305,7 @@ def create_event(
     # Create notifications for participants
     if participant_ids:
         inviter_name = current_user.full_name or current_user.email
+        notified_count = 0
         for participant_id in participant_ids:
             if participant_id != current_user.id:  # Don't notify yourself
                 notify_event_invited(
@@ -313,6 +314,8 @@ def create_event(
                     event=event,
                     inviter_name=inviter_name,
                 )
+                notified_count += 1
+        print(f"[Event Creation] Created {notified_count} invitation notifications for event {event.id}")
         # Schedule reminders
         schedule_reminders_for_event(session=session, event=event)
 
@@ -523,6 +526,7 @@ def update_event(
                         event=event,
                         inviter_name=inviter_name,
                     )
+                    print(f"[Event Update] Created invitation notification for user {user_id} for event {event.id}")
             # Существующие участники остаются с их текущими статусами
         session.commit()
 

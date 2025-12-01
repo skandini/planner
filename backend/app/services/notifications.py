@@ -36,7 +36,7 @@ def notify_event_invited(
 ) -> None:
     """Notify user about event invitation."""
     inviter_text = f" от {inviter_name}" if inviter_name else ""
-    create_notification(
+    notification = create_notification(
         session=session,
         user_id=user_id,
         type="event_invited",
@@ -44,6 +44,7 @@ def notify_event_invited(
         message=f"Вас пригласили на встречу «{event.title}»{inviter_text}",
         event_id=event.id,
     )
+    print(f"[Notification] Created invitation notification {notification.id} for user {user_id} about event {event.id}")
 
 
 def notify_event_updated(
