@@ -1452,6 +1452,21 @@ useEffect(() => {
             editingEvent={editingEventId ? events.find((e) => e.id === editingEventId) : undefined}
             onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
               try {
+                // Оптимистичное обновление: сразу обновляем событие в списке
+                setEvents((prevEvents) => {
+                  return prevEvents.map((event) => {
+                    if (event.id === eventId) {
+                      return {
+                        ...event,
+                        participants: event.participants?.map((p) =>
+                          p.user_id === userId ? { ...p, response_status: status } : p
+                        ),
+                      };
+                    }
+                    return event;
+                  });
+                });
+
                 const response = await authFetch(
                   `${EVENT_ENDPOINT}${eventId}/participants/${userId}`,
                   {
@@ -1463,8 +1478,17 @@ useEffect(() => {
                 if (!response.ok) {
                   throw new Error("Не удалось обновить статус");
                 }
+                
+                // Обновляем данные с сервера для синхронизации
                 await loadEvents();
+                
+                // Обновляем уведомления, чтобы увидеть новые уведомления организатору
+                if (notificationsRefresh) {
+                  notificationsRefresh();
+                }
               } catch (err) {
+                // Откатываем оптимистичное обновление при ошибке
+                await loadEvents();
                 setEventFormError(
                   err instanceof Error ? err.message : "Не удалось обновить статус",
                 );
