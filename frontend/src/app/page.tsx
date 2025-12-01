@@ -1404,6 +1404,7 @@ useEffect(() => {
               loading={eventsLoading}
               accent={selectedCalendar.color}
               onEventClick={(event) => openEventModal(undefined, event)}
+              rooms={rooms}
             />
               </div>
           )}
