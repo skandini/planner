@@ -39,6 +39,7 @@ interface EventModalProps {
   } | null;
   editingEvent?: EventRecord;
   onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
+  currentUserEmail?: string;
 }
 
 export function EventModal({
@@ -66,6 +67,7 @@ export function EventModal({
   recurrenceInfo,
   editingEvent,
   onUpdateParticipantStatus,
+  currentUserEmail,
 }: EventModalProps) {
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);

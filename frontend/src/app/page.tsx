@@ -1449,7 +1449,7 @@ useEffect(() => {
             onRefreshMembers={loadCalendarMembers}
             recurrenceInfo={editingRecurrenceInfo}
             editingEvent={editingEventId ? events.find((e) => e.id === editingEventId) : undefined}
-            onUpdateParticipantStatus={canManageEvents ? async (eventId: string, userId: string, status: string) => {
+            onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
               try {
                 const response = await authFetch(
                   `${EVENT_ENDPOINT}${eventId}/participants/${userId}`,
@@ -1468,7 +1468,7 @@ useEffect(() => {
                   err instanceof Error ? err.message : "Не удалось обновить статус",
                 );
               }
-            } : undefined}
+            }}
           />
         )}
         {moveDialog && (
