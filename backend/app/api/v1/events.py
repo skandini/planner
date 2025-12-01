@@ -127,7 +127,7 @@ def _attach_participants(
 ) -> None:
     for user_id in participant_ids:
         participant = EventParticipant(
-            event_id=event_id, user_id=user_id, response_status="pending"
+            event_id=event_id, user_id=user_id, response_status="needs_action"
         )
         session.add(participant)
 
@@ -502,9 +502,18 @@ def update_event(
         if new_participant_ids:
             for user_id in new_participant_ids:
                 participant = EventParticipant(
-                    event_id=event.id, user_id=user_id, response_status="pending"
+                    event_id=event.id, user_id=user_id, response_status="needs_action"
                 )
                 session.add(participant)
+                # Создаем уведомления для новых участников
+                if user_id != current_user.id:
+                    inviter_name = current_user.full_name or current_user.email
+                    notify_event_invited(
+                        session=session,
+                        user_id=user_id,
+                        event=event,
+                        inviter_name=inviter_name,
+                    )
         session.commit()
 
     session.refresh(event)

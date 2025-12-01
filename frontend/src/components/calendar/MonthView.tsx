@@ -246,28 +246,49 @@ export function MonthView({
               <p className="mb-1 text-xs font-semibold text-slate-700">
                 Участники ({hoveredEvent.event.participants.length}):
               </p>
-              <div className="space-y-1">
-                {hoveredEvent.event.participants.slice(0, 3).map((participant) => (
-                  <div key={participant.user_id} className="flex items-center gap-2">
-                    <span className="text-xs text-slate-600">
-                      {participant.full_name || participant.email}
-                    </span>
-                    <span className="text-[0.65rem] text-slate-400">
-                      {participant.response_status === "accepted"
-                        ? "✓"
-                        : participant.response_status === "declined"
-                          ? "✕"
-                          : participant.response_status === "tentative"
-                            ? "?"
-                            : "○"}
-                    </span>
-                  </div>
-                ))}
-                {hoveredEvent.event.participants.length > 3 && (
-                  <p className="text-[0.65rem] text-slate-400">
-                    + {hoveredEvent.event.participants.length - 3} ещё
-                  </p>
-                )}
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                {hoveredEvent.event.participants.map((participant) => {
+                  const statusLabels: Record<string, string> = {
+                    accepted: "Принял",
+                    declined: "Отклонил",
+                    tentative: "Возможно",
+                    pending: "Нет ответа",
+                    needs_action: "Нет ответа",
+                  };
+                  const statusColors: Record<string, string> = {
+                    accepted: "bg-lime-100 text-lime-700 border-lime-300",
+                    declined: "bg-red-100 text-red-700 border-red-300",
+                    tentative: "bg-amber-100 text-amber-700 border-amber-300",
+                    pending: "bg-slate-100 text-slate-600 border-slate-300",
+                    needs_action: "bg-slate-100 text-slate-600 border-slate-300",
+                  };
+                  const status = participant.response_status || "needs_action";
+                  
+                  return (
+                    <div
+                      key={participant.user_id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {participant.full_name || participant.email}
+                        </p>
+                        {participant.full_name && (
+                          <p className="text-[0.65rem] text-slate-500 truncate">
+                            {participant.email}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold flex-shrink-0 ${
+                          statusColors[status] || statusColors.needs_action
+                        }`}
+                      >
+                        {statusLabels[status] || statusLabels.needs_action}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
