@@ -496,16 +496,25 @@ def update_event(
         existing = session.exec(
             select(EventParticipant).where(EventParticipant.event_id == event_id)
         ).all()
+        existing_user_ids = {ep.user_id for ep in existing}
+        existing_participants_map = {ep.user_id: ep for ep in existing}
+        new_participant_ids_set = set(new_participant_ids)
+        
+        # Удаляем участников, которых больше нет в списке
         for ep in existing:
-            session.delete(ep)
-
-        if new_participant_ids:
-            for user_id in new_participant_ids:
+            if ep.user_id not in new_participant_ids_set:
+                session.delete(ep)
+        
+        # Добавляем новых участников и создаем уведомления
+        # Сохраняем статусы существующих участников
+        for user_id in new_participant_ids:
+            if user_id not in existing_user_ids:
+                # Новый участник - создаем с needs_action
                 participant = EventParticipant(
                     event_id=event.id, user_id=user_id, response_status="needs_action"
                 )
                 session.add(participant)
-                # Создаем уведомления для новых участников
+                # Создаем уведомления только для новых участников
                 if user_id != current_user.id:
                     inviter_name = current_user.full_name or current_user.email
                     notify_event_invited(
@@ -514,6 +523,7 @@ def update_event(
                         event=event,
                         inviter_name=inviter_name,
                     )
+            # Существующие участники остаются с их текущими статусами
         session.commit()
 
     session.refresh(event)
