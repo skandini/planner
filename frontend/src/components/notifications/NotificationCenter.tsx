@@ -63,17 +63,24 @@ export function NotificationCenter({
   };
 
   const formatDate = (dateString: string) => {
+    // Парсим дату как UTC, если она в формате ISO
     const date = new Date(dateString);
     const now = new Date();
+    
+    // Проверяем, что дата валидна
+    if (isNaN(date.getTime())) {
+      return "недавно";
+    }
+    
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return "только что";
-    if (diffMins < 60) return `${diffMins} мин назад`;
-    if (diffHours < 24) return `${diffHours} ч назад`;
-    if (diffDays < 7) return `${diffDays} дн назад`;
+    if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'минуту' : diffMins < 5 ? 'минуты' : 'минут'} назад`;
+    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'час' : diffHours < 5 ? 'часа' : 'часов'} назад`;
+    if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'день' : diffDays < 5 ? 'дня' : 'дней'} назад`;
     return new Intl.DateTimeFormat("ru-RU", {
       day: "numeric",
       month: "short",

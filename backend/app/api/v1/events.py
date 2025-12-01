@@ -23,6 +23,7 @@ from app.services.notifications import (
     notify_event_cancelled,
     notify_event_invited,
     notify_event_updated,
+    notify_participant_response,
     schedule_reminders_for_event,
 )
 from app.services.permissions import calendar_access_condition, ensure_calendar_access
