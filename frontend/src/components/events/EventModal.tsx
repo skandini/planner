@@ -485,7 +485,7 @@ export function EventModal({
             </div>
           </form>
 
-          {isEditing && editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
+          {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-4">
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
@@ -494,6 +494,12 @@ export function EventModal({
                 <h3 className="mt-1 text-lg font-semibold text-slate-900">
                   Ответы на приглашение
                 </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  {editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли,{" "}
+                  {editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили,{" "}
+                  {editingEvent.participants.filter((p) => p.response_status === "tentative").length} под вопросом,{" "}
+                  {editingEvent.participants.filter((p) => p.response_status === "needs_action" || !p.response_status || p.response_status === "pending").length} не ответили
+                </p>
               </div>
               <div className="space-y-2">
                 {editingEvent.participants.map((participant) => (
