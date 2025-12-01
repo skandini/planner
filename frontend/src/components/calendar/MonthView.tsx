@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
+import type { Room } from "@/types/room.types";
 import { addDays, parseUTC } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
@@ -13,6 +14,7 @@ interface MonthViewProps {
   loading: boolean;
   accent: string;
   onEventClick: (event: EventRecord) => void;
+  rooms?: Room[];
 }
 
 export function MonthView({
@@ -23,6 +25,7 @@ export function MonthView({
   loading,
   accent,
   onEventClick,
+  rooms = [],
 }: MonthViewProps) {
   const currentMonth = selectedDate.getMonth();
   
@@ -129,7 +132,7 @@ export function MonthView({
   }, [days, events]);
 
   return (
-    <div className="mt-6">
+    <div className="mt-6 relative">
       {loading && (
         <p className="mb-4 text-sm text-slate-400">Загружаем события…</p>
       )}
