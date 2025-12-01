@@ -72,6 +72,7 @@ export default function Home() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    refresh: notificationsRefresh,
   } = useNotifications();
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isMembersManagerOpen, setIsMembersManagerOpen] = useState(false);
@@ -264,6 +265,20 @@ export default function Home() {
     loadCalendars();
     loadRooms();
   }, [loadCalendars, loadRooms]);
+
+  // Автоматическое обновление событий каждые 30 секунд
+  useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+    loadEvents();
+    const interval = setInterval(() => {
+      if (accessToken) {
+        loadEvents();
+      }
+    }, 30000); // Обновляем каждые 30 секунд
+    return () => clearInterval(interval);
+  }, [loadEvents, accessToken, rangeStart, rangeEnd]);
 
 useEffect(() => {
   loadUsers();
