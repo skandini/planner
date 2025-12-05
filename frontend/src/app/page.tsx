@@ -323,6 +323,14 @@ useEffect(() => {
     if (calendars.length === 0) {
       setSelectedCalendarId(null);
     }
+    // Проверяем, что выбранный календарь все еще доступен
+    if (selectedCalendarId && calendars.length > 0) {
+      const calendarExists = calendars.some((c) => c.id === selectedCalendarId);
+      if (!calendarExists) {
+        // Если выбранный календарь больше не доступен, выбираем первый доступный
+        setSelectedCalendarId(calendars[0].id);
+      }
+    }
   }, [calendars, selectedCalendarId]);
 
   const selectedCalendar = calendars.find(
