@@ -356,22 +356,40 @@ def get_user_availability(
     # Доступность можно проверить для любого пользователя, если current_user имеет доступ к календарю
     # Это позволяет добавлять участников в события без добавления их в календарь
 
-    # Получаем события пользователя в указанном диапазоне
+    # Получаем все события пользователя в указанном диапазоне
+    # Включаем события, где пользователь является участником (через EventParticipant)
+    # И события из календарей, к которым у пользователя есть доступ
     from app.models import EventParticipant
+    from app.services.permissions import calendar_access_condition
 
+    # События, где пользователь является участником
+    participant_events_subquery = select(EventParticipant.event_id).where(
+        EventParticipant.user_id == user_id
+    )
+
+    # Календари, к которым у пользователя есть доступ
+    accessible_calendars_subquery = select(Calendar.id).where(
+        calendar_access_condition(user_id)
+    )
+
+    # Получаем события:
+    # 1. Где пользователь является участником (даже без доступа к календарю)
+    # 2. Из календарей, к которым у пользователя есть доступ
     stmt = (
-        sql_select(Event)
-        .join(EventParticipant, Event.id == EventParticipant.event_id)
+        select(Event)
         .where(
             and_(
-                EventParticipant.user_id == user_id,
+                or_(
+                    Event.id.in_(participant_events_subquery),
+                    Event.calendar_id.in_(accessible_calendars_subquery),
+                ),
                 Event.starts_at < to_date,
                 Event.ends_at > from_date,
             )
         )
         .order_by(Event.starts_at)
     )
-    events = session.exec(stmt).scalars().all()
+    events = session.exec(stmt).all()
 
     # Сериализуем события с участниками
     from app.api.v1.events import _serialize_event_with_participants
