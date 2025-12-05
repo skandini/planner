@@ -60,16 +60,22 @@ export function ParticipantsSection({
     if (readOnly) return;
     const alreadySelected = form.participant_ids.includes(userId);
     if (!alreadySelected) {
+      // Пытаемся добавить в календарь, если пользователь еще не участник
+      // Но не блокируем добавление в событие, если это не удалось
+      // Участники могут быть добавлены в события без членства в календаре
       try {
         await onEnsureMembership(userId);
         setMembershipError(null);
       } catch (err) {
+        // Не блокируем добавление в событие, если не удалось добавить в календарь
+        // Просто показываем предупреждение, но разрешаем продолжить
+        console.warn("Could not add user to calendar, but will add to event:", err);
         setMembershipError(
           err instanceof Error
-            ? err.message
-            : "Не удалось выдать доступ пользователю",
+            ? `Предупреждение: ${err.message}. Участник будет добавлен только в событие.`
+            : "Предупреждение: не удалось выдать доступ к календарю. Участник будет добавлен только в событие.",
         );
-        return;
+        // Продолжаем добавление в событие даже если не удалось добавить в календарь
       }
     }
     toggleParticipant(userId);

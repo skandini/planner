@@ -152,40 +152,12 @@ export function ResourcePanel({
       return;
     }
 
-    const missingAccess = selectedParticipantProfiles.filter(
-      (participant) => !membershipMap.has(participant.user_id),
-    );
-    if (missingAccess.length > 0) {
-      if (readOnly) {
-        setParticipantAvailabilityError(
-          "Некоторым участникам недоступен этот календарь",
-        );
-        return;
-      }
-      let cancelled = false;
-      (async () => {
-        try {
-          await Promise.all(
-            missingAccess.map((participant) =>
-              ensureMembership(participant.user_id),
-            ),
-          );
-        } catch (err) {
-          if (!cancelled) {
-            setParticipantAvailabilityError(
-              err instanceof Error
-                ? err.message
-                : "Не удалось выдать доступ участнику",
-            );
-          }
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (accessibleParticipants.length === 0) {
+    // Не требуем автоматического добавления в календарь
+    // Участники могут быть добавлены в события без членства в календаре
+    // Загружаем доступность для всех выбранных участников
+    // Если участник не в календаре, его доступность просто не будет показана
+    
+    if (selectedParticipantProfiles.length === 0) {
       setParticipantAvailability({});
       setParticipantAvailabilityError(null);
       setParticipantAvailabilityLoading(false);
@@ -197,8 +169,10 @@ export function ResourcePanel({
       setParticipantAvailabilityLoading(true);
       setParticipantAvailabilityError(null);
       try {
+        // Загружаем доступность для всех выбранных участников
+        // Backend вернет доступность, если пользователь имеет доступ к календарю
         const entries = await Promise.all(
-          accessibleParticipants.map(async (participant) => {
+          selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
               const response = await authFetch(url, { cache: "no-store" });
@@ -234,14 +208,10 @@ export function ResourcePanel({
       cancelled = true;
     };
   }, [
-    accessibleParticipants,
     authFetch,
-    ensureMembership,
     form.all_day,
     form.ends_at,
     form.starts_at,
-    membershipMap,
-    readOnly,
     selectedCalendarId,
     selectedParticipantProfiles,
   ]);

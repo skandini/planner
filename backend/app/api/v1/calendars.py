@@ -352,19 +352,9 @@ def get_user_availability(
 ) -> List[EventRead]:
     ensure_calendar_access(session, calendar_id, current_user)
 
-    # Проверяем, что пользователь является участником календаря
-    member = session.exec(
-        select(CalendarMember).where(
-            CalendarMember.calendar_id == calendar_id,
-            CalendarMember.user_id == user_id,
-        )
-    ).one_or_none()
-    calendar = session.get(Calendar, calendar_id)
-    if not member and calendar.owner_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User is not a member of this calendar",
-        )
+    # Не требуем, чтобы user_id был участником календаря
+    # Доступность можно проверить для любого пользователя, если current_user имеет доступ к календарю
+    # Это позволяет добавлять участников в события без добавления их в календарь
 
     # Получаем события пользователя в указанном диапазоне
     from app.models import EventParticipant
