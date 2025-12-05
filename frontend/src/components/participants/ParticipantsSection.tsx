@@ -58,25 +58,8 @@ export function ParticipantsSection({
 
   const handleToggle = async (userId: string) => {
     if (readOnly) return;
-    const alreadySelected = form.participant_ids.includes(userId);
-    if (!alreadySelected) {
-      // Пытаемся добавить в календарь, если пользователь еще не участник
-      // Но не блокируем добавление в событие, если это не удалось
-      // Участники могут быть добавлены в события без членства в календаре
-      const membership = membershipMap.get(userId);
-      if (!membership) {
-        // Пытаемся добавить в календарь только если пользователь не участник
-        try {
-          await onEnsureMembership(userId);
-          setMembershipError(null);
-        } catch (err) {
-          // Не блокируем добавление в событие, если не удалось добавить в календарь
-          // Просто логируем, но не показываем ошибку пользователю
-          console.warn("Could not add user to calendar, but will add to event:", err);
-          setMembershipError(null); // Не показываем ошибку, так как это не критично
-        }
-      }
-    }
+    // Просто добавляем/убираем участника из события
+    // Не требуется членство в календаре - участники могут быть добавлены в события напрямую
     toggleParticipant(userId);
   };
 

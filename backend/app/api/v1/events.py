@@ -169,11 +169,17 @@ def _ensure_no_conflicts(
             )
 
     if participant_ids:
+        # Проверяем конфликты участников во ВСЕХ календарях, а не только в текущем
+        # Участники могут быть в событиях разных календарей, и занятость единая
         participant_conflict = session.exec(
             select(Event, User)
             .join(EventParticipant, EventParticipant.event_id == Event.id)
             .join(User, User.id == EventParticipant.user_id)
-            .where(EventParticipant.user_id.in_(participant_ids), *filters)
+            .where(
+                EventParticipant.user_id.in_(participant_ids),
+                Event.starts_at < ends_at,
+                Event.ends_at > starts_at,
+            )
         ).first()
         if participant_conflict:
             conflict_event, conflict_user = participant_conflict
