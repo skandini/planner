@@ -859,12 +859,17 @@ useEffect(() => {
           await loadEvents();
         }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.detail ||
-            (editingEventId
-              ? "Не удалось обновить событие"
-              : "Не удалось создать событие"),
-        );
+        const errorMessage = errorData.detail || 
+          (editingEventId ? "Не удалось обновить событие" : "Не удалось создать событие");
+        
+        // Если ошибка доступа, проверяем, может ли пользователь работать с этим календарем
+        if (response.status === 403) {
+          // Перезагружаем календари, чтобы убедиться, что список актуален
+          await loadCalendars();
+          throw new Error("Нет доступа к календарю. Возможно, доступ был отозван.");
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const createdEvent: EventRecord = await response.json();

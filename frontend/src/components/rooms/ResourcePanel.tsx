@@ -177,11 +177,17 @@ export function ResourcePanel({
             try {
               const response = await authFetch(url, { cache: "no-store" });
               if (!response.ok) {
+                // Если ошибка доступа (403), просто возвращаем пустой список
+                // Это нормально, если пользователь не имеет доступа к календарю
+                if (response.status === 403 || response.status === 404) {
+                  return [participant.user_id, []] as const;
+                }
                 return [participant.user_id, []] as const;
               }
               const data: EventRecord[] = await response.json();
               return [participant.user_id, data] as const;
             } catch {
+              // Игнорируем ошибки при загрузке доступности
               return [participant.user_id, []] as const;
             }
           }),
