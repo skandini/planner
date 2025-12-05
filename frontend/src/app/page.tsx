@@ -562,8 +562,9 @@ useEffect(() => {
       if (!selectedCalendarId) {
         throw new Error("Сначала выберите календарь");
       }
-      if (selectedRole !== "owner") {
-        throw new Error("Только владелец календаря может добавлять участников");
+      // Editor и owner могут добавлять участников в календарь
+      if (selectedRole !== "owner" && selectedRole !== "editor") {
+        throw new Error("Только владелец или редактор календаря может добавлять участников");
       }
       const membershipMap = new Map<string, CalendarMember>();
       members.forEach((member) => membershipMap.set(member.user_id, member));
