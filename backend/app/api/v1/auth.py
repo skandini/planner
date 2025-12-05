@@ -47,6 +47,17 @@ def register_user(payload: UserCreate, session: SessionDep) -> User:
     session.add(user)
     session.commit()
     session.refresh(user)
+    
+    # Создаем личный календарь для нового пользователя
+    try:
+        from app.services.personal_calendar import ensure_personal_calendar
+        ensure_personal_calendar(session, user.id)
+    except Exception as e:
+        # Логируем ошибку, но не прерываем регистрацию
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Не удалось создать личный календарь для пользователя {user.id}: {e}")
+    
     return user
 
 

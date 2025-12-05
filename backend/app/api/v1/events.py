@@ -208,25 +208,39 @@ def list_events(
         default=None, alias="to", description="ISO timestamp filter end"
     ),
 ) -> List[EventRead]:
+    # Упрощенная логика: показываем события из личных календарей пользователя
+    # и события, где пользователь является участником
     if calendar_id:
-        ensure_calendar_access(session, calendar_id, current_user)
+        # Проверяем, что календарь существует и принадлежит пользователю
+        calendar = session.get(Calendar, calendar_id)
+        if not calendar:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Calendar not found",
+            )
+        if calendar.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access to calendar denied",
+            )
 
     filter_expr = _build_range_filter(
         calendar_id=calendar_id, starts_after=starts_after, ends_before=ends_before
     )
 
-    accessible_calendars_subquery = select(Calendar.id).where(
-        calendar_access_condition(current_user.id)
+    # Личные календари пользователя
+    personal_calendars_subquery = select(Calendar.id).where(
+        Calendar.owner_id == current_user.id
     )
 
-    # Также включаем события, где пользователь является участником, даже без доступа к календарю
+    # События, где пользователь является участником
     participant_events_subquery = select(EventParticipant.event_id).where(
         EventParticipant.user_id == current_user.id
     )
 
     statement = select(Event).where(
         or_(
-            Event.calendar_id.in_(accessible_calendars_subquery),
+            Event.calendar_id.in_(personal_calendars_subquery),
             Event.id.in_(participant_events_subquery)
         )
     )
@@ -248,9 +262,23 @@ def create_event(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> EventRead:
-    # Проверяем доступ к календарю (любая роль: viewer, editor, owner)
-    # Но для создания событий требуем минимум роль "viewer" (все роли могут создавать события)
-    ensure_calendar_access(session, payload.calendar_id, current_user)
+    # Упрощенная логика: проверяем только, что календарь существует
+    # Пользователь может создавать события в любом календаре, где он является владельцем
+    # Или приглашать участников в события без проверки доступа к календарю
+    calendar = session.get(Calendar, payload.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    
+    # Проверяем, что пользователь является владельцем календаря
+    # Это базовая проверка безопасности
+    if calendar.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only calendar owner can create events in this calendar",
+        )
 
     recurrence_rule = payload.recurrence_rule
     if recurrence_rule and not (recurrence_rule.count or recurrence_rule.until):
@@ -351,7 +379,18 @@ def get_event(
         
         # Проверяем доступ: либо доступ к календарю, либо участник события
         try:
-            ensure_calendar_access(session, event.calendar_id, current_user)
+            # Проверяем, что пользователь является владельцем календаря
+    calendar = session.get(Calendar, event.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    if calendar.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only calendar owner can delete events",
+        )
         except HTTPException:
             # Если нет доступа к календарю, проверяем, является ли пользователь участником события
             participant = session.exec(
@@ -395,7 +434,18 @@ def update_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    ensure_calendar_access(session, event.calendar_id, current_user)
+    # Проверяем, что пользователь является владельцем календаря
+    calendar = session.get(Calendar, event.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    if calendar.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only calendar owner can delete events",
+        )
 
     update_payload = payload.model_dump(exclude_unset=True)
     if "recurrence_rule" in update_payload:
@@ -563,7 +613,18 @@ def delete_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    ensure_calendar_access(session, event.calendar_id, current_user)
+    # Проверяем, что пользователь является владельцем календаря
+    calendar = session.get(Calendar, event.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    if calendar.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only calendar owner can delete events",
+        )
 
     # Get participants before deletion
     participant_ids = _get_event_participant_ids(session, event_id)
@@ -630,7 +691,18 @@ def update_participant_status(
     # Проверяем, что пользователь обновляет свой собственный статус
     if user_id != current_user.id:
         # Если обновляет чужой статус, нужен доступ к календарю
-        ensure_calendar_access(session, event.calendar_id, current_user)
+        # Проверяем, что пользователь является владельцем календаря
+    calendar = session.get(Calendar, event.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    if calendar.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only calendar owner can delete events",
+        )
     else:
         # Если обновляет свой статус, проверяем, что он является участником
         participant_check = session.exec(

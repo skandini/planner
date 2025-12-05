@@ -49,28 +49,19 @@ def list_calendars(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> List[CalendarReadWithRole]:
+    # Упрощенная логика: показываем только личные календари пользователя
+    # Каждый пользователь видит только свой личный календарь
     statement = (
         select(Calendar)
-        .where(calendar_access_condition(current_user.id))
+        .where(Calendar.owner_id == current_user.id)
         .order_by(Calendar.created_at.desc())
     )
     calendars = session.exec(statement).all()
 
-    membership_map = {
-        member.calendar_id: member.role
-        for member in session.exec(
-            select(CalendarMember).where(CalendarMember.user_id == current_user.id)
-        )
-    }
-
     result: List[CalendarReadWithRole] = []
     for calendar in calendars:
-        role = (
-            "owner"
-            if calendar.owner_id == current_user.id
-            else membership_map.get(calendar.id)
-        )
-        result.append(_serialize_calendar_with_role(calendar, role=role))
+        # Все календари, которые видит пользователь, являются его собственными
+        result.append(_serialize_calendar_with_role(calendar, role="owner"))
 
     return result
 
@@ -350,39 +341,33 @@ def get_user_availability(
     from_date: datetime = Query(..., alias="from", description="Start date (ISO format)"),
     to_date: datetime = Query(..., alias="to", description="End date (ISO format)"),
 ) -> List[EventRead]:
-    ensure_calendar_access(session, calendar_id, current_user)
+    # Упрощенная логика: проверяем только, что календарь существует
+    # Любой пользователь может проверить доступность любого другого пользователя
+    # Это позволяет приглашать участников без проверки доступа к календарю
+    calendar = session.get(Calendar, calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
 
-    # Не требуем, чтобы user_id был участником календаря
-    # Доступность можно проверить для любого пользователя, если current_user имеет доступ к календарю
-    # Это позволяет добавлять участников в события без добавления их в календарь
-
-    # Получаем все события пользователя в указанном диапазоне
+    # Получаем ВСЕ события пользователя в указанном диапазоне
     # Включаем события, где пользователь является участником (через EventParticipant)
-    # И события из календарей, к которым у пользователя есть доступ
+    # Это единая занятость для всех календарей
     from app.models import EventParticipant
-    from app.services.permissions import calendar_access_condition
 
     # События, где пользователь является участником
     participant_events_subquery = select(EventParticipant.event_id).where(
         EventParticipant.user_id == user_id
     )
 
-    # Календари, к которым у пользователя есть доступ
-    accessible_calendars_subquery = select(Calendar.id).where(
-        calendar_access_condition(user_id)
-    )
-
-    # Получаем события:
-    # 1. Где пользователь является участником (даже без доступа к календарю)
-    # 2. Из календарей, к которым у пользователя есть доступ
+    # Получаем все события, где пользователь является участником
+    # Это дает единую занятость независимо от календаря
     stmt = (
         select(Event)
         .where(
             and_(
-                or_(
-                    Event.id.in_(participant_events_subquery),
-                    Event.calendar_id.in_(accessible_calendars_subquery),
-                ),
+                Event.id.in_(participant_events_subquery),
                 Event.starts_at < to_date,
                 Event.ends_at > from_date,
             )
