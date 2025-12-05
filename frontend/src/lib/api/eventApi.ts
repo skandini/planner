@@ -175,7 +175,16 @@ export const eventApi = {
       },
     );
     if (!response.ok) {
-      throw new Error("Не удалось обновить статус участника");
+      let errorMessage = "Не удалось обновить статус участника";
+      try {
+        const errorData = await response.json();
+        if (errorData?.detail) {
+          errorMessage = errorData.detail;
+        }
+      } catch {
+        // Игнорируем ошибку парсинга
+      }
+      throw new Error(errorMessage);
     }
   },
 };

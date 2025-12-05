@@ -593,6 +593,7 @@ def update_participant_status(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> EventRead:
+    # Упрощенная логика: проверяем только, что пользователь обновляет свой собственный статус
     if current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -606,6 +607,8 @@ def update_participant_status(
             detail="Event not found",
         )
 
+    # Проверяем, является ли пользователь участником события
+    # Не требуем доступа к календарю - достаточно быть участником события
     participant = session.exec(
         select(EventParticipant).where(
             EventParticipant.event_id == event_id,
@@ -616,7 +619,7 @@ def update_participant_status(
     if not participant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Participant not found",
+            detail="Participant not found. You must be invited to the event first.",
         )
 
     old_status = participant.response_status

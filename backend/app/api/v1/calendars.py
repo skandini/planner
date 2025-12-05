@@ -352,7 +352,9 @@ def get_user_availability(
         )
 
     # Получаем ВСЕ события пользователя в указанном диапазоне
-    # Включаем события, где пользователь является участником (через EventParticipant)
+    # Включаем:
+    # 1. События, где пользователь является участником (через EventParticipant)
+    # 2. События из личных календарей пользователя
     # Это единая занятость для всех календарей
     from app.models import EventParticipant
 
@@ -361,13 +363,23 @@ def get_user_availability(
         EventParticipant.user_id == user_id
     )
 
-    # Получаем все события, где пользователь является участником
-    # Это дает единую занятость независимо от календаря
+    # Личные календари пользователя
+    personal_calendars_subquery = select(Calendar.id).where(
+        Calendar.owner_id == user_id
+    )
+
+    # Получаем все события:
+    # 1. Где пользователь является участником
+    # 2. Из личных календарей пользователя
+    # Это дает полную занятость независимо от календаря
     stmt = (
         select(Event)
         .where(
             and_(
-                Event.id.in_(participant_events_subquery),
+                or_(
+                    Event.id.in_(participant_events_subquery),
+                    Event.calendar_id.in_(personal_calendars_subquery),
+                ),
                 Event.starts_at < to_date,
                 Event.ends_at > from_date,
             )
