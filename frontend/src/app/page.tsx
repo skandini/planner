@@ -2,7 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+// Утилита для debounce
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  return function executedFunction(...args: Parameters<T>) {
+    const later = () => {
+      timeout = null;
+      func(...args);
+    };
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 import { useAuth } from "@/context/AuthContext";
 import type { Calendar, CalendarMember, CalendarDraft, CalendarRole } from "@/types/calendar.types";
@@ -391,6 +407,36 @@ useEffect(() => {
     }
   }, [selectedCalendarId, rangeStart, rangeEnd, accessToken, authFetch]);
 
+  // Debounced refresh для событий при получении уведомлений
+  const debouncedLoadEventsRef = useRef<NodeJS.Timeout | null>(null);
+  const debouncedLoadEvents = useCallback(() => {
+    if (debouncedLoadEventsRef.current) {
+      clearTimeout(debouncedLoadEventsRef.current);
+    }
+    debouncedLoadEventsRef.current = setTimeout(() => {
+      if (accessToken) {
+        loadEvents();
+      }
+    }, 800); // 800ms задержка для группировки множественных обновлений
+  }, [accessToken, loadEvents]);
+
+  // Отслеживаем уведомления о событиях и обновляем календарь
+  useEffect(() => {
+    if (!accessToken || !notifications.length) {
+      return;
+    }
+    
+    // Проверяем, есть ли новые уведомления о событиях
+    const eventNotifications = notifications.filter(
+      (n) => n.type === "event_invited" || n.type === "event_updated" || n.type === "event_cancelled"
+    );
+    
+    if (eventNotifications.length > 0) {
+      // Debounced refresh - обновляем события через 800ms после получения уведомления
+      debouncedLoadEvents();
+    }
+  }, [notifications, debouncedLoadEvents, accessToken]);
+
   // Polling для событий - надежный механизм для 300+ пользователей
   useEffect(() => {
     if (!accessToken) {
@@ -401,13 +447,20 @@ useEffect(() => {
     loadEvents();
     
     // Polling каждые 12 секунд - оптимально для 300 пользователей
+    // Это обеспечивает быструю синхронизацию без перегрузки сервера
+    // При 300 пользователях: 300 запросов / 12 сек = 25 запросов/сек (вполне приемлемо)
     const interval = setInterval(() => {
       if (accessToken) {
         loadEvents();
       }
-    }, 12000); // 12 секунд
+    }, 12000); // 12 секунд - оптимальный баланс между скоростью и нагрузкой
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (debouncedLoadEventsRef.current) {
+        clearTimeout(debouncedLoadEventsRef.current);
+      }
+    };
   }, [accessToken, loadEvents]);
 
 
