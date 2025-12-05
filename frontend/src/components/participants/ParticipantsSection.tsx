@@ -63,19 +63,18 @@ export function ParticipantsSection({
       // Пытаемся добавить в календарь, если пользователь еще не участник
       // Но не блокируем добавление в событие, если это не удалось
       // Участники могут быть добавлены в события без членства в календаре
-      try {
-        await onEnsureMembership(userId);
-        setMembershipError(null);
-      } catch (err) {
-        // Не блокируем добавление в событие, если не удалось добавить в календарь
-        // Просто показываем предупреждение, но разрешаем продолжить
-        console.warn("Could not add user to calendar, but will add to event:", err);
-        setMembershipError(
-          err instanceof Error
-            ? `Предупреждение: ${err.message}. Участник будет добавлен только в событие.`
-            : "Предупреждение: не удалось выдать доступ к календарю. Участник будет добавлен только в событие.",
-        );
-        // Продолжаем добавление в событие даже если не удалось добавить в календарь
+      const membership = membershipMap.get(userId);
+      if (!membership) {
+        // Пытаемся добавить в календарь только если пользователь не участник
+        try {
+          await onEnsureMembership(userId);
+          setMembershipError(null);
+        } catch (err) {
+          // Не блокируем добавление в событие, если не удалось добавить в календарь
+          // Просто логируем, но не показываем ошибку пользователю
+          console.warn("Could not add user to calendar, but will add to event:", err);
+          setMembershipError(null); // Не показываем ошибку, так как это не критично
+        }
       }
     }
     toggleParticipant(userId);

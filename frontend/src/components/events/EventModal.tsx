@@ -148,23 +148,33 @@ export function EventModal({
     authFetch(url, { cache: "no-store" })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Не удалось загрузить конфликты");
+          // Если ошибка доступа, просто возвращаем пустой список конфликтов
+          if (response.status === 403 || response.status === 404) {
+            console.warn("Cannot load conflicts, returning empty list");
+            return [] as ConflictEntry[];
+          }
+          // Для других ошибок пытаемся получить детали
+          return response.json().then((data) => {
+            throw new Error(data.detail || "Не удалось загрузить конфликты");
+          }).catch(() => {
+            throw new Error("Не удалось загрузить конфликты");
+          });
         }
         return response.json() as Promise<ConflictEntry[]>;
       })
       .then((data) => {
         if (!cancelled) {
           setConflicts(data);
+          setConflictsError(null);
         }
       })
       .catch((error) => {
         if (!cancelled) {
           setConflicts([]);
-          setConflictsError(
-            error instanceof Error
-              ? error.message
-              : "Не удалось загрузить конфликты",
-          );
+          // Не показываем ошибку, если это просто проблема доступа
+          // Конфликты - это дополнительная информация, не критичная для создания события
+          console.warn("Failed to load conflicts:", error);
+          setConflictsError(null); // Не показываем ошибку пользователю
         }
       })
       .finally(() => {
