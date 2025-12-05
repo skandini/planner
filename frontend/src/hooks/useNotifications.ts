@@ -46,12 +46,13 @@ export function useNotifications() {
     }
     loadNotifications();
     loadUnreadCount();
+    // Polling каждые 15 секунд - оптимально для 300 пользователей
     const interval = setInterval(() => {
       if (accessToken) {
         loadNotifications();
         loadUnreadCount();
       }
-    }, 30000);
+    }, 15000); // 15 секунд вместо 30
     return () => clearInterval(interval);
   }, [loadNotifications, loadUnreadCount, accessToken]);
 

@@ -391,9 +391,24 @@ useEffect(() => {
     }
   }, [selectedCalendarId, rangeStart, rangeEnd, accessToken, authFetch]);
 
+  // Polling для событий - надежный механизм для 300+ пользователей
   useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+    
+    // Загружаем события сразу
     loadEvents();
-  }, [loadEvents]);
+    
+    // Polling каждые 12 секунд - оптимально для 300 пользователей
+    const interval = setInterval(() => {
+      if (accessToken) {
+        loadEvents();
+      }
+    }, 12000); // 12 секунд
+    
+    return () => clearInterval(interval);
+  }, [accessToken, loadEvents]);
 
 
   const loadCalendarMembers = useCallback(async () => {
@@ -707,6 +722,61 @@ useEffect(() => {
         : EVENT_ENDPOINT;
       const method = editingEventId ? "PUT" : "POST";
 
+      // Оптимистичное обновление - сразу добавляем/обновляем событие в UI
+      let optimisticEvent: EventRecord | null = null;
+      if (!editingEventId) {
+        // Создание нового события - создаем временный объект для оптимистичного обновления
+        const tempId = `temp-${Date.now()}`;
+        optimisticEvent = {
+          id: tempId,
+          title: payload.title as string,
+          description: (payload.description as string) || "",
+          location: (payload.location as string) || "",
+          starts_at: payload.starts_at as string,
+          ends_at: payload.ends_at as string,
+          all_day: (payload.all_day as boolean) || false,
+          calendar_id: payload.calendar_id as string,
+          room_id: (payload.room_id as string) || null,
+          recurrence_rule: payload.recurrence_rule || null,
+          recurrence_parent_id: null,
+          participants: (payload.participant_ids as string[] | null)?.map((id) => ({
+            user_id: id,
+            email: users.find((u) => u.id === id)?.email || "",
+            full_name: users.find((u) => u.id === id)?.full_name || null,
+            response_status: "needs_action" as const,
+          })) || [],
+        } as EventRecord;
+        
+        // Добавляем событие в список оптимистично
+        setEvents((prev) => {
+          // Проверяем, нет ли уже такого события
+          if (prev.some((e) => e.id === optimisticEvent!.id)) {
+            return prev;
+          }
+          return [...prev, optimisticEvent!];
+        });
+      } else {
+        // Обновление существующего события - оптимистично обновляем
+        setEvents((prev) =>
+          prev.map((e) => {
+            if (e.id === editingEventId) {
+              return {
+                ...e,
+                title: payload.title as string,
+                description: (payload.description as string) || "",
+                location: (payload.location as string) || "",
+                starts_at: payload.starts_at as string,
+                ends_at: payload.ends_at as string,
+                all_day: (payload.all_day as boolean) || false,
+                room_id: (payload.room_id as string) || null,
+                recurrence_rule: payload.recurrence_rule || null,
+              };
+            }
+            return e;
+          }),
+        );
+      }
+
       const response = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -714,6 +784,13 @@ useEffect(() => {
       });
 
       if (!response.ok) {
+        // Откатываем оптимистичное обновление при ошибке
+        if (optimisticEvent) {
+          setEvents((prev) => prev.filter((e) => e.id !== optimisticEvent!.id));
+        } else {
+          // Перезагружаем события для отката изменений
+          await loadEvents();
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.detail ||
@@ -723,11 +800,25 @@ useEffect(() => {
         );
       }
 
+      const createdEvent: EventRecord = await response.json();
+      
+      // Заменяем оптимистичное событие на реальное
+      if (optimisticEvent) {
+        setEvents((prev) =>
+          prev.map((e) => (e.id === optimisticEvent!.id ? createdEvent : e)),
+        );
+      }
+
       setEventForm(DEFAULT_EVENT_FORM);
       setEditingEventId(null);
       setEditingRecurrenceInfo(null);
       setIsEventModalOpen(false);
-      await loadEvents();
+      
+      // Перезагружаем события для синхронизации (на случай, если были изменения на сервере)
+      // Небольшая задержка, чтобы дать серверу время обработать все изменения
+      setTimeout(() => {
+        loadEvents();
+      }, 500);
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",
