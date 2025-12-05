@@ -560,8 +560,12 @@ export function WeekView({
                         const currentParticipant = event.participants?.find(
                           (p) => p.email === currentUserEmail
                         );
+                        // Показываем кнопки только если статус needs_action, pending или null
+                        // НЕ показываем если уже accepted, declined или tentative
                         const needsAction = currentParticipant && 
-                          (currentParticipant.response_status === "needs_action" || !currentParticipant.response_status);
+                          (currentParticipant.response_status === "needs_action" || 
+                           currentParticipant.response_status === "pending" ||
+                           !currentParticipant.response_status);
                         if (!needsAction) return null;
                         return (
                           <div className="mt-1 flex gap-1" onClick={(e) => e.stopPropagation()}>

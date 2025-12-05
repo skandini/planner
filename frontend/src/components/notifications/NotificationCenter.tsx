@@ -139,10 +139,15 @@ export function NotificationCenter({
     setUpdatingStatus((prev) => new Set(prev).add(key));
     try {
       await onUpdateParticipantStatus(eventId, status);
-      // Автоматически отмечаем уведомление как прочитанное после ответа
+      // Автоматически удаляем уведомление после ответа на приглашение
       const notification = notifications.find((n) => n.event_id === eventId && n.type === "event_invited");
-      if (notification && !notification.is_read) {
-        await onMarkAsRead(notification.id);
+      if (notification) {
+        // Сначала отмечаем как прочитанное (если еще не прочитано)
+        if (!notification.is_read) {
+          await onMarkAsRead(notification.id);
+        }
+        // Затем удаляем уведомление, так как пользователь уже ответил
+        await onDelete(notification.id);
       }
     } catch (err) {
       console.error("Failed to update participant status:", err);
