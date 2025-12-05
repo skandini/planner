@@ -478,17 +478,30 @@ useEffect(() => {
         { cache: "no-store" },
       );
       if (!response.ok) {
+        // Если ошибка доступа (403), просто возвращаем пустой список
+        // Это нормально, если пользователь не имеет доступа к списку участников
+        if (response.status === 403 || response.status === 404) {
+          console.warn("User doesn't have access to calendar members list, skipping");
+          setMembers([]);
+          return;
+        }
         throw new Error("Не удалось загрузить участников");
       }
       const data: CalendarMember[] = await response.json();
       setMembers(data);
     } catch (err) {
       setMembers([]);
-      setMembersError(
-        err instanceof Error
-          ? err.message
-          : "Ошибка загрузки списка участников",
-      );
+      // Не показываем ошибку, если это проблема доступа
+      if (err instanceof Error && err.message.includes("403")) {
+        console.warn("User doesn't have access to calendar members list, skipping");
+        setMembersError(null);
+      } else {
+        setMembersError(
+          err instanceof Error
+            ? err.message
+            : "Ошибка загрузки списка участников",
+        );
+      }
     } finally {
       setMembersLoading(false);
     }
