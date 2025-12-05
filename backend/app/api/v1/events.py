@@ -26,7 +26,6 @@ from app.services.notifications import (
     notify_participant_response,
     schedule_reminders_for_event,
 )
-from app.services.permissions import calendar_access_condition, ensure_calendar_access
 
 router = APIRouter()
 
@@ -62,7 +61,7 @@ def _load_event_participants(
             user_id=p.user_id,
             email=u.email,
             full_name=u.full_name,
-            response_status=p.response_status,
+            response_status=p.response_status
         )
         for p, u in rows
     ]
@@ -90,31 +89,27 @@ def _add_months(base: datetime, months: int) -> datetime:
 def _advance_recurrence(start: datetime, rule: RecurrenceRule) -> datetime:
     if rule.frequency == "daily":
         return start + timedelta(days=rule.interval)
-    if rule.frequency == "weekly":
+    elif rule.frequency == "weekly":
         return start + timedelta(weeks=rule.interval)
-    if rule.frequency == "monthly":
+    elif rule.frequency == "monthly":
         return _add_months(start, rule.interval)
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Поддерживаются только daily/weekly/monthly повторения",
-    )
+    elif rule.frequency == "yearly":
+        return _add_months(start, rule.interval * 12)
+    return start
 
 
 def _generate_recurrence_starts(
-    start: datetime, rule: RecurrenceRule
+    base_start: datetime, rule: RecurrenceRule
 ) -> List[datetime]:
     additional: List[datetime] = []
-    max_extra = (
-        max(rule.count - 1, 0) if rule.count is not None else MAX_RECURRENCE_OCCURRENCES
-    )
-    max_extra = min(max_extra, MAX_RECURRENCE_OCCURRENCES)
-
-    current = start.replace(tzinfo=None) if start.tzinfo else start
+    current = base_start
     until = rule.until.replace(tzinfo=None) if rule.until else None
 
-    while len(additional) < max_extra:
+    while len(additional) < MAX_RECURRENCE_OCCURRENCES:
         current = _advance_recurrence(current, rule)
         if until and current > until:
+            break
+        if rule.count and len(additional) >= rule.count - 1:
             break
         additional.append(current)
         if not rule.count and until is None and len(additional) >= MAX_RECURRENCE_OCCURRENCES:
@@ -251,6 +246,48 @@ def list_events(
     return [_serialize_event_with_participants(session, event) for event in events]
 
 
+@router.get("/{event_id}", response_model=EventRead, summary="Get event by id")
+def get_event(
+    event_id: UUID,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> EventRead:
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    
+    # Упрощенная логика: проверяем, является ли пользователь владельцем календаря или участником события
+    calendar = session.get(Calendar, event.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    
+    # Проверяем, является ли пользователь владельцем календаря
+    is_owner = calendar.owner_id == current_user.id
+    
+    # Проверяем, является ли пользователь участником события
+    participant = session.exec(
+        select(EventParticipant).where(
+            EventParticipant.event_id == event_id,
+            EventParticipant.user_id == current_user.id,
+        )
+    ).one_or_none()
+    is_participant = participant is not None
+    
+    if not is_owner and not is_participant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to event denied",
+        )
+
+    return _serialize_event_with_participants(session, event)
+
+
 @router.post(
     "/",
     response_model=EventRead,
@@ -356,67 +393,16 @@ def create_event(
                     inviter_name=inviter_name,
                 )
                 notified_count += 1
-        print(f"[Event Creation] Created {notified_count} invitation notifications for event {event.id}")
-        # Schedule reminders
-        schedule_reminders_for_event(session=session, event=event)
+
+    # Schedule reminders
+    schedule_reminders_for_event(session, event)
 
     session.commit()
     session.refresh(event)
 
-    return _serialize_event_with_participants(session, event)
+    serialized_event = _serialize_event_with_participants(session, event)
 
-
-@router.get("/{event_id}", response_model=EventRead, summary="Get event by id")
-def get_event(
-    event_id: UUID,
-    session: SessionDep,
-    current_user: User = Depends(get_current_user),
-) -> EventRead:
-    try:
-        event = session.get(Event, event_id)
-        if not event:
-            raise HTTPException(status_code=404, detail="Event not found")
-        
-        # Проверяем доступ: либо доступ к календарю, либо участник события
-        try:
-            # Проверяем, что пользователь является владельцем календаря
-    calendar = session.get(Calendar, event.calendar_id)
-    if not calendar:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Calendar not found",
-        )
-    if calendar.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only calendar owner can delete events",
-        )
-        except HTTPException:
-            # Если нет доступа к календарю, проверяем, является ли пользователь участником события
-            participant = session.exec(
-                select(EventParticipant).where(
-                    EventParticipant.event_id == event_id,
-                    EventParticipant.user_id == current_user.id,
-                )
-            ).one_or_none()
-            if not participant:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access to calendar denied"
-                )
-        
-        return _serialize_event_with_participants(session, event)
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        error_msg = f"Error getting event {event_id}: {str(e)}"
-        print(f"[ERROR] {error_msg}")
-        print(traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=error_msg
-        )
+    return serialized_event
 
 
 @router.put("/{event_id}", response_model=EventRead, summary="Update event")
@@ -444,20 +430,8 @@ def update_event(
     if calendar.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only calendar owner can delete events",
+            detail="Only calendar owner can update events",
         )
-
-    update_payload = payload.model_dump(exclude_unset=True)
-    if "recurrence_rule" in update_payload:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Редактирование повторяющихся событий пока не поддерживается",
-        )
-
-    if scope == "series" and not (
-        event.recurrence_parent_id or event.recurrence_rule
-    ):
-        scope = "single"
 
     if scope == "series":
         if not payload.starts_at:
@@ -523,6 +497,7 @@ def update_event(
     new_ends_at = data.get("ends_at", event.ends_at)
     new_room_id = data.get("room_id", event.room_id)
 
+    update_payload = payload.model_dump(exclude_unset=True)
     if "participant_ids" in update_payload:
         new_participant_ids = payload.participant_ids or []
     else:
@@ -566,39 +541,111 @@ def update_event(
         existing_participants_map = {ep.user_id: ep for ep in existing}
         new_participant_ids_set = set(new_participant_ids)
         
-        # Удаляем участников, которых больше нет в списке
-        for ep in existing:
-            if ep.user_id not in new_participant_ids_set:
-                session.delete(ep)
-        
-        # Добавляем новых участников и создаем уведомления
-        # Сохраняем статусы существующих участников
-        for user_id in new_participant_ids:
-            if user_id not in existing_user_ids:
-                # Новый участник - создаем с needs_action
-                participant = EventParticipant(
-                    event_id=event.id, user_id=user_id, response_status="needs_action"
+        # Удаляем участников, которых больше нет
+        to_remove = existing_user_ids - new_participant_ids_set
+        if to_remove:
+            session.exec(
+                delete(EventParticipant).where(
+                    EventParticipant.event_id == event_id,
+                    EventParticipant.user_id.in_(to_remove),
                 )
-                session.add(participant)
-                # Создаем уведомления только для новых участников
-                if user_id != current_user.id:
-                    inviter_name = current_user.full_name or current_user.email
-                    notify_event_invited(
-                        session=session,
-                        user_id=user_id,
-                        event=event,
-                        inviter_name=inviter_name,
-                    )
-                    print(f"[Event Update] Created invitation notification for user {user_id} for event {event.id}")
-            # Существующие участники остаются с их текущими статусами
-        session.commit()
+            )
+        
+        # Добавляем новых участников
+        to_add = new_participant_ids_set - existing_user_ids
+        for user_id in to_add:
+            participant = EventParticipant(
+                event_id=event_id,
+                user_id=user_id,
+                response_status="needs_action",
+            )
+            session.add(participant)
+            # Отправляем уведомление новым участникам
+            if user_id != current_user.id:
+                notify_event_invited(
+                    session=session,
+                    user_id=user_id,
+                    event=event,
+                    inviter_name=updater_name,
+                )
+        
+        # Сохраняем статусы ответов существующих участников
+        for user_id in existing_user_ids & new_participant_ids_set:
+            existing_participant = existing_participants_map[user_id]
+            if existing_participant.response_status in ("accepted", "declined", "tentative"):
+                # Сохраняем статус ответа при обновлении события
+                pass
+
+    session.commit()
+    session.refresh(event)
+    return _serialize_event_with_participants(session, event)
+
+
+@router.patch(
+    "/{event_id}/participants/{user_id}/status",
+    response_model=EventRead,
+    summary="Update participant response status",
+)
+def update_participant_status(
+    event_id: UUID,
+    user_id: UUID,
+    payload: ParticipantStatusUpdate,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> EventRead:
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own participant status",
+        )
+
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+
+    participant = session.exec(
+        select(EventParticipant).where(
+            EventParticipant.event_id == event_id,
+            EventParticipant.user_id == user_id,
+        )
+    ).one_or_none()
+
+    if not participant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Participant not found",
+        )
+
+    old_status = participant.response_status
+    participant.response_status = payload.response_status
+    session.add(participant)
+    session.commit()
+
+    # Уведомляем организатора события об изменении статуса участника
+    calendar = session.get(Calendar, event.calendar_id)
+    if calendar and calendar.owner_id:
+        if calendar.owner_id != current_user.id:
+            notify_participant_response(
+                session=session,
+                user_id=calendar.owner_id,
+                event=event,
+                participant_name=current_user.full_name or current_user.email,
+                old_status=old_status,
+                new_status=payload.response_status,
+            )
 
     session.refresh(event)
     return _serialize_event_with_participants(session, event)
 
 
 @router.delete(
-    "/{event_id}", status_code=204, summary="Delete event", response_model=None
+    "/{event_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete event",
+    response_model=None,
 )
 def delete_event(
     event_id: UUID,
@@ -653,6 +700,8 @@ def delete_event(
                 )
             )
             session.exec(delete(Event).where(Event.id.in_(series_ids)))
+        else:
+            session.delete(event)
     else:
         # Notify participants
         for participant_id in participant_ids:
@@ -664,100 +713,8 @@ def delete_event(
                     canceller_name=canceller_name,
                 )
         session.exec(
-            delete(EventParticipant).where(EventParticipant.event_id == event.id)
+            delete(EventParticipant).where(EventParticipant.event_id == event_id)
         )
         session.delete(event)
 
     session.commit()
-
-
-@router.patch(
-    "/{event_id}/participants/{user_id}",
-    status_code=status.HTTP_200_OK,
-    response_model=EventParticipantRead,
-)
-def update_participant_status(
-    event_id: UUID,
-    user_id: UUID,
-    data: ParticipantStatusUpdate,
-    session: SessionDep,
-    current_user: User = Depends(get_current_user),
-) -> EventParticipantRead:
-    """Update participant response status."""
-    event = session.get(Event, event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="Event not found")
-
-    # Проверяем, что пользователь обновляет свой собственный статус
-    if user_id != current_user.id:
-        # Если обновляет чужой статус, нужен доступ к календарю
-        # Проверяем, что пользователь является владельцем календаря
-    calendar = session.get(Calendar, event.calendar_id)
-    if not calendar:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Calendar not found",
-        )
-    if calendar.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only calendar owner can delete events",
-        )
-    else:
-        # Если обновляет свой статус, проверяем, что он является участником
-        participant_check = session.exec(
-            select(EventParticipant).where(
-                and_(
-                    EventParticipant.event_id == event_id,
-                    EventParticipant.user_id == current_user.id,
-                )
-            )
-        ).first()
-        if not participant_check:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not a participant of this event"
-            )
-
-    participant = session.exec(
-        select(EventParticipant).where(
-            and_(
-                EventParticipant.event_id == event_id,
-                EventParticipant.user_id == user_id,
-            )
-        )
-    ).first()
-
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found")
-
-    old_status = participant.response_status
-    participant.response_status = data.response_status
-    session.add(participant)
-    session.commit()
-    session.refresh(participant)
-
-    user = session.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Уведомляем организатора календаря об изменении статуса участника
-    # (только если статус действительно изменился и это не сам организатор)
-    calendar = session.get(Calendar, event.calendar_id)
-    if calendar and calendar.owner_id and calendar.owner_id != user_id and old_status != data.response_status:
-        notify_participant_response(
-            session=session,
-            event=event,
-            participant=user,
-            response_status=data.response_status,
-            calendar_owner_id=calendar.owner_id,
-        )
-        session.commit()
-
-    return EventParticipantRead(
-        user_id=participant.user_id,
-        email=user.email,
-        full_name=user.full_name,
-        response_status=participant.response_status,
-    )
-
