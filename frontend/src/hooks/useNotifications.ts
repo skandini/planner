@@ -76,51 +76,40 @@ export function useNotifications() {
       return;
     }
     
-    let previousUnreadCount = 0;
-    let previousNotificationIds = new Set<string>();
-    
-    const checkAndPlaySound = () => {
-      // Проверяем, появились ли новые непрочитанные уведомления
-      if (unreadCount > previousUnreadCount) {
-        playNotificationSound();
-      }
-      
-      // Проверяем, появились ли новые уведомления по ID
-      const currentNotificationIds = new Set(notifications.map(n => n.id));
-      const newNotifications = notifications.filter(n => !previousNotificationIds.has(n.id) && !n.is_read);
-      if (newNotifications.length > 0) {
-        playNotificationSound();
-      }
-      
-      previousUnreadCount = unreadCount;
-      previousNotificationIds = currentNotificationIds;
-    };
-    
     loadNotifications();
     loadUnreadCount();
-    
-    // Проверяем новые уведомления после загрузки
-    const checkTimeout = setTimeout(() => {
-      checkAndPlaySound();
-    }, 500);
     
     // Polling каждые 15 секунд - оптимально для 300 пользователей
     const interval = setInterval(() => {
       if (accessToken) {
         loadNotifications();
         loadUnreadCount();
-        // Проверяем новые уведомления после обновления
-        setTimeout(() => {
-          checkAndPlaySound();
-        }, 500);
       }
-    }, 15000); // 15 секунд вместо 30
+    }, 15000); // 15 секунд
     
     return () => {
       clearInterval(interval);
-      clearTimeout(checkTimeout);
     };
-  }, [loadNotifications, loadUnreadCount, accessToken, notifications, unreadCount, playNotificationSound]);
+  }, [loadNotifications, loadUnreadCount, accessToken]);
+
+  // Отдельный useEffect для воспроизведения звука при новых уведомлениях
+  useEffect(() => {
+    if (!accessToken || notifications.length === 0) {
+      return;
+    }
+    
+    // Проверяем, есть ли новые непрочитанные уведомления
+    const newUnreadNotifications = notifications.filter(n => !n.is_read);
+    if (newUnreadNotifications.length > 0) {
+      // Воспроизводим звук только если есть новые непрочитанные уведомления
+      // Используем небольшой таймаут, чтобы избежать множественных воспроизведений
+      const soundTimeout = setTimeout(() => {
+        playNotificationSound();
+      }, 300);
+      
+      return () => clearTimeout(soundTimeout);
+    }
+  }, [notifications, accessToken, playNotificationSound]);
 
   const markAsRead = useCallback(
     async (notificationId: string) => {

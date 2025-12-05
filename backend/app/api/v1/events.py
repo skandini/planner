@@ -238,7 +238,8 @@ def create_event(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> EventRead:
-    ensure_calendar_access(session, payload.calendar_id, current_user)
+    # Требуем роль "editor" или "owner" для создания событий
+    ensure_calendar_access(session, payload.calendar_id, current_user, required_role="editor")
 
     recurrence_rule = payload.recurrence_rule
     if recurrence_rule and not (recurrence_rule.count or recurrence_rule.until):
