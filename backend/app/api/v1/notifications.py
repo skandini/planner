@@ -23,17 +23,37 @@ def list_notifications(
     limit: int = Query(default=50, ge=1, le=100, description="Maximum number of notifications"),
 ) -> List[NotificationRead]:
     """Get user's notifications."""
-    statement = select(Notification).where(
-        Notification.user_id == current_user.id,
-        Notification.is_deleted == False,  # Исключаем удаленные
-    )
-    
-    if unread_only:
-        statement = statement.where(Notification.is_read == False)
-    
-    statement = statement.order_by(Notification.created_at.desc()).limit(limit)
-    notifications = session.exec(statement).all()
-    return notifications
+    try:
+        statement = select(Notification).where(
+            Notification.user_id == current_user.id,
+            Notification.is_deleted == False,  # Исключаем удаленные
+        )
+        
+        if unread_only:
+            statement = statement.where(Notification.is_read == False)
+        
+        statement = statement.order_by(Notification.created_at.desc()).limit(limit)
+        notifications = session.exec(statement).all()
+        
+        # Убеждаемся, что все поля присутствуют
+        result = []
+        for notification in notifications:
+            if not hasattr(notification, 'is_deleted'):
+                notification.is_deleted = False
+            if not hasattr(notification, 'deleted_at'):
+                notification.deleted_at = None
+            result.append(notification)
+        
+        return result
+    except Exception as e:
+        import traceback
+        error_msg = f"Error listing notifications: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=error_msg
+        )
 
 
 @router.get("/unread-count", summary="Get unread notifications count")
