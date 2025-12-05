@@ -329,8 +329,8 @@ useEffect(() => {
     (calendar) => calendar.id === selectedCalendarId,
   );
   const selectedRole = selectedCalendar?.current_user_role ?? null;
-  const canManageEvents =
-    selectedRole === "owner" || selectedRole === "editor";
+  // Все участники календаря (viewer, editor, owner) могут создавать события
+  const canManageEvents = selectedRole !== null; // Любая роль позволяет создавать события
 
   const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
