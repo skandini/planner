@@ -205,7 +205,8 @@ def create_calendar_member(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> CalendarMemberRead:
-    ensure_calendar_access(session, calendar_id, current_user, required_role="owner")
+    # Editor и owner могут добавлять участников в календарь
+    ensure_calendar_access(session, calendar_id, current_user, required_role="editor")
 
     target_user = session.get(User, payload.user_id)
     if not target_user:
