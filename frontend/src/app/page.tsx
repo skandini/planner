@@ -564,19 +564,14 @@ useEffect(() => {
 
   useEffect(() => {
     if (selectedUserForView) {
-      const isMember = members.some((m) => m.user_id === selectedUserForView);
-      if (isMember) {
-        loadUserAvailability(selectedUserForView);
-      } else {
-        setUserAvailability([]);
-        setUserAvailabilityError(null);
-        setUserAvailabilityLoading(false);
-      }
+      // Загружаем доступность для любого пользователя, не только для членов календаря
+      // Backend позволяет проверять доступность любого пользователя
+      loadUserAvailability(selectedUserForView);
     } else {
       setUserAvailability([]);
       setUserAvailabilityError(null);
     }
-  }, [selectedUserForView, members, loadUserAvailability]);
+  }, [selectedUserForView, loadUserAvailability]);
 
   const ensureMembership = useCallback(
     async (userId: string) => {

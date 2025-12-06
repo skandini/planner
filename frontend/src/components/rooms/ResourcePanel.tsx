@@ -170,24 +170,24 @@ export function ResourcePanel({
       setParticipantAvailabilityError(null);
       try {
         // Загружаем доступность для всех выбранных участников
-        // Backend вернет доступность, если пользователь имеет доступ к календарю
+        // Backend позволяет проверять доступность любого пользователя, независимо от доступа к календарю
         const entries = await Promise.all(
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
               const response = await authFetch(url, { cache: "no-store" });
               if (!response.ok) {
-                // Если ошибка доступа (403), просто возвращаем пустой список
-                // Это нормально, если пользователь не имеет доступа к календарю
-                if (response.status === 403 || response.status === 404) {
-                  return [participant.user_id, []] as const;
+                // Если ошибка, логируем и возвращаем пустой список
+                if (response.status !== 404) {
+                  console.warn(`Failed to load availability for user ${participant.user_id}:`, response.status);
                 }
                 return [participant.user_id, []] as const;
               }
               const data: EventRecord[] = await response.json();
               return [participant.user_id, data] as const;
-            } catch {
-              // Игнорируем ошибки при загрузке доступности
+            } catch (err) {
+              // Логируем ошибки при загрузке доступности
+              console.warn(`Error loading availability for user ${participant.user_id}:`, err);
               return [participant.user_id, []] as const;
             }
           }),
@@ -240,9 +240,7 @@ export function ResourcePanel({
         label: participant.label,
         meta: participant.email,
         availability: participantAvailability[participant.user_id] ?? [],
-        loading:
-          participantAvailabilityLoading ||
-          !membershipMap.has(participant.user_id),
+        loading: participantAvailabilityLoading,
         type: "participant",
       });
     });
