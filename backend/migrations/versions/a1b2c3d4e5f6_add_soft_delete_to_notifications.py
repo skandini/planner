@@ -33,3 +33,4 @@ def downgrade() -> None:
     op.drop_column('notifications', 'is_deleted')
     # ### end Alembic commands ###
 
+

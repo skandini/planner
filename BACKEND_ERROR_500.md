@@ -49,3 +49,4 @@ Traceback (most recent call last):
 3. Проверьте логи backend в терминале
 4. Проверьте Network tab - должен быть 200 OK вместо 500
 
+

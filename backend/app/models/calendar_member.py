@@ -20,3 +20,4 @@ class CalendarMember(SQLModel, table=True):
     added_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
+

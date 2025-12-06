@@ -68,3 +68,4 @@ git checkout backup-before-rollback
 
 3. Проверить, что все работает без WebSocket
 
+

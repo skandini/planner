@@ -59,3 +59,4 @@ def get_personal_calendar(session: Session, user_id: UUID) -> Calendar | None:
         )
     ).first()
 
+

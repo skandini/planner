@@ -121,11 +121,23 @@ def _generate_recurrence_starts(
 def _attach_participants(
     session: SessionDep, event_id: UUID, participant_ids: List[UUID]
 ) -> None:
+    """
+    Добавляет участников к событию.
+    Не требует проверки доступа к календарю - любой может пригласить любого.
+    """
     for user_id in participant_ids:
-        participant = EventParticipant(
-            event_id=event_id, user_id=user_id, response_status="needs_action"
-        )
-        session.add(participant)
+        # Проверяем, не добавлен ли уже этот участник
+        existing = session.exec(
+            select(EventParticipant).where(
+                EventParticipant.event_id == event_id,
+                EventParticipant.user_id == user_id,
+            )
+        ).one_or_none()
+        if not existing:
+            participant = EventParticipant(
+                event_id=event_id, user_id=user_id, response_status="needs_action"
+            )
+            session.add(participant)
 
 
 def _serialize_event_with_participants(
@@ -164,31 +176,75 @@ def _ensure_no_conflicts(
             )
 
     if participant_ids:
-        # Проверяем конфликты участников во ВСЕХ календарях, а не только в текущем
-        # Участники могут быть в событиях разных календарей, и занятость единая
-        participant_conflict_filters = [
-            EventParticipant.user_id.in_(participant_ids),
+        # Проверяем конфликты участников во ВСЕХ календарях
+        # Учитываем:
+        # 1. События, где участник является участником (через EventParticipant)
+        # 2. События из личных календарей участника (где он владелец)
+        # Это дает полную занятость независимо от календаря
+        
+        # События, где участники являются участниками
+        participant_events_subquery = select(EventParticipant.event_id).where(
+            EventParticipant.user_id.in_(participant_ids)
+        )
+        
+        # Личные календари участников
+        participant_calendars_subquery = select(Calendar.id).where(
+            Calendar.owner_id.in_(participant_ids)
+        )
+        
+        # Фильтры для проверки конфликтов
+        conflict_filters = [
+            or_(
+                Event.id.in_(participant_events_subquery),
+                Event.calendar_id.in_(participant_calendars_subquery),
+            ),
             Event.starts_at < ends_at,
             Event.ends_at > starts_at,
         ]
         if exclude_event_id:
-            participant_conflict_filters.append(Event.id != exclude_event_id)
+            conflict_filters.append(Event.id != exclude_event_id)
         
-        participant_conflict = session.exec(
-            select(Event, User)
-            .join(EventParticipant, EventParticipant.event_id == Event.id)
-            .join(User, User.id == EventParticipant.user_id)
-            .where(*participant_conflict_filters)
+        # Проверяем конфликты
+        conflict_event = session.exec(
+            select(Event)
+            .where(*conflict_filters)
         ).first()
-        if participant_conflict:
-            conflict_event, conflict_user = participant_conflict
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Участник {conflict_user.full_name or conflict_user.email} "
-                    f"уже занят в событии «{conflict_event.title}»."
-                ),
-            )
+        
+        if conflict_event:
+            # Находим пользователя, у которого конфликт
+            # Проверяем, является ли он участником конфликтующего события
+            conflict_participant = session.exec(
+                select(EventParticipant, User)
+                .join(User, User.id == EventParticipant.user_id)
+                .where(
+                    EventParticipant.event_id == conflict_event.id,
+                    EventParticipant.user_id.in_(participant_ids),
+                )
+            ).first()
+            
+            if conflict_participant:
+                _, conflict_user = conflict_participant
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        f"Участник {conflict_user.full_name or conflict_user.email} "
+                        f"уже занят в событии «{conflict_event.title}»."
+                    ),
+                )
+            else:
+                # Конфликт в личном календаре участника
+                # Находим владельца календаря
+                conflict_calendar = session.get(Calendar, conflict_event.calendar_id)
+                if conflict_calendar and conflict_calendar.owner_id in participant_ids:
+                    conflict_user = session.get(User, conflict_calendar.owner_id)
+                    if conflict_user:
+                        raise HTTPException(
+                            status_code=status.HTTP_409_CONFLICT,
+                            detail=(
+                                f"Участник {conflict_user.full_name or conflict_user.email} "
+                                f"уже занят в событии «{conflict_event.title}»."
+                            ),
+                        )
 
 
 @router.get("/", response_model=List[EventRead], summary="List events")

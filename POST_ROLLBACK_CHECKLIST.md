@@ -68,3 +68,4 @@ git checkout backup-before-rollback
 - Резервная копия сохранена в ветке `backup-before-rollback`
 - Если нужно восстановить какие-то конкретные изменения, можно использовать `git cherry-pick`
 
+

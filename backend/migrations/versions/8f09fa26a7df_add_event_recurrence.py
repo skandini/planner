@@ -36,3 +36,4 @@ def downgrade() -> None:
     op.drop_column("events", "recurrence_rule")
 
 
+
