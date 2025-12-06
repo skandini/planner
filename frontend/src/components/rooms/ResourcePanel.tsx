@@ -183,7 +183,7 @@ export function ResourcePanel({
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
-              console.log(`Fetching availability for participant ${participant.label} (${participant.user_id})`);
+              console.log(`Fetching availability for participant ${participant.label} (${participant.user_id}) from ${url}`);
               const response = await authFetch(url, { cache: "no-store" });
               if (!response.ok) {
                 // Если ошибка, логируем и возвращаем пустой список
@@ -197,7 +197,22 @@ export function ResourcePanel({
             } catch (err) {
               // Логируем ошибки при загрузке доступности
               const errorMessage = err instanceof Error ? err.message : String(err);
-              console.error(`Error loading availability for user ${participant.user_id} (${participant.label}):`, errorMessage, err);
+              
+              // Проверяем, является ли это ошибкой сети (сервер недоступен)
+              if (errorMessage.includes("Не удалось подключиться к серверу") || 
+                  errorMessage.includes("Failed to fetch") ||
+                  (err instanceof TypeError && err.message === "Failed to fetch")) {
+                console.error(
+                  `[CRITICAL] Backend server is not available. Please start the backend server:\n` +
+                  `  1. Open terminal in backend directory\n` +
+                  `  2. Activate virtual environment: .\\.venv\Scripts\Activate.ps1\n` +
+                  `  3. Run: uvicorn app.main:app --reload\n` +
+                  `  URL: ${url}`
+                );
+              } else {
+                console.error(`Error loading availability for user ${participant.user_id} (${participant.label}):`, errorMessage, err);
+              }
+              
               // Возвращаем пустой список, но не прерываем загрузку для других участников
               return [participant.user_id, []] as const;
             }

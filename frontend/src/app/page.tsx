@@ -179,6 +179,7 @@ export default function Home() {
         headers.set("Authorization", `Bearer ${token}`);
         
         try {
+          const url = typeof input === "string" ? input : input.toString();
           const response = await fetch(input, { 
             ...init, 
             headers,
@@ -189,10 +190,20 @@ export default function Home() {
         } catch (error) {
           // Обработка сетевых ошибок (CORS, сеть недоступна и т.д.)
           const url = typeof input === "string" ? input : input.toString();
-          console.error(`[API Error] Failed to fetch: ${url}`, error);
           
           if (error instanceof TypeError) {
             if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
+              // Проверяем, доступен ли сервер
+              const baseUrl = url.split('/api/v1')[0] || 'http://localhost:8000';
+              console.error(
+                `[API Error] Backend server is not available.\n` +
+                `  URL: ${url}\n` +
+                `  Base URL: ${baseUrl}\n` +
+                `  Please ensure the backend server is running:\n` +
+                `    1. cd backend\n` +
+                `    2. .\\.venv\Scripts\Activate.ps1\n` +
+                `    3. uvicorn app.main:app --reload`
+              );
               throw new Error(
                 `Не удалось подключиться к серверу. Проверьте, что сервер запущен и доступен. URL: ${url}`
               );
