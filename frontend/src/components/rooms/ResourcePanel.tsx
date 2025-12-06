@@ -171,23 +171,32 @@ export function ResourcePanel({
       try {
         // Загружаем доступность для всех выбранных участников
         // Backend позволяет проверять доступность любого пользователя, независимо от доступа к календарю
+        if (!selectedCalendarId) {
+          console.warn("Cannot fetch availability: no calendar selected");
+          setParticipantAvailability({});
+          setParticipantAvailabilityLoading(false);
+          return;
+        }
+        
+        console.log(`Fetching availability for ${selectedParticipantProfiles.length} participants`);
         const entries = await Promise.all(
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
+              console.log(`Fetching availability for participant ${participant.label} (${participant.user_id})`);
               const response = await authFetch(url, { cache: "no-store" });
               if (!response.ok) {
                 // Если ошибка, логируем и возвращаем пустой список
-                if (response.status !== 404) {
-                  console.warn(`Failed to load availability for user ${participant.user_id}:`, response.status);
-                }
+                const errorText = await response.text().catch(() => "");
+                console.warn(`Failed to load availability for user ${participant.user_id} (${participant.label}):`, response.status, errorText);
                 return [participant.user_id, []] as const;
               }
               const data: EventRecord[] = await response.json();
+              console.log(`Loaded ${data.length} events for participant ${participant.label} (${participant.user_id})`);
               return [participant.user_id, data] as const;
             } catch (err) {
               // Логируем ошибки при загрузке доступности
-              console.warn(`Error loading availability for user ${participant.user_id}:`, err);
+              console.error(`Error loading availability for user ${participant.user_id} (${participant.label}):`, err);
               return [participant.user_id, []] as const;
             }
           }),
