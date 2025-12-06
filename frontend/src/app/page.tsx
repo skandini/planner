@@ -177,7 +177,35 @@ export default function Home() {
       const execute = async (token: string) => {
         const headers = new Headers(init.headers as HeadersInit | undefined);
         headers.set("Authorization", `Bearer ${token}`);
-        return fetch(input, { ...init, headers });
+        
+        try {
+          const response = await fetch(input, { 
+            ...init, 
+            headers,
+            mode: "cors",
+            credentials: "omit",
+          });
+          return response;
+        } catch (error) {
+          // Обработка сетевых ошибок (CORS, сеть недоступна и т.д.)
+          const url = typeof input === "string" ? input : input.toString();
+          console.error(`[API Error] Failed to fetch: ${url}`, error);
+          
+          if (error instanceof TypeError) {
+            if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
+              throw new Error(
+                `Не удалось подключиться к серверу. Проверьте, что сервер запущен и доступен. URL: ${url}`
+              );
+            }
+            throw new Error(`Ошибка сети: ${error.message}`);
+          }
+          
+          if (error instanceof Error) {
+            throw error;
+          }
+          
+          throw new Error(`Неизвестная ошибка: ${String(error)}`);
+        }
       };
 
       if (!accessToken) {

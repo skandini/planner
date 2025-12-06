@@ -179,7 +179,7 @@ export function ResourcePanel({
         }
         
         console.log(`Fetching availability for ${selectedParticipantProfiles.length} participants`);
-        const entries = await Promise.all(
+        const entries = await Promise.allSettled(
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
@@ -196,14 +196,31 @@ export function ResourcePanel({
               return [participant.user_id, data] as const;
             } catch (err) {
               // Логируем ошибки при загрузке доступности
-              console.error(`Error loading availability for user ${participant.user_id} (${participant.label}):`, err);
+              const errorMessage = err instanceof Error ? err.message : String(err);
+              console.error(`Error loading availability for user ${participant.user_id} (${participant.label}):`, errorMessage, err);
+              // Возвращаем пустой список, но не прерываем загрузку для других участников
               return [participant.user_id, []] as const;
             }
           }),
         );
+        
+        // Обрабатываем результаты Promise.allSettled
+        const processedEntries: Array<[string, EventRecord[]]> = entries.map((result, index) => {
+          if (result.status === "fulfilled") {
+            return result.value;
+          } else {
+            // Если промис был отклонен, логируем и возвращаем пустой список
+            const participant = selectedParticipantProfiles[index];
+            console.error(`Promise rejected for participant ${participant?.label || 'unknown'}:`, result.reason);
+            if (participant) {
+              return [participant.user_id, []] as const;
+            }
+            return ["", []] as const;
+          }
+        }).filter((entry): entry is [string, EventRecord[]] => entry[0] !== "");
 
         if (!cancelled) {
-          setParticipantAvailability(Object.fromEntries(entries));
+          setParticipantAvailability(Object.fromEntries(processedEntries));
         }
       } catch {
         if (!cancelled) {
