@@ -180,35 +180,57 @@ export default function Home() {
         
         try {
           const url = typeof input === "string" ? input : input.toString();
+          
+          // Добавляем таймаут для запроса
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+          
           const response = await fetch(input, { 
             ...init, 
             headers,
             mode: "cors",
             credentials: "omit",
+            signal: controller.signal,
           });
+          
+          clearTimeout(timeoutId);
           return response;
         } catch (error) {
           // Обработка сетевых ошибок (CORS, сеть недоступна и т.д.)
           const url = typeof input === "string" ? input : input.toString();
           
+          // Проверяем, является ли это ошибкой сети
           if (error instanceof TypeError) {
             if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
-              // Проверяем, доступен ли сервер
-              const baseUrl = url.split('/api/v1')[0] || 'http://localhost:8000';
+              // Это может быть CORS ошибка или сервер недоступен
               console.error(
-                `[API Error] Backend server is not available.\n` +
+                `[API Error] Network error when fetching:\n` +
                 `  URL: ${url}\n` +
-                `  Base URL: ${baseUrl}\n` +
-                `  Please ensure the backend server is running:\n` +
-                `    1. cd backend\n` +
-                `    2. .\\.venv\Scripts\Activate.ps1\n` +
-                `    3. uvicorn app.main:app --reload`
+                `  Error: ${error.message}\n` +
+                `  Possible causes:\n` +
+                `    1. Backend server is not running on http://localhost:8000\n` +
+                `    2. CORS configuration issue\n` +
+                `    3. Network connectivity problem\n` +
+                `  To fix:\n` +
+                `    1. Check if backend is running: http://localhost:8000/api/v1/health\n` +
+                `    2. Check browser console for CORS errors\n` +
+                `    3. Verify CORS settings in backend/app/core/config.py`
               );
               throw new Error(
-                `Не удалось подключиться к серверу. Проверьте, что сервер запущен и доступен. URL: ${url}`
+                `Не удалось подключиться к серверу. Проверьте:\n` +
+                `1. Запущен ли бэкенд на http://localhost:8000\n` +
+                `2. Настройки CORS в backend/app/core/config.py\n` +
+                `3. Консоль браузера на наличие ошибок CORS\n` +
+                `URL: ${url}`
               );
             }
             throw new Error(`Ошибка сети: ${error.message}`);
+          }
+          
+          // Обработка ошибки таймаута
+          if (error instanceof Error && error.name === "AbortError") {
+            console.error(`[API Error] Request timeout for: ${url}`);
+            throw new Error(`Превышено время ожидания ответа от сервера. URL: ${url}`);
           }
           
           if (error instanceof Error) {

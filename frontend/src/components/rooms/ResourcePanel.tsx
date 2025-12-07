@@ -183,35 +183,38 @@ export function ResourcePanel({
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
-              console.log(`Fetching availability for participant ${participant.label} (${participant.user_id}) from ${url}`);
+              console.log(`[Availability] Fetching for ${participant.label} (${participant.user_id})`);
+              console.log(`[Availability] URL: ${url}`);
               const response = await authFetch(url, { cache: "no-store" });
+              
+              console.log(`[Availability] Response status: ${response.status} for ${participant.label}`);
+              
               if (!response.ok) {
                 // Если ошибка, логируем и возвращаем пустой список
                 const errorText = await response.text().catch(() => "");
-                console.warn(`Failed to load availability for user ${participant.user_id} (${participant.label}):`, response.status, errorText);
+                console.warn(
+                  `[Availability] Failed to load for ${participant.label}:\n` +
+                  `  Status: ${response.status}\n` +
+                  `  Error: ${errorText}\n` +
+                  `  URL: ${url}`
+                );
                 return [participant.user_id, []] as const;
               }
+              
               const data: EventRecord[] = await response.json();
-              console.log(`Loaded ${data.length} events for participant ${participant.label} (${participant.user_id})`);
+              console.log(`[Availability] Loaded ${data.length} events for ${participant.label} (${participant.user_id})`);
               return [participant.user_id, data] as const;
             } catch (err) {
               // Логируем ошибки при загрузке доступности
               const errorMessage = err instanceof Error ? err.message : String(err);
               
-              // Проверяем, является ли это ошибкой сети (сервер недоступен)
-              if (errorMessage.includes("Не удалось подключиться к серверу") || 
-                  errorMessage.includes("Failed to fetch") ||
-                  (err instanceof TypeError && err.message === "Failed to fetch")) {
-                console.error(
-                  `[CRITICAL] Backend server is not available. Please start the backend server:\n` +
-                  `  1. Open terminal in backend directory\n` +
-                  `  2. Activate virtual environment: .\\.venv\Scripts\Activate.ps1\n` +
-                  `  3. Run: uvicorn app.main:app --reload\n` +
-                  `  URL: ${url}`
-                );
-              } else {
-                console.error(`Error loading availability for user ${participant.user_id} (${participant.label}):`, errorMessage, err);
-              }
+              console.error(
+                `[Availability] Error for ${participant.label} (${participant.user_id}):\n` +
+                `  Error: ${errorMessage}\n` +
+                `  Type: ${err instanceof Error ? err.constructor.name : typeof err}\n` +
+                `  URL: ${url}\n` +
+                `  Full error:`, err
+              );
               
               // Возвращаем пустой список, но не прерываем загрузку для других участников
               return [participant.user_id, []] as const;
