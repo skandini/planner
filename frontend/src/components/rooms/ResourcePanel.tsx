@@ -133,23 +133,47 @@ export function ResourcePanel({
   );
 
   useEffect(() => {
-    if (!selectedCalendarId || !form.starts_at || !form.ends_at) {
+    // Проверяем условия для загрузки доступности
+    if (!selectedCalendarId || !authFetch) {
       setParticipantAvailability({});
       setParticipantAvailabilityError(null);
       setParticipantAvailabilityLoading(false);
       return;
     }
 
-    const rangeStart = inputToDate(form.starts_at, { allDay: form.all_day });
-    const rangeEnd = inputToDate(form.ends_at, {
-      allDay: form.all_day,
-      endOfDay: true,
-    });
-    if (!rangeStart || !rangeEnd) {
+    // Если нет выбранных участников, не загружаем доступность
+    if (selectedParticipantProfiles.length === 0) {
       setParticipantAvailability({});
       setParticipantAvailabilityError(null);
       setParticipantAvailabilityLoading(false);
       return;
+    }
+
+    // Если время не указано, используем текущий день как диапазон
+    let rangeStart: Date;
+    let rangeEnd: Date;
+    
+    if (form.starts_at && form.ends_at) {
+      const start = inputToDate(form.starts_at, { allDay: form.all_day });
+      const end = inputToDate(form.ends_at, {
+        allDay: form.all_day,
+        endOfDay: true,
+      });
+      if (!start || !end) {
+        setParticipantAvailability({});
+        setParticipantAvailabilityError(null);
+        setParticipantAvailabilityLoading(false);
+        return;
+      }
+      rangeStart = start;
+      rangeEnd = end;
+    } else {
+      // Используем текущий день как диапазон по умолчанию
+      const today = new Date(selectedDate);
+      today.setHours(0, 0, 0, 0);
+      rangeStart = today;
+      rangeEnd = new Date(today);
+      rangeEnd.setHours(23, 59, 59, 999);
     }
 
     // Не требуем автоматического добавления в календарь
