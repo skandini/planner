@@ -23,16 +23,12 @@ def create_application() -> FastAPI:
         max_age=3600,
     )
 
-    # Exception handler для обеспечения CORS заголовков при ошибках
+    # Exception handlers - CORS middleware автоматически добавит заголовки
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
-            headers={
-                "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
-                "Access-Control-Allow-Credentials": "true",
-            },
         )
 
     @app.exception_handler(RequestValidationError)
@@ -40,10 +36,6 @@ def create_application() -> FastAPI:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": exc.errors()},
-            headers={
-                "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
-                "Access-Control-Allow-Credentials": "true",
-            },
         )
 
     @app.exception_handler(Exception)
@@ -53,11 +45,7 @@ def create_application() -> FastAPI:
         print(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Internal server error"},
-            headers={
-                "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
-                "Access-Control-Allow-Credentials": "true",
-            },
+            content={"detail": f"Internal server error: {str(exc)}"},
         )
 
     app.include_router(api_router, prefix=settings.API_V1_STR)
