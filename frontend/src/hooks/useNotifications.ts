@@ -44,6 +44,15 @@ export function useNotifications() {
       // Используем Web Audio API для создания звукового сигнала
       const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const audioContext = new AudioContextClass();
+      
+      // Resume AudioContext если он в suspended состоянии (требуется user gesture)
+      if (audioContext.state === "suspended") {
+        audioContext.resume().catch((err) => {
+          console.debug("Failed to resume AudioContext:", err);
+          return;
+        });
+      }
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -57,12 +66,18 @@ export function useNotifications() {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3); // Длительность 300мс
-      
-      oscillator.onended = () => {
+      // Ждем, пока AudioContext будет готов
+      audioContext.resume().then(() => {
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3); // Длительность 300мс
+        
+        oscillator.onended = () => {
+          audioContext.close();
+        };
+      }).catch((err) => {
+        console.debug("Failed to start audio:", err);
         audioContext.close();
-      };
+      });
     } catch (err) {
       // Игнорируем ошибки, если браузер не поддерживает Web Audio API
       console.debug("Audio notification not available:", err);

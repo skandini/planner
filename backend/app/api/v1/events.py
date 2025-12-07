@@ -649,55 +649,72 @@ def update_participant_status(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> EventRead:
-    # Упрощенная логика: проверяем только, что пользователь обновляет свой собственный статус
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own participant status",
-        )
-
-    event = session.get(Event, event_id)
-    if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event not found",
-        )
-
-    # Проверяем, является ли пользователь участником события
-    # Не требуем доступа к календарю - достаточно быть участником события
-    participant = session.exec(
-        select(EventParticipant).where(
-            EventParticipant.event_id == event_id,
-            EventParticipant.user_id == user_id,
-        )
-    ).one_or_none()
-
-    if not participant:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Participant not found. You must be invited to the event first.",
-        )
-
-    old_status = participant.response_status
-    participant.response_status = payload.response_status
-    session.add(participant)
-    session.commit()
-
-    # Уведомляем организатора события об изменении статуса участника
-    calendar = session.get(Calendar, event.calendar_id)
-    if calendar and calendar.owner_id:
-        if calendar.owner_id != current_user.id:
-            notify_participant_response(
-                session=session,
-                user_id=calendar.owner_id,
-                event=event,
-                participant_name=current_user.full_name or current_user.email,
-                old_status=old_status,
-                new_status=payload.response_status,
+    try:
+        # Упрощенная логика: проверяем только, что пользователь обновляет свой собственный статус
+        if current_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update your own participant status",
             )
 
-    session.refresh(event)
-    return _serialize_event_with_participants(session, event)
+        event = session.get(Event, event_id)
+        if not event:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Event not found",
+            )
+
+        # Проверяем, является ли пользователь участником события
+        # Не требуем доступа к календарю - достаточно быть участником события
+        participant = session.exec(
+            select(EventParticipant).where(
+                EventParticipant.event_id == event_id,
+                EventParticipant.user_id == user_id,
+            )
+        ).one_or_none()
+
+        if not participant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Participant not found. You must be invited to the event first.",
+            )
+
+        old_status = participant.response_status
+        participant.response_status = payload.response_status
+        session.add(participant)
+        session.commit()
+
+        # Уведомляем организатора события об изменении статуса участника
+        calendar = session.get(Calendar, event.calendar_id)
+        if calendar and calendar.owner_id:
+            if calendar.owner_id != current_user.id:
+                try:
+                    notify_participant_response(
+                        session=session,
+                        user_id=calendar.owner_id,
+                        event=event,
+                        participant_name=current_user.full_name or current_user.email,
+                        old_status=old_status,
+                        new_status=payload.response_status,
+                    )
+                except Exception as e:
+                    # Логируем ошибку уведомления, но не прерываем обновление статуса
+                    print(f"[WARNING] Failed to send notification: {e}")
+
+        session.refresh(event)
+        return _serialize_event_with_participants(session, event)
+    except HTTPException:
+        # Пробрасываем HTTPException как есть
+        raise
+    except Exception as e:
+        # Логируем неожиданные ошибки
+        import traceback
+        print(f"[ERROR] update_participant_status failed: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update participant status: {str(e)}"
+        )
 
 
 @router.delete(
