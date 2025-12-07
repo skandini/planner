@@ -98,14 +98,17 @@ export function ParticipantsSection({
             {sortedUsers.map((user) => {
               const membership = membershipMap.get(user.id);
               const isSelected = form.participant_ids.includes(user.id);
-              const badge =
-                membership?.role === "owner"
+              // Показываем роль только если пользователь является членом календаря
+              // Но это не влияет на возможность приглашения - можно приглашать любого
+              const badge = membership
+                ? membership.role === "owner"
                   ? "Владелец"
-                  : membership?.role === "editor"
+                  : membership.role === "editor"
                     ? "Редактор"
-                    : membership?.role === "viewer"
+                    : membership.role === "viewer"
                       ? "Наблюдатель"
-                      : "Нет доступа";
+                      : null
+                : null;
               return (
                 <div
                   key={user.id}
@@ -128,15 +131,11 @@ export function ParticipantsSection({
                     </p>
                     <p className="text-xs text-slate-500">{user.email}</p>
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-[0.65rem] ${
-                      membership
-                        ? "border border-slate-200 text-slate-500"
-                        : "border border-amber-200 bg-amber-50 text-amber-600"
-                    }`}
-                  >
-                    {badge}
-                  </span>
+                  {badge && (
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[0.65rem] text-slate-600">
+                      {badge}
+                    </span>
+                  )}
                 </div>
               );
             })}
