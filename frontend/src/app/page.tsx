@@ -30,7 +30,7 @@ import { WeekView } from "@/components/calendar/WeekView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
-import { EventModal } from "@/components/events/EventModal";
+import { EventModalEnhanced as EventModal } from "@/components/events/EventModalEnhanced";
 import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
