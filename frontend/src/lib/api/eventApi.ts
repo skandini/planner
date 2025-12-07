@@ -167,7 +167,7 @@ export const eventApi = {
     status: string,
   ): Promise<void> {
     const response = await authFetch(
-      `${EVENT_ENDPOINT}${eventId}/participants/${userId}`,
+      `${EVENT_ENDPOINT}${eventId}/participants/${userId}/status`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
