@@ -5,8 +5,8 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, select as sql_select
-from sqlmodel import select
+from sqlalchemy import select as sql_select
+from sqlmodel import and_, or_, select
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
