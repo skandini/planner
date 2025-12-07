@@ -149,32 +149,22 @@ export function ResourcePanel({
       return;
     }
 
-    // Если время не указано, используем текущий день как диапазон
-    let rangeStart: Date;
-    let rangeEnd: Date;
-    
-    if (form.starts_at && form.ends_at) {
-      const start = inputToDate(form.starts_at, { allDay: form.all_day });
-      const end = inputToDate(form.ends_at, {
-        allDay: form.all_day,
-        endOfDay: true,
-      });
-      if (!start || !end) {
-        setParticipantAvailability({});
-        setParticipantAvailabilityError(null);
-        setParticipantAvailabilityLoading(false);
-        return;
-      }
-      rangeStart = start;
-      rangeEnd = end;
+    // Загружаем доступность для всего дня, чтобы видеть всю занятость
+    // Используем дату из starts_at или selectedDate
+    let targetDate: Date;
+    if (form.starts_at) {
+      const dateStr = form.starts_at.split("T")[0];
+      targetDate = new Date(dateStr + "T00:00:00");
     } else {
-      // Используем текущий день как диапазон по умолчанию
-      const today = new Date(selectedDate);
-      today.setHours(0, 0, 0, 0);
-      rangeStart = today;
-      rangeEnd = new Date(today);
-      rangeEnd.setHours(23, 59, 59, 999);
+      targetDate = new Date(selectedDate);
+      targetDate.setHours(0, 0, 0, 0);
     }
+    
+    // Загружаем доступность для всего дня (00:00 - 23:59:59)
+    const rangeStart = new Date(targetDate);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(targetDate);
+    rangeEnd.setHours(23, 59, 59, 999);
 
     // Не требуем автоматического добавления в календарь
     // Участники могут быть добавлены в события без членства в календаре
@@ -227,6 +217,13 @@ export function ResourcePanel({
               
               const data: EventRecord[] = await response.json();
               console.log(`[Availability] Loaded ${data.length} events for ${participant.label} (${participant.user_id})`);
+              if (data.length > 0) {
+                console.log(`[Availability] Events for ${participant.label}:`, data.map(e => ({
+                  title: e.title,
+                  starts_at: e.starts_at,
+                  ends_at: e.ends_at,
+                })));
+              }
               return [participant.user_id, data] as const;
             } catch (err) {
               // Логируем ошибки при загрузке доступности
