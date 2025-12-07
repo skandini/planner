@@ -13,8 +13,10 @@ def create_application() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
     )
 
     app.include_router(api_router, prefix=settings.API_V1_STR)
