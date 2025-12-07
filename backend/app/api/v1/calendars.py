@@ -372,26 +372,36 @@ def get_user_availability(
     # 1. Где пользователь является участником
     # 2. Из личных календарей пользователя
     # Это дает полную занятость независимо от календаря
-    stmt = (
-        select(Event)
-        .where(
-            and_(
-                or_(
-                    Event.id.in_(participant_events_subquery),
-                    Event.calendar_id.in_(personal_calendars_subquery),
-                ),
-                Event.starts_at < to_date,
-                Event.ends_at > from_date,
+    try:
+        stmt = (
+            select(Event)
+            .where(
+                and_(
+                    or_(
+                        Event.id.in_(participant_events_subquery),
+                        Event.calendar_id.in_(personal_calendars_subquery),
+                    ),
+                    Event.starts_at < to_date,
+                    Event.ends_at > from_date,
+                )
             )
+            .order_by(Event.starts_at)
         )
-        .order_by(Event.starts_at)
-    )
-    events = session.exec(stmt).all()
+        events = session.exec(stmt).all()
 
-    # Сериализуем события с участниками
-    from app.api.v1.events import _serialize_event_with_participants
+        # Сериализуем события с участниками
+        from app.api.v1.events import _serialize_event_with_participants
 
-    return [_serialize_event_with_participants(session, event) for event in events]
+        return [_serialize_event_with_participants(session, event) for event in events]
+    except Exception as e:
+        # Логируем ошибку для отладки
+        import traceback
+        print(f"[ERROR] get_user_availability failed: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user availability: {str(e)}"
+        )
 
 
 def _build_conflict_entry(
