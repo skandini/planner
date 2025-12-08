@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { AuthenticatedFetch } from "@/types/common.types";
-import { USERS_ENDPOINT } from "@/lib/constants";
+import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT } from "@/lib/constants";
 
 interface Organization {
   id: string;
@@ -85,7 +85,7 @@ export function ProfileSettings({
 
   const loadOrganizations = async () => {
     try {
-      const response = await authFetch(`${USERS_ENDPOINT.replace("/users/", "/organizations")}`);
+      const response = await authFetch(ORGANIZATIONS_ENDPOINT);
       if (response.ok) {
         const data: Organization[] = await response.json();
         setOrganizations(data);
