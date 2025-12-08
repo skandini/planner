@@ -32,9 +32,9 @@ def get_current_user_profile(
 
 @router.put("/me", response_model=UserRead, summary="Update current user profile")
 def update_current_user_profile(
-    payload: UserBase,
     session: SessionDep,
     current_user: User = Depends(get_current_user),
+    payload: UserBase = Body(...),
 ) -> UserRead:
     """Update current authenticated user profile."""
     current_user.email = payload.email.lower()
