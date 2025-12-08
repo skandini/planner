@@ -302,6 +302,21 @@ export default function Home() {
     }
   }, [accessToken, authFetch]);
 
+  const loadCurrentUser = useCallback(async () => {
+    if (!accessToken) {
+      setCurrentUser(null);
+      return;
+    }
+    try {
+      const response = await authFetch(`${USERS_ENDPOINT}me`, { cache: "no-store" });
+      if (response.ok) {
+        const data: UserProfile = await response.json();
+        setCurrentUser(data);
+      }
+    } catch (err) {
+      console.error("Failed to load current user:", err);
+    }
+  }, [accessToken, authFetch]);
 
   const loadCalendars = useCallback(async () => {
     if (!accessToken) {
@@ -355,8 +370,11 @@ export default function Home() {
   }, [loadCalendars, loadRooms]);
 
 useEffect(() => {
-  loadUsers();
-}, [loadUsers]);
+  if (isAuthenticated) {
+    loadUsers();
+    loadCurrentUser();
+  }
+}, [isAuthenticated, loadUsers, loadCurrentUser]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1902,6 +1920,17 @@ useEffect(() => {
                 openEventModal(undefined, event);
                 setIsNotificationCenterOpen(false);
               }
+            }}
+          />
+        )}
+        {isProfileSettingsOpen && (
+          <ProfileSettings
+            isOpen={isProfileSettingsOpen}
+            onClose={() => setIsProfileSettingsOpen(false)}
+            authFetch={authFetch}
+            onUpdate={() => {
+              loadCurrentUser();
+              loadUsers();
             }}
           />
         )}
