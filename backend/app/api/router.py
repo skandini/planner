@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, calendars, event_attachments, events, health, notifications, rooms, users
+from app.api.v1 import auth, calendars, event_attachments, events, health, notifications, organizations, rooms, users
 
 
 api_router = APIRouter()
@@ -12,3 +12,4 @@ api_router.include_router(event_attachments.router, prefix="/events", tags=["eve
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])

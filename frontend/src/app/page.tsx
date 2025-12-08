@@ -1259,11 +1259,8 @@ useEffect(() => {
               </div>
               <div className="flex flex-col min-w-0">
                 <h1 className="text-xs font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent truncate">
-                  Командные календари
+                  Планировщик Corestone
                 </h1>
-                <p className="text-[0.55rem] text-slate-500 truncate">
-                  Корпоративный календарь
-                </p>
               </div>
             </div>
 
@@ -1272,11 +1269,12 @@ useEffect(() => {
               {/* Блоки статистики */}
               <div className="flex items-center gap-1">
                 <div className="group relative">
-                  <div className="flex items-center gap-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-2 py-1 hover:bg-white/80 transition-all cursor-default">
-                    <div className="w-1.5 h-1.5 rounded-full bg-lime-500 animate-pulse" />
-                    <span className="text-[0.65rem] font-semibold text-slate-700">
+                  <div className="flex items-center gap-2 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-3 py-1 hover:bg-white/80 transition-all cursor-default">
+                    <div className="w-2 h-2 rounded-full bg-lime-500 animate-pulse" />
+                    <span className="text-[0.7rem] font-semibold text-slate-700">
                       {loading ? "…" : calendars.length}
                     </span>
+                    <span className="text-[0.65rem] text-slate-500">календарей</span>
                   </div>
                   <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-[0.6rem] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     Календарей
@@ -1284,16 +1282,24 @@ useEffect(() => {
                 </div>
                 
                 <div className="group relative">
-                  <div className="flex items-center gap-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-2 py-1 hover:bg-white/80 transition-all cursor-default max-w-[100px]">
-                    <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileSettingsOpen(true)}
+                    className="flex items-center gap-2 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-3 py-1 hover:bg-white/80 transition-all cursor-pointer max-w-[180px]"
+                  >
+                    <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
-                    <span className="text-[0.65rem] font-semibold text-slate-700 truncate">
-                      {userEmail ? userEmail.split("@")[0] : "—"}
+                    <span className="text-[0.7rem] font-semibold text-slate-700 truncate">
+                      {currentUser?.full_name || userEmail?.split("@")[0] || "Пользователь"}
                     </span>
-                  </div>
+                    <svg className="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
                   <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-[0.6rem] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    {userEmail || "Пользователь"}
+                    Настройки профиля
                   </div>
                 </div>
               </div>
