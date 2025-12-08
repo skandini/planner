@@ -254,14 +254,6 @@ export function NotificationCenter({
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleParticipantStatus(notification.event_id!, "tentative")}
-                              disabled={updatingStatus.has(`${notification.event_id}-tentative`)}
-                              className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                              {updatingStatus.has(`${notification.event_id}-tentative`) ? "..." : "? Под вопросом"}
-                            </button>
-                            <button
-                              type="button"
                               onClick={() => handleParticipantStatus(notification.event_id!, "declined")}
                               disabled={updatingStatus.has(`${notification.event_id}-declined`)}
                               className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-400 disabled:opacity-60 disabled:cursor-not-allowed"

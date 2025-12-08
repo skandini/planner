@@ -532,7 +532,7 @@ export function WeekView({
                           (p) => p.email === currentUserEmail
                         );
                         // Показываем кнопки только если статус needs_action, pending или null
-                        // НЕ показываем если уже accepted, declined или tentative
+                        // НЕ показываем если уже accepted или declined
                         const needsAction = currentParticipant && 
                           (currentParticipant.response_status === "needs_action" || 
                            currentParticipant.response_status === "pending" ||
@@ -573,19 +573,6 @@ export function WeekView({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (currentParticipant) {
-                                      onUpdateParticipantStatus(event.id, currentParticipant.user_id, "tentative");
-                                    }
-                                  }}
-                                  className="w-full rounded bg-amber-500 px-2 py-1 text-[0.65rem] font-semibold text-white transition hover:bg-amber-600 mb-1 flex items-center justify-center gap-1"
-                                  title="Под вопросом"
-                                >
-                                  <span>?</span> Возможно
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (currentParticipant) {
                                       onUpdateParticipantStatus(event.id, currentParticipant.user_id, "declined");
                                     }
                                   }}
@@ -614,19 +601,6 @@ export function WeekView({
                               title="Принять"
                             >
                               ✓
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (currentParticipant) {
-                                  onUpdateParticipantStatus(event.id, currentParticipant.user_id, "tentative");
-                                }
-                              }}
-                              className="flex-1 rounded bg-amber-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:bg-amber-400"
-                              title="Под вопросом"
-                            >
-                              ?
                             </button>
                             <button
                               type="button"
@@ -728,14 +702,12 @@ export function WeekView({
                   const statusLabels: Record<string, string> = {
                     accepted: "Принял",
                     declined: "Отклонил",
-                    tentative: "Возможно",
                     pending: "Нет ответа",
                     needs_action: "Нет ответа",
                   };
                   const statusColors: Record<string, string> = {
                     accepted: "bg-lime-100 text-lime-700 border-lime-300",
                     declined: "bg-red-100 text-red-700 border-red-300",
-                    tentative: "bg-amber-100 text-amber-700 border-amber-300",
                     pending: "bg-slate-100 text-slate-600 border-slate-300",
                     needs_action: "bg-slate-100 text-slate-600 border-slate-300",
                   };

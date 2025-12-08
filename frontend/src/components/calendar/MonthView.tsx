@@ -268,14 +268,12 @@ export function MonthView({
                   const statusLabels: Record<string, string> = {
                     accepted: "Принял",
                     declined: "Отклонил",
-                    tentative: "Возможно",
                     pending: "Нет ответа",
                     needs_action: "Нет ответа",
                   };
                   const statusColors: Record<string, string> = {
                     accepted: "bg-lime-100 text-lime-700 border-lime-300",
                     declined: "bg-red-100 text-red-700 border-red-300",
-                    tentative: "bg-amber-100 text-amber-700 border-amber-300",
                     pending: "bg-slate-100 text-slate-600 border-slate-300",
                     needs_action: "bg-slate-100 text-slate-600 border-slate-300",
                   };

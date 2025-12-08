@@ -509,7 +509,6 @@ export function EventModal({
                 <p className="mt-1 text-xs text-slate-500">
                   {editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли,{" "}
                   {editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили,{" "}
-                  {editingEvent.participants.filter((p) => p.response_status === "tentative").length} под вопросом,{" "}
                   {editingEvent.participants.filter((p) => p.response_status === "needs_action" || !p.response_status || p.response_status === "pending").length} не ответили
                 </p>
               </div>

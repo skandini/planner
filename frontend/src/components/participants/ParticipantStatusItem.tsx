@@ -24,14 +24,12 @@ export function ParticipantStatusItem({
   const statusLabels: Record<string, string> = {
     accepted: "Принял",
     declined: "Отклонил",
-    tentative: "Возможно",
     needs_action: "Нет ответа",
   };
 
   const statusColors: Record<string, string> = {
     accepted: "bg-lime-100 text-lime-700 border-lime-300",
     declined: "bg-red-100 text-red-700 border-red-300",
-    tentative: "bg-amber-100 text-amber-700 border-amber-300",
     needs_action: "bg-slate-100 text-slate-600 border-slate-300",
   };
 
@@ -68,15 +66,6 @@ export function ParticipantStatusItem({
             title="Принять"
           >
             ✓ Принять
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStatusChange("tentative")}
-            disabled={isUpdating}
-            className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
-            title="Под вопросом"
-          >
-            ? Под вопросом
           </button>
           <button
             type="button"

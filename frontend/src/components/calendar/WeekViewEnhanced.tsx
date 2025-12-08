@@ -502,19 +502,6 @@ export function WeekViewEnhanced({
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (currentParticipant) {
-                                    onUpdateParticipantStatus(event.id, currentParticipant.user_id, "tentative");
-                                  }
-                                }}
-                                className="flex-1 rounded-md bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-1 text-[0.6rem] font-bold text-white transition hover:from-amber-500 hover:to-amber-600 shadow-sm"
-                                title="Под вопросом"
-                              >
-                                ?
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (currentParticipant) {
                                     onUpdateParticipantStatus(event.id, currentParticipant.user_id, "declined");
                                   }
                                 }}
@@ -611,14 +598,12 @@ export function WeekViewEnhanced({
                   const statusLabels: Record<string, string> = {
                     accepted: "Принял",
                     declined: "Отклонил",
-                    tentative: "Возможно",
                     pending: "Нет ответа",
                     needs_action: "Нет ответа",
                   };
                   const statusColors: Record<string, string> = {
                     accepted: "bg-gradient-to-r from-lime-100 to-emerald-100 text-lime-700 border-lime-300",
                     declined: "bg-gradient-to-r from-red-100 to-red-200 text-red-700 border-red-300",
-                    tentative: "bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 border-amber-300",
                     pending: "bg-slate-100 text-slate-600 border-slate-300",
                     needs_action: "bg-slate-100 text-slate-600 border-slate-300",
                   };

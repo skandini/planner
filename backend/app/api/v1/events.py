@@ -643,7 +643,7 @@ def update_event(
         # Сохраняем статусы ответов существующих участников
         for user_id in existing_user_ids & new_participant_ids_set:
             existing_participant = existing_participants_map[user_id]
-            if existing_participant.response_status in ("accepted", "declined", "tentative"):
+            if existing_participant.response_status in ("accepted", "declined"):
                 # Сохраняем статус ответа при обновлении события
                 pass
 

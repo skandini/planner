@@ -392,7 +392,6 @@ export function EventModalEnhanced({
                     <p className="mt-1 text-xs text-slate-500">
                       {editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли,{" "}
                       {editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили,{" "}
-                      {editingEvent.participants.filter((p) => p.response_status === "tentative").length} под вопросом
                     </p>
                   </div>
                   <div className="space-y-2">

@@ -16,7 +16,7 @@ class EventParticipant(SQLModel, table=True):
         foreign_key="events.id", primary_key=True, nullable=False
     )
     user_id: UUID = Field(foreign_key="users.id", primary_key=True, nullable=False)
-    response_status: str = Field(default="needs_action", max_length=32)  # needs_action, accepted, declined, tentative
+    response_status: str = Field(default="needs_action", max_length=32)  # needs_action, accepted, declined
     added_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 

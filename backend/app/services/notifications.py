@@ -114,7 +114,6 @@ def notify_participant_response(
     status_labels = {
         "accepted": "принял",
         "declined": "отклонил",
-        "tentative": "возможно придет",
     }
     
     status_label = status_labels.get(response_status, "изменил статус")
