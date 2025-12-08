@@ -804,6 +804,9 @@ useEffect(() => {
       setEventFormError("Войдите, чтобы управлять событиями");
       return;
     }
+    
+    // Сохраняем текущие временные файлы перед созданием события
+    const filesToUploadAfterCreation = [...pendingFiles];
     if (!canManageEvents) {
       setEventFormError("Недостаточно прав для изменения событий");
       return;
@@ -974,14 +977,12 @@ useEffect(() => {
       setEditingRecurrenceInfo(null);
       // Оставляем модальное окно открытым
       
-      // Загружаем временные файлы асинхронно после небольшой задержки,
-      // чтобы дать время модальному окну обновиться
-      if (pendingFiles.length > 0 && createdEvent.id) {
-        // Используем setTimeout чтобы дать время для обновления состояния
-        setTimeout(async () => {
+      // Загружаем временные файлы, если они были выбраны до создания события
+      if (filesToUploadAfterCreation.length > 0 && createdEvent.id) {
+        // Загружаем файлы асинхронно, не блокируя создание события
+        (async () => {
           try {
-            const filesToUpload = [...pendingFiles]; // Сохраняем копию массива
-            for (const file of filesToUpload) {
+            for (const file of filesToUploadAfterCreation) {
               const formData = new FormData();
               formData.append("file", file);
 
@@ -1006,7 +1007,7 @@ useEffect(() => {
             console.error("Ошибка загрузки временных файлов:", err);
             // Не блокируем создание события из-за ошибки загрузки файлов
           }
-        }, 500);
+        })();
       }
     } catch (err) {
       setEventFormError(
