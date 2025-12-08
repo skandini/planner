@@ -78,28 +78,46 @@ async def upload_attachment(
         )
 
     # Сохраняем файл
-    file_extension = Path(file.filename or "").suffix
-    filename = f"{event_id}_{UUID().hex}{file_extension}"
-    file_path = UPLOAD_DIR / filename
-    
-    with open(file_path, "wb") as f:
-        f.write(file_content)
+    try:
+        file_extension = Path(file.filename or "").suffix
+        filename = f"{event_id}_{uuid4().hex}{file_extension}"
+        file_path = UPLOAD_DIR / filename
+        
+        # Убеждаемся, что директория существует
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        
+        with open(file_path, "wb") as f:
+            f.write(file_content)
 
-    # Создаем запись в БД
-    attachment = EventAttachment(
-        event_id=event_id,
-        filename=filename,
-        original_filename=file.filename or "unknown",
-        file_size=file_size,
-        content_type=file.content_type or "application/octet-stream",
-        file_path=str(file_path),
-        uploaded_by=current_user.id,
-    )
-    session.add(attachment)
-    session.commit()
-    session.refresh(attachment)
+        # Создаем запись в БД
+        attachment = EventAttachment(
+            event_id=event_id,
+            filename=filename,
+            original_filename=file.filename or "unknown",
+            file_size=file_size,
+            content_type=file.content_type or "application/octet-stream",
+            file_path=str(file_path.absolute()),
+            uploaded_by=current_user.id,
+        )
+        session.add(attachment)
+        session.commit()
+        session.refresh(attachment)
 
-    return EventAttachmentRead.model_validate(attachment)
+        return EventAttachmentRead.model_validate(attachment)
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Failed to upload attachment: {str(e)}")
+        print(traceback.format_exc())
+        # Удаляем файл, если он был создан, но запись в БД не удалась
+        if 'file_path' in locals() and file_path.exists():
+            try:
+                file_path.unlink()
+            except:
+                pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}",
+        )
 
 
 @router.get(
@@ -161,6 +179,9 @@ def download_attachment(
 
     # Проверяем, что файл существует
     file_path = Path(attachment.file_path)
+    # Если путь относительный, делаем его абсолютным
+    if not file_path.is_absolute():
+        file_path = BASE_DIR / file_path
     if not file_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -168,7 +189,7 @@ def download_attachment(
         )
 
     return FileResponse(
-        path=file_path,
+        path=str(file_path),
         filename=attachment.original_filename,
         media_type=attachment.content_type,
     )
