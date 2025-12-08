@@ -1695,6 +1695,12 @@ useEffect(() => {
             onRefreshMembers={loadCalendarMembers}
             recurrenceInfo={editingRecurrenceInfo}
             editingEvent={editingEventId ? events.find((e) => e.id === editingEventId) : undefined}
+            onEventUpdated={async () => {
+              // Перезагружаем событие после обновления вложений
+              if (editingEventId) {
+                await loadEvents();
+              }
+            }}
             onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
               try {
                 // Оптимистичное обновление: сразу обновляем событие в списке

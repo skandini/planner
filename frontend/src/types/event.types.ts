@@ -1,6 +1,17 @@
 import type { EventParticipant } from "./user.types";
 import type { RecurrenceRule } from "./common.types";
 
+export type EventAttachment = {
+  id: string;
+  event_id: string;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  content_type: string;
+  uploaded_by: string;
+  created_at: string;
+};
+
 export type EventRecord = {
   id: string;
   calendar_id: string;
@@ -18,6 +29,7 @@ export type EventRecord = {
   participants?: EventParticipant[];
   recurrence_rule?: RecurrenceRule | null;
   recurrence_parent_id?: string | null;
+  attachments?: EventAttachment[];
 };
 
 export type ConflictEvent = {
@@ -52,5 +64,4 @@ export type EventDraft = {
   recurrence_count?: number;
   recurrence_until: string;
 };
-
 

@@ -17,6 +17,7 @@ from .event import (
     ParticipantStatusUpdate,
     RecurrenceRule,
 )
+from .event_attachment import EventAttachmentRead
 from .notification import (
     NotificationCreate,
     NotificationRead,
@@ -41,6 +42,7 @@ __all__ = [
     "CalendarMemberUpdate",
     "ConflictEntry",
     "ConflictEventSummary",
+    "EventAttachmentRead",
     "EventCreate",
     "EventRead",
     "EventParticipantRead",

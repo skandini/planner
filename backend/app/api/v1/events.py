@@ -10,7 +10,7 @@ from sqlmodel import and_, delete, or_, select
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, Event, EventParticipant, User
+from app.models import Calendar, Event, EventAttachment, EventParticipant, User
 from app.schemas import (
     EventCreate,
     EventRead,
@@ -19,6 +19,7 @@ from app.schemas import (
     ParticipantStatusUpdate,
     RecurrenceRule,
 )
+from app.schemas.event_attachment import EventAttachmentRead
 from app.services.notifications import (
     notify_event_cancelled,
     notify_event_invited,
@@ -140,11 +141,25 @@ def _attach_participants(
             session.add(participant)
 
 
+def _load_event_attachments(
+    session: SessionDep, event_id: UUID
+) -> List[EventAttachmentRead]:
+    """Загрузить вложения события."""
+    from app.models import EventAttachment
+    attachments = session.exec(
+        select(EventAttachment).where(EventAttachment.event_id == event_id)
+    ).all()
+    return [EventAttachmentRead.model_validate(att) for att in attachments]
+
+
 def _serialize_event_with_participants(
     session: SessionDep, event: Event
 ) -> EventRead:
     participants = _load_event_participants(session, event.id)
-    return EventRead.model_validate(event).model_copy(update={"participants": participants})
+    attachments = _load_event_attachments(session, event.id)
+    return EventRead.model_validate(event).model_copy(
+        update={"participants": participants, "attachments": attachments}
+    )
 
 
 def _ensure_no_conflicts(

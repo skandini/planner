@@ -9,6 +9,7 @@ import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
+import { EventAttachments } from "@/components/events/EventAttachments";
 import { toUTCDateISO } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT, ROOM_ENDPOINT } from "@/lib/constants";
 
@@ -398,6 +399,19 @@ export function EventModalEnhanced({
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Вложения */}
+              {editingEvent && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                  <EventAttachments
+                    eventId={editingEvent.id}
+                    attachments={editingEvent.attachments || []}
+                    authFetch={authFetch}
+                    canManage={canManageEvents}
+                    onAttachmentsChange={onEventUpdated}
+                  />
                 </div>
               )}
 

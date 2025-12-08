@@ -74,6 +74,7 @@ class EventRead(EventBase):
     updated_at: datetime
     participants: List[EventParticipantRead] = []
     recurrence_parent_id: Optional[UUID] = None
+    attachments: Optional[List["EventAttachmentRead"]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -105,3 +106,13 @@ class ParticipantStatusUpdate(BaseModel):
 
 EventBase.model_rebuild()
 EventUpdate.model_rebuild()
+
+# Импортируем для forward reference
+from app.schemas.event_attachment import EventAttachmentRead  # noqa: E402
+
+EventRead.model_rebuild()
+
+# Импортируем для forward reference
+from app.schemas.event_attachment import EventAttachmentRead  # noqa: E402
+
+EventRead.model_rebuild()
