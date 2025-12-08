@@ -104,6 +104,7 @@ export function ProfileSettings({
 
     try {
       // Подготавливаем payload с правильными типами
+      // Backend ожидает UUID для organization_id или null, не пустую строку
       const payload: {
         email: string;
         full_name: string | null;
@@ -115,6 +116,8 @@ export function ProfileSettings({
           ? formData.organization_id.trim() 
           : null,
       };
+
+      console.log("Sending profile update:", payload);
 
       const response = await authFetch(`${USERS_ENDPOINT}me`, {
         method: "PUT",
