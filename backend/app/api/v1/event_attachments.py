@@ -41,9 +41,9 @@ def _get_total_attachment_size(session: SessionDep, event_id: UUID) -> int:
 )
 async def upload_attachment(
     event_id: UUID,
-    file: UploadFile = File(...),
     session: SessionDep,
     current_user: User = Depends(get_current_user),
+    file: UploadFile = File(...),
 ) -> EventAttachmentRead:
     """Загрузить файл к событию."""
     # Проверяем, что событие существует
