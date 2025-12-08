@@ -447,14 +447,14 @@ export function WeekView({
                   const displayEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
                   const minutesFromStart =
                     (displayStart.getTime() - dayStart.getTime()) / 60000;
-                  const durationMinutes = Math.max(
-                    (displayEnd.getTime() - displayStart.getTime()) / 60000,
-                    30,
-                  );
+                  // Реальная длительность события в минутах (до округления)
+                  const realDurationMinutes = (displayEnd.getTime() - displayStart.getTime()) / 60000;
+                  const isShortEvent = realDurationMinutes < 30; // Событие меньше 30 минут
+                  // Минимальная высота для отображения - 30 минут
+                  const durationMinutes = Math.max(realDurationMinutes, 30);
                   const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const heightPx = (durationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
-                  const isShortEvent = durationMinutes < 30; // Событие меньше 30 минут
                   
                   // Проверяем статус текущего пользователя для события
                   const userParticipant = currentUserEmail && event.participants
