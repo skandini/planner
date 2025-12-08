@@ -980,11 +980,6 @@ useEffect(() => {
       // Перезагружаем события для синхронизации
       await loadEvents();
       
-      // После создания события переключаемся в режим редактирования
-      setEditingEventId(createdEvent.id);
-      setEditingRecurrenceInfo(null);
-      // Оставляем модальное окно открытым
-      
       // Загружаем временные файлы, если они были выбраны до создания события
       if (filesToUploadAfterCreation.length > 0 && createdEvent.id) {
         // Загружаем файлы асинхронно, не блокируя создание события
@@ -1017,6 +1012,12 @@ useEffect(() => {
           }
         })();
       }
+      
+      // Закрываем модальное окно после создания события
+      setIsEventModalOpen(false);
+      setEditingEventId(null);
+      setEditingRecurrenceInfo(null);
+      setPendingFiles([]);
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",

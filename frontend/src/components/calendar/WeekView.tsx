@@ -454,6 +454,7 @@ export function WeekView({
                   const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const heightPx = (durationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
+                  const isShortEvent = durationMinutes < 30; // Событие меньше 30 минут
                   
                   // Проверяем статус текущего пользователя для события
                   const userParticipant = currentUserEmail && event.participants
@@ -510,26 +511,30 @@ export function WeekView({
                       }}
                     >
                       <p className="text-xs font-semibold leading-tight truncate">{event.title}</p>
-                      <p className="text-[0.65rem] text-slate-600 leading-tight">
-                        {new Intl.DateTimeFormat("ru-RU", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).format(eventStart)}{" "}
-                        —{" "}
-                        {new Intl.DateTimeFormat("ru-RU", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).format(eventEnd)}
-                      </p>
-                      {event.room_id && (
-                        <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 truncate">
-                          🏢 {rooms.find((r) => r.id === event.room_id)?.name || "Переговорка"}
-                        </p>
-                      )}
-                      {event.location && !event.room_id && (
-                        <p className="mt-0.5 text-[0.6rem] uppercase tracking-wide text-slate-500 truncate">
-                          {event.location}
-                        </p>
+                      {!isShortEvent && (
+                        <>
+                          <p className="text-[0.65rem] text-slate-600 leading-tight">
+                            {new Intl.DateTimeFormat("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }).format(eventStart)}{" "}
+                            —{" "}
+                            {new Intl.DateTimeFormat("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }).format(eventEnd)}
+                          </p>
+                          {event.room_id && (
+                            <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 truncate">
+                              🏢 {rooms.find((r) => r.id === event.room_id)?.name || "Переговорка"}
+                            </p>
+                          )}
+                          {event.location && !event.room_id && (
+                            <p className="mt-0.5 text-[0.6rem] uppercase tracking-wide text-slate-500 truncate">
+                              {event.location}
+                            </p>
+                          )}
+                        </>
                       )}
                       {onUpdateParticipantStatus && currentUserEmail && event.participants && (() => {
                         const currentParticipant = event.participants?.find(
