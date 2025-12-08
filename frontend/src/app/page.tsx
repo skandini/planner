@@ -969,38 +969,45 @@ useEffect(() => {
       // Перезагружаем события для синхронизации
       await loadEvents();
       
-      // Загружаем временные файлы, если они есть
-      if (pendingFiles.length > 0 && createdEvent.id) {
-        try {
-          for (const file of pendingFiles) {
-            const formData = new FormData();
-            formData.append("file", file);
-
-            const uploadResponse = await authFetch(
-              `${EVENT_ENDPOINT}${createdEvent.id}/attachments`,
-              {
-                method: "POST",
-                body: formData,
-              }
-            );
-
-            if (!uploadResponse.ok) {
-              console.error(`Не удалось загрузить файл ${file.name}`);
-            }
-          }
-          // Очищаем временные файлы после загрузки
-          setPendingFiles([]);
-          // Перезагружаем события для отображения загруженных файлов
-          await loadEvents();
-        } catch (err) {
-          console.error("Ошибка загрузки временных файлов:", err);
-        }
-      }
-      
       // После создания события переключаемся в режим редактирования
       setEditingEventId(createdEvent.id);
       setEditingRecurrenceInfo(null);
       // Оставляем модальное окно открытым
+      
+      // Загружаем временные файлы асинхронно после небольшой задержки,
+      // чтобы дать время модальному окну обновиться
+      if (pendingFiles.length > 0 && createdEvent.id) {
+        // Используем setTimeout чтобы дать время для обновления состояния
+        setTimeout(async () => {
+          try {
+            const filesToUpload = [...pendingFiles]; // Сохраняем копию массива
+            for (const file of filesToUpload) {
+              const formData = new FormData();
+              formData.append("file", file);
+
+              const uploadResponse = await authFetch(
+                `${EVENT_ENDPOINT}${createdEvent.id}/attachments`,
+                {
+                  method: "POST",
+                  body: formData,
+                }
+              );
+
+              if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json().catch(() => ({}));
+                console.error(`Не удалось загрузить файл ${file.name}:`, errorData.detail || uploadResponse.statusText);
+              }
+            }
+            // Очищаем временные файлы после загрузки
+            setPendingFiles([]);
+            // Перезагружаем события для отображения загруженных файлов
+            await loadEvents();
+          } catch (err) {
+            console.error("Ошибка загрузки временных файлов:", err);
+            // Не блокируем создание события из-за ошибки загрузки файлов
+          }
+        }, 500);
+      }
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",
