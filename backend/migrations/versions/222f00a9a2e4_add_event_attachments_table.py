@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect as sa_inspect
 
 
 # revision identifiers, used by Alembic.
@@ -22,24 +23,37 @@ def upgrade() -> None:
     # SQLite не поддерживает ALTER для внешних ключей, поэтому пропускаем их создание для events
     # Внешние ключи для events уже должны быть созданы в предыдущих миграциях
     
-    # Создаем таблицу event_attachments
-    op.create_table(
-        'event_attachments',
-        sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('event_id', sa.UUID(), nullable=False),
-        sa.Column('filename', sa.String(length=255), nullable=False),
-        sa.Column('original_filename', sa.String(length=255), nullable=False),
-        sa.Column('file_size', sa.Integer(), nullable=False),
-        sa.Column('content_type', sa.String(length=100), nullable=False),
-        sa.Column('file_path', sa.String(length=500), nullable=False),
-        sa.Column('uploaded_by', sa.UUID(), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['event_id'], ['events.id'], ),
-        sa.ForeignKeyConstraint(['uploaded_by'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_event_attachments_id'), 'event_attachments', ['id'], unique=False)
-    op.create_index(op.f('ix_event_attachments_event_id'), 'event_attachments', ['event_id'], unique=False)
+    # Проверяем, существует ли уже таблица event_attachments
+    bind = op.get_bind()
+    inspector = sa_inspect(bind)
+    tables = inspector.get_table_names()
+    
+    if 'event_attachments' not in tables:
+        # Создаем таблицу event_attachments
+        op.create_table(
+            'event_attachments',
+            sa.Column('id', sa.UUID(), nullable=False),
+            sa.Column('event_id', sa.UUID(), nullable=False),
+            sa.Column('filename', sa.String(length=255), nullable=False),
+            sa.Column('original_filename', sa.String(length=255), nullable=False),
+            sa.Column('file_size', sa.Integer(), nullable=False),
+            sa.Column('content_type', sa.String(length=100), nullable=False),
+            sa.Column('file_path', sa.String(length=500), nullable=False),
+            sa.Column('uploaded_by', sa.UUID(), nullable=False),
+            sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.ForeignKeyConstraint(['event_id'], ['events.id'], ),
+            sa.ForeignKeyConstraint(['uploaded_by'], ['users.id'], ),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index(op.f('ix_event_attachments_id'), 'event_attachments', ['id'], unique=False)
+        op.create_index(op.f('ix_event_attachments_event_id'), 'event_attachments', ['event_id'], unique=False)
+    else:
+        # Таблица уже существует, проверяем индексы
+        indexes = {idx['name'] for idx in inspector.get_indexes('event_attachments')}
+        if op.f('ix_event_attachments_id') not in indexes:
+            op.create_index(op.f('ix_event_attachments_id'), 'event_attachments', ['id'], unique=False)
+        if op.f('ix_event_attachments_event_id') not in indexes:
+            op.create_index(op.f('ix_event_attachments_event_id'), 'event_attachments', ['event_id'], unique=False)
 
 
 def downgrade() -> None:
