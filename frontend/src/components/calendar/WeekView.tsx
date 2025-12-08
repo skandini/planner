@@ -456,6 +456,10 @@ export function WeekView({
                     ? event.participants.find((p) => p.email === currentUserEmail)
                     : null;
                   const isAccepted = userParticipant?.response_status === "accepted";
+                  const needsAction = userParticipant && 
+                    (userParticipant.response_status === "needs_action" || 
+                     userParticipant.response_status === "pending" ||
+                     !userParticipant.response_status);
 
                   return (
                     <div
@@ -487,8 +491,8 @@ export function WeekView({
                       className={`absolute left-0.5 right-0.5 cursor-pointer rounded-lg border p-1.5 text-xs text-slate-900 shadow-md transition hover:shadow-lg z-10 ${
                         isStartingSoon 
                           ? "event-vibrating border-lime-500 border-2" 
-                          : isAccepted
-                            ? "border-lime-500 border-2 shadow-lg"
+                          : needsAction
+                            ? "border-2 border-slate-300 bg-white"
                             : "border-slate-200"
                       }`}
                       style={{
@@ -496,8 +500,8 @@ export function WeekView({
                         height: `${heightPx}px`,
                         background: isStartingSoon 
                           ? `${accent}40` 
-                          : isAccepted
-                            ? `linear-gradient(135deg, ${accent}30 0%, ${accent}50 100%)`
+                          : needsAction
+                            ? "white"
                             : `${accent}20`,
                       }}
                     >

@@ -177,7 +177,10 @@ export function MonthView({
                   const userParticipant = currentUserEmail && event.participants
                     ? event.participants.find((p) => p.email === currentUserEmail)
                     : null;
-                  const isAccepted = userParticipant?.response_status === "accepted";
+                  const needsAction = userParticipant && 
+                    (userParticipant.response_status === "needs_action" || 
+                     userParticipant.response_status === "pending" ||
+                     !userParticipant.response_status);
                   
                   return (
                     <div
@@ -189,20 +192,16 @@ export function MonthView({
                       onMouseEnter={(e) => handleEventMouseEnter(event, e.currentTarget)}
                       onMouseLeave={handleEventMouseLeave}
                       className={`flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-[0.65rem] transition ${
-                        isAccepted
-                          ? "bg-gradient-to-r from-lime-100 to-emerald-100 border border-lime-300 hover:from-lime-200 hover:to-emerald-200 shadow-sm"
+                        needsAction
+                          ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm"
                           : "bg-slate-100 hover:bg-slate-200"
                       }`}
                     >
                       <span
-                        className={`h-2 w-2 rounded-full ${
-                          isAccepted ? "ring-2 ring-lime-400" : ""
-                        }`}
-                        style={{ background: isAccepted ? accent : accent }}
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: accent }}
                       />
-                      <span className={`truncate ${
-                        isAccepted ? "font-semibold text-slate-900" : "text-slate-700"
-                      }`}>
+                      <span className="truncate text-slate-700">
                         {event.title}
                       </span>
                     </div>
