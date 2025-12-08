@@ -968,11 +968,11 @@ useEffect(() => {
       // Перезагружаем события для синхронизации
       await loadEvents();
       
-      // После создания события переключаемся в режим редактирования,
-      // чтобы можно было сразу добавить файлы
+      // После создания события переключаемся в режим редактирования
       setEditingEventId(createdEvent.id);
       setEditingRecurrenceInfo(null);
       // Оставляем модальное окно открытым для добавления файлов
+      // Временные файлы будут загружены автоматически через onPendingFilesReady
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",

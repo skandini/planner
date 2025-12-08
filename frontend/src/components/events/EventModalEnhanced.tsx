@@ -73,6 +73,7 @@ export function EventModalEnhanced({
   currentUserEmail,
   onEventUpdated,
 }: EventModalEnhancedProps) {
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictEntry[]>([]);
@@ -412,6 +413,8 @@ export function EventModalEnhanced({
                   authFetch={authFetch}
                   canManage={canManageEvents}
                   onAttachmentsChange={onEventUpdated}
+                  pendingFiles={pendingFiles}
+                  onPendingFilesChange={setPendingFiles}
                 />
               </div>
 

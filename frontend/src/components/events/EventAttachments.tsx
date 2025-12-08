@@ -11,6 +11,8 @@ interface EventAttachmentsProps {
   authFetch: AuthenticatedFetch;
   canManage: boolean;
   onAttachmentsChange?: () => void;
+  pendingFiles?: File[];
+  onPendingFilesChange?: (files: File[]) => void;
 }
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 МБ
@@ -22,6 +24,8 @@ export function EventAttachments({
   authFetch,
   canManage,
   onAttachmentsChange,
+  pendingFiles = [],
+  onPendingFilesChange,
 }: EventAttachmentsProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,22 +38,18 @@ export function EventAttachments({
   };
 
   const getTotalSize = () => {
-    return attachments.reduce((sum, att) => sum + att.file_size, 0);
+    const attachmentsSize = attachments.reduce((sum, att) => sum + att.file_size, 0);
+    const pendingSize = pendingFiles.reduce((sum, file) => sum + file.size, 0);
+    return attachmentsSize + pendingSize;
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!eventId || !canManage) {
-      if (!eventId) {
-        setError("Сначала создайте событие, затем добавьте файлы");
-      }
-      return;
-    }
+    if (!canManage) return;
 
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
     setError(null);
-    setUploading(true);
 
     try {
       // Проверяем размер каждого файла
@@ -66,22 +66,39 @@ export function EventAttachments({
         throw new Error(`Общий размер файлов превышает ${formatFileSize(MAX_TOTAL_SIZE)}`);
       }
 
-      // Загружаем файлы по очереди
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
+      // Если событие уже создано, загружаем файлы сразу
+      if (eventId) {
+        setUploading(true);
+        try {
+          for (const file of files) {
+            const formData = new FormData();
+            formData.append("file", file);
 
-        const response = await authFetch(
-          `${EVENT_ENDPOINT}${eventId}/attachments`,
-          {
-            method: "POST",
-            body: formData,
+            const response = await authFetch(
+              `${EVENT_ENDPOINT}${eventId}/attachments`,
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.detail || `Не удалось загрузить файл "${file.name}"`);
+            }
           }
-        );
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || `Не удалось загрузить файл "${file.name}"`);
+          // Обновляем список
+          if (onAttachmentsChange) {
+            onAttachmentsChange();
+          }
+        } finally {
+          setUploading(false);
+        }
+      } else {
+        // Если событие еще не создано, сохраняем файлы во временное состояние
+        if (onPendingFilesChange) {
+          onPendingFilesChange([...pendingFiles, ...files]);
         }
       }
 
@@ -89,20 +106,19 @@ export function EventAttachments({
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-
-      // Обновляем список
-      if (onAttachmentsChange) {
-        onAttachmentsChange();
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки файлов");
-    } finally {
-      setUploading(false);
     }
   };
 
+  const handleDeletePendingFile = (index: number) => {
+    if (!canManage || !onPendingFilesChange) return;
+    const newFiles = pendingFiles.filter((_, i) => i !== index);
+    onPendingFilesChange(newFiles);
+  };
+
   const handleDelete = async (attachmentId: string) => {
-    if (!canManage) return;
+    if (!canManage || !eventId) return;
 
     if (!confirm("Удалить этот файл?")) return;
 
@@ -160,8 +176,18 @@ export function EventAttachments({
     return "📎";
   };
 
+  const getFileIconFromFile = (file: File) => {
+    if (file.type.startsWith("image/")) return "🖼️";
+    if (file.type.includes("pdf")) return "📄";
+    if (file.type.includes("word") || file.type.includes("document")) return "📝";
+    if (file.type.includes("excel") || file.type.includes("spreadsheet")) return "📊";
+    if (file.type.includes("zip") || file.type.includes("archive")) return "📦";
+    return "📎";
+  };
+
   const totalSize = getTotalSize();
   const remainingSize = MAX_TOTAL_SIZE - totalSize;
+  const totalFilesCount = attachments.length + pendingFiles.length;
 
   return (
     <div className="space-y-3">
@@ -169,12 +195,12 @@ export function EventAttachments({
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Вложения</h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            {attachments.length > 0
-              ? `${attachments.length} ${attachments.length === 1 ? "файл" : "файлов"} (${formatFileSize(totalSize)})`
+            {totalFilesCount > 0
+              ? `${totalFilesCount} ${totalFilesCount === 1 ? "файл" : "файлов"} (${formatFileSize(totalSize)})`
               : "Нет вложений"}
           </p>
         </div>
-        {canManage && eventId && (
+        {canManage && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -211,8 +237,47 @@ export function EventAttachments({
         </div>
       )}
 
+      {/* Временные файлы (до создания события) */}
+      {pendingFiles.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate-600">Файлы для загрузки:</p>
+          {pendingFiles.map((file, index) => (
+            <div
+              key={`pending-${index}`}
+              className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 text-xl">
+                {getFileIconFromFile(file)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {file.name}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {formatFileSize(file.size)}
+                </p>
+              </div>
+              {canManage && onPendingFilesChange && (
+                <button
+                  type="button"
+                  onClick={() => handleDeletePendingFile(index)}
+                  className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
+                  title="Удалить"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Загруженные файлы */}
       {attachments.length > 0 && (
         <div className="space-y-2">
+          {pendingFiles.length > 0 && <p className="text-xs font-medium text-slate-600">Загруженные файлы:</p>}
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
@@ -240,7 +305,7 @@ export function EventAttachments({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                 </button>
-                {canManage && (
+                {canManage && eventId && (
                   <button
                     type="button"
                     onClick={() => handleDelete(attachment.id)}
@@ -260,29 +325,19 @@ export function EventAttachments({
 
       {canManage && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
-          {!eventId ? (
-            <p className="text-amber-700 font-medium">
-              💡 Создайте событие, чтобы добавить файлы
+          <p>Максимум: {formatFileSize(MAX_TOTAL_SIZE)} на событие</p>
+          <p>Максимум: {formatFileSize(MAX_FILE_SIZE)} на файл</p>
+          {remainingSize > 0 ? (
+            <p className="mt-1 font-medium text-slate-700">
+              Осталось: {formatFileSize(remainingSize)}
             </p>
           ) : (
-            <>
-              <p>Максимум: {formatFileSize(MAX_TOTAL_SIZE)} на событие</p>
-              <p>Максимум: {formatFileSize(MAX_FILE_SIZE)} на файл</p>
-              {remainingSize > 0 && (
-                <p className="mt-1 font-medium text-slate-700">
-                  Осталось: {formatFileSize(remainingSize)}
-                </p>
-              )}
-              {remainingSize <= 0 && (
-                <p className="mt-1 font-medium text-red-600">
-                  Достигнут лимит размера файлов
-                </p>
-              )}
-            </>
+            <p className="mt-1 font-medium text-red-600">
+              Достигнут лимит размера файлов
+            </p>
           )}
         </div>
       )}
     </div>
   );
 }
-
