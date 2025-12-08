@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { AuthenticatedFetch } from "@/types/common.types";
+import { USERS_ENDPOINT } from "@/lib/constants";
 
 interface Organization {
   id: string;
@@ -59,9 +60,10 @@ export function ProfileSettings({
     setLoading(true);
     setError(null);
     try {
-      const response = await authFetch("/api/v1/users/me");
+      const response = await authFetch(`${USERS_ENDPOINT}me`);
       if (!response.ok) {
-        throw new Error("Не удалось загрузить профиль");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Не удалось загрузить профиль");
       }
       const data: UserProfile = await response.json();
       setProfile(data);
@@ -74,6 +76,7 @@ export function ProfileSettings({
         department: "",
       });
     } catch (err) {
+      console.error("Profile load error:", err);
       setError(err instanceof Error ? err.message : "Ошибка загрузки профиля");
     } finally {
       setLoading(false);
@@ -82,10 +85,12 @@ export function ProfileSettings({
 
   const loadOrganizations = async () => {
     try {
-      const response = await authFetch("/api/v1/organizations");
+      const response = await authFetch(`${USERS_ENDPOINT.replace("/users/", "/organizations")}`);
       if (response.ok) {
         const data: Organization[] = await response.json();
         setOrganizations(data);
+      } else {
+        console.error("Failed to load organizations:", response.status, response.statusText);
       }
     } catch (err) {
       console.error("Failed to load organizations:", err);
@@ -98,7 +103,7 @@ export function ProfileSettings({
     setError(null);
 
     try {
-      const response = await authFetch("/api/v1/users/me", {
+      const response = await authFetch(`${USERS_ENDPOINT}me`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
