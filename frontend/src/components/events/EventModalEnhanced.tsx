@@ -43,6 +43,7 @@ interface EventModalEnhancedProps {
   onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
   currentUserEmail?: string;
   onEventUpdated?: () => void | Promise<void>;
+  onPendingFilesReady?: (files: File[]) => void;
 }
 
 export function EventModalEnhanced({
