@@ -1245,45 +1245,69 @@ useEffect(() => {
   return (
     <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
-        <header className="rounded-lg border border-slate-200 bg-white/90 px-2 py-1 shadow-sm flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400 whitespace-nowrap">
-                Корпоративный календарь
-              </p>
-              <h1 className="text-xs font-semibold truncate">Командные календари</h1>
+        <header className="relative overflow-hidden rounded-xl border border-slate-200/50 bg-gradient-to-r from-white via-slate-50/50 to-white backdrop-blur-sm px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex-shrink-0">
+          {/* Декоративный градиент */}
+          <div className="absolute inset-0 bg-gradient-to-r from-lime-500/5 via-emerald-500/5 to-lime-500/5 pointer-events-none" />
+          
+          <div className="relative flex items-center justify-between gap-3">
+            {/* Левая часть - Логотип и название */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-lime-400 to-emerald-500 shadow-sm">
+                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <h1 className="text-xs font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent truncate">
+                  Командные календари
+                </h1>
+                <p className="text-[0.55rem] text-slate-500 truncate">
+                  Корпоративный календарь
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[0.65rem] text-slate-500 flex-shrink-0">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-center">
-                <p className="text-[0.55rem] uppercase tracking-wide text-slate-400">
-                  API
-                </p>
-                <p className="font-semibold text-lime-600 text-[0.65rem]">
-                  {API_BASE_URL.replace(/https?:\/\//, "").substring(0, 15)}...
-                </p>
+
+            {/* Правая часть - Статистика и действия */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Блоки статистики */}
+              <div className="flex items-center gap-1">
+                <div className="group relative">
+                  <div className="flex items-center gap-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-2 py-1 hover:bg-white/80 transition-all cursor-default">
+                    <div className="w-1.5 h-1.5 rounded-full bg-lime-500 animate-pulse" />
+                    <span className="text-[0.65rem] font-semibold text-slate-700">
+                      {loading ? "…" : calendars.length}
+                    </span>
+                  </div>
+                  <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-[0.6rem] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                    Календарей
+                  </div>
+                </div>
+                
+                <div className="group relative">
+                  <div className="flex items-center gap-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-2 py-1 hover:bg-white/80 transition-all cursor-default max-w-[100px]">
+                    <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-[0.65rem] font-semibold text-slate-700 truncate">
+                      {userEmail ? userEmail.split("@")[0] : "—"}
+                    </span>
+                  </div>
+                  <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-[0.6rem] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                    {userEmail || "Пользователь"}
+                  </div>
+                </div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-center">
-                <p className="text-[0.55rem] uppercase tracking-wide text-slate-400">
-                  Календарей
-                </p>
-                <p className="font-semibold text-[0.65rem]">
-                  {loading ? "…" : calendars.length}
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-center max-w-[120px]">
-                <p className="text-[0.55rem] uppercase tracking-wide text-slate-400 truncate">
-                  Пользователь
-                </p>
-                <p className="font-semibold text-[0.65rem] truncate">
-                  {userEmail ? userEmail.split("@")[0] : "—"}
-                </p>
-              </div>
+
+              {/* Кнопка выхода */}
               <button
                 type="button"
                 onClick={handleManualLogout}
-                className="rounded-lg border border-slate-200 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 transition hover:bg-slate-100 whitespace-nowrap"
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/60 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-700 transition-all hover:from-slate-200 hover:to-slate-100 hover:shadow-sm active:scale-95 whitespace-nowrap"
               >
-                Выйти
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Выйти</span>
               </button>
             </div>
           </div>
