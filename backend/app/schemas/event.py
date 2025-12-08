@@ -101,7 +101,7 @@ class RecurrenceRule(BaseModel):
 
 
 class ParticipantStatusUpdate(BaseModel):
-    response_status: Literal["accepted", "declined", "tentative", "needs_action", "pending"]
+    response_status: Literal["accepted", "declined", "needs_action", "pending"]
 
 
 EventBase.model_rebuild()
