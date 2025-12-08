@@ -567,6 +567,68 @@ export function WeekView({
                            currentParticipant.response_status === "pending" ||
                            !currentParticipant.response_status);
                         if (!needsAction) return null;
+                        
+                        // Если событие слишком короткое (меньше 60px), показываем компактное меню
+                        const isShortEvent = heightPx < 60;
+                        
+                        if (isShortEvent) {
+                          // Компактная версия - одна кнопка с выпадающим меню при hover
+                          return (
+                            <div className="group/buttons mt-1 relative" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="w-full rounded bg-gradient-to-r from-lime-500 to-emerald-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:from-lime-600 hover:to-emerald-600 shadow-sm"
+                                title="Ответить на приглашение"
+                              >
+                                Ответить
+                              </button>
+                              {/* Выпадающее меню при hover */}
+                              <div className="absolute top-full left-0 right-0 mt-1 opacity-0 invisible group-hover/buttons:opacity-100 group-hover/buttons:visible transition-all z-50 bg-white rounded-lg border border-slate-200 shadow-lg p-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (currentParticipant) {
+                                      onUpdateParticipantStatus(event.id, currentParticipant.user_id, "accepted");
+                                    }
+                                  }}
+                                  className="w-full rounded bg-lime-500 px-2 py-1 text-[0.65rem] font-semibold text-white transition hover:bg-lime-600 mb-1 flex items-center justify-center gap-1"
+                                  title="Принять"
+                                >
+                                  <span>✓</span> Принять
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (currentParticipant) {
+                                      onUpdateParticipantStatus(event.id, currentParticipant.user_id, "tentative");
+                                    }
+                                  }}
+                                  className="w-full rounded bg-amber-500 px-2 py-1 text-[0.65rem] font-semibold text-white transition hover:bg-amber-600 mb-1 flex items-center justify-center gap-1"
+                                  title="Под вопросом"
+                                >
+                                  <span>?</span> Возможно
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (currentParticipant) {
+                                      onUpdateParticipantStatus(event.id, currentParticipant.user_id, "declined");
+                                    }
+                                  }}
+                                  className="w-full rounded bg-red-500 px-2 py-1 text-[0.65rem] font-semibold text-white transition hover:bg-red-600 flex items-center justify-center gap-1"
+                                  title="Отклонить"
+                                >
+                                  <span>✕</span> Отклонить
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // Для длинных событий показываем все три кнопки
                         return (
                           <div className="mt-1 flex gap-1" onClick={(e) => e.stopPropagation()}>
                             <button
