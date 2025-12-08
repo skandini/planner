@@ -170,26 +170,42 @@ export function MonthView({
                 )}
               </div>
               <div className="mt-3 space-y-1 relative">
-                {dayEvents.slice(0, 3).map((event) => (
-                  <div
-                    key={event.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick(event);
-                    }}
-                    onMouseEnter={(e) => handleEventMouseEnter(event, e.currentTarget)}
-                    onMouseLeave={handleEventMouseLeave}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl bg-slate-100 px-2 py-1 text-[0.65rem] transition hover:bg-slate-200"
-                  >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: accent }}
-                    />
-                    <span className="truncate text-slate-700">
-                      {event.title}
-                    </span>
-                  </div>
-                ))}
+                {dayEvents.slice(0, 3).map((event) => {
+                  // Проверяем статус текущего пользователя для события (если есть участники)
+                  // В MonthView нет currentUserEmail, но мы можем проверить по participants
+                  const hasAcceptedStatus = event.participants?.some(
+                    (p) => p.response_status === "accepted"
+                  );
+                  
+                  return (
+                    <div
+                      key={event.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }}
+                      onMouseEnter={(e) => handleEventMouseEnter(event, e.currentTarget)}
+                      onMouseLeave={handleEventMouseLeave}
+                      className={`flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-[0.65rem] transition ${
+                        hasAcceptedStatus
+                          ? "bg-gradient-to-r from-lime-100 to-emerald-100 border border-lime-300 hover:from-lime-200 hover:to-emerald-200 shadow-sm"
+                          : "bg-slate-100 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          hasAcceptedStatus ? "ring-2 ring-lime-400" : ""
+                        }`}
+                        style={{ background: hasAcceptedStatus ? accent : accent }}
+                      />
+                      <span className={`truncate ${
+                        hasAcceptedStatus ? "font-semibold text-slate-900" : "text-slate-700"
+                      }`}>
+                        {event.title}
+                      </span>
+                    </div>
+                  );
+                })}
                 {dayEvents.length > 3 && (
                   <p className="text-[0.65rem] text-slate-500">
                     + {dayEvents.length - 3} ещё

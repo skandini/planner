@@ -454,7 +454,7 @@ useEffect(() => {
       const data: EventRecord[] = await response.json();
       // Если выбран календарь, показываем события из этого календаря
       // ИЛИ события, где пользователь является участником (даже если они в другом календаре)
-      const filteredEvents = selectedCalendarId
+      let filteredEvents = selectedCalendarId
         ? data.filter((e) => {
             // События из выбранного календаря
             if (e.calendar_id === selectedCalendarId) return true;
@@ -465,6 +465,23 @@ useEffect(() => {
             return false;
           })
         : data;
+      
+      // Фильтруем отклоненные события для текущего пользователя
+      // Если пользователь отклонил событие, оно не должно отображаться в его календаре
+      if (userEmail) {
+        filteredEvents = filteredEvents.filter((e) => {
+          // Если пользователь является участником события
+          if (e.participants) {
+            const userParticipant = e.participants.find((p) => p.email === userEmail);
+            // Если пользователь отклонил событие, скрываем его
+            if (userParticipant && userParticipant.response_status === "declined") {
+              return false;
+            }
+          }
+          return true;
+        });
+      }
+      
       setEvents(filteredEvents);
       setEventsError(null);
     } catch (err) {
@@ -474,7 +491,7 @@ useEffect(() => {
     } finally {
       setEventsLoading(false);
     }
-  }, [selectedCalendarId, rangeStart, rangeEnd, accessToken, authFetch]);
+  }, [selectedCalendarId, rangeStart, rangeEnd, accessToken, authFetch, userEmail]);
 
   // Debounced refresh для событий при получении уведомлений
   const debouncedLoadEventsRef = useRef<NodeJS.Timeout | null>(null);

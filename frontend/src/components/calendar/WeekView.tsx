@@ -497,6 +497,12 @@ export function WeekView({
                   const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const heightPx = (durationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
+                  
+                  // Проверяем статус текущего пользователя для события
+                  const userParticipant = currentUserEmail && event.participants
+                    ? event.participants.find((p) => p.email === currentUserEmail)
+                    : null;
+                  const isAccepted = userParticipant?.response_status === "accepted";
 
                   return (
                     <div
@@ -525,13 +531,21 @@ export function WeekView({
                       draggable={Boolean(onEventMove) && !event.all_day}
                       onDragStart={(dragEvent) => handleDragStart(dragEvent, event)}
                       onDragEnd={handleDragEnd}
-                      className={`absolute left-0.5 right-0.5 cursor-pointer rounded-lg border border-slate-200 bg-white p-1.5 text-xs text-slate-900 shadow-md transition hover:shadow-lg z-10 ${
-                        isStartingSoon ? "event-vibrating border-lime-500 border-2" : ""
+                      className={`absolute left-0.5 right-0.5 cursor-pointer rounded-lg border p-1.5 text-xs text-slate-900 shadow-md transition hover:shadow-lg z-10 ${
+                        isStartingSoon 
+                          ? "event-vibrating border-lime-500 border-2" 
+                          : isAccepted
+                            ? "border-lime-500 border-2 shadow-lg"
+                            : "border-slate-200"
                       }`}
                       style={{
                         top: `${topPx}px`,
                         height: `${heightPx}px`,
-                        background: isStartingSoon ? `${accent}40` : `${accent}20`,
+                        background: isStartingSoon 
+                          ? `${accent}40` 
+                          : isAccepted
+                            ? `linear-gradient(135deg, ${accent}30 0%, ${accent}50 100%)`
+                            : `${accent}20`,
                       }}
                     >
                       <p className="text-xs font-semibold leading-tight truncate">{event.title}</p>
