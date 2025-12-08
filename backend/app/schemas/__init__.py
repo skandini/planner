@@ -23,6 +23,7 @@ from .notification import (
     NotificationRead,
     NotificationUpdate,
 )
+from .organization import OrganizationCreate, OrganizationRead
 from .room import RoomCreate, RoomRead, RoomUpdate
 from .user import (
     RefreshTokenRequest,
@@ -52,6 +53,8 @@ __all__ = [
     "NotificationUpdate",
     "ParticipantStatusUpdate",
     "RecurrenceRule",
+    "OrganizationCreate",
+    "OrganizationRead",
     "RoomCreate",
     "RoomRead",
     "RoomUpdate",

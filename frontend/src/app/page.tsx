@@ -35,6 +35,7 @@ import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { CalendarMembersManager } from "@/components/calendar/CalendarMembersManager";
+import { ProfileSettings } from "@/components/profile/ProfileSettings";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
