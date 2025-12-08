@@ -101,6 +101,7 @@ export default function Home() {
     isSeriesParent: boolean;
     isSeriesChild: boolean;
   } | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [members, setMembers] = useState<CalendarMember[]>([]);
@@ -968,11 +969,38 @@ useEffect(() => {
       // Перезагружаем события для синхронизации
       await loadEvents();
       
+      // Загружаем временные файлы, если они есть
+      if (pendingFiles.length > 0 && createdEvent.id) {
+        try {
+          for (const file of pendingFiles) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const uploadResponse = await authFetch(
+              `${EVENT_ENDPOINT}${createdEvent.id}/attachments`,
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            if (!uploadResponse.ok) {
+              console.error(`Не удалось загрузить файл ${file.name}`);
+            }
+          }
+          // Очищаем временные файлы после загрузки
+          setPendingFiles([]);
+          // Перезагружаем события для отображения загруженных файлов
+          await loadEvents();
+        } catch (err) {
+          console.error("Ошибка загрузки временных файлов:", err);
+        }
+      }
+      
       // После создания события переключаемся в режим редактирования
       setEditingEventId(createdEvent.id);
       setEditingRecurrenceInfo(null);
-      // Оставляем модальное окно открытым для добавления файлов
-      // Временные файлы будут загружены автоматически через onPendingFilesReady
+      // Оставляем модальное окно открытым
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",
@@ -1678,7 +1706,9 @@ useEffect(() => {
               setEditingEventId(null);
               setEventFormError(null);
               setEditingRecurrenceInfo(null);
+              setPendingFiles([]);
             }}
+            onPendingFilesReady={setPendingFiles}
             isSubmitting={isEventSubmitting}
             error={eventFormError}
             calendarName={selectedCalendar?.name || ""}
