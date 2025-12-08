@@ -26,8 +26,8 @@ import type { EventRecord, EventDraft, ConflictEntry } from "@/types/event.types
 import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { ViewMode, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
-import { WeekViewEnhanced as WeekView } from "@/components/calendar/WeekViewEnhanced";
-import { MonthViewEnhanced as MonthView } from "@/components/calendar/MonthViewEnhanced";
+import { WeekView } from "@/components/calendar/WeekView";
+import { MonthView } from "@/components/calendar/MonthView";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventModalEnhanced as EventModal } from "@/components/events/EventModalEnhanced";
