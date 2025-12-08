@@ -1708,7 +1708,18 @@ useEffect(() => {
             </div>
 
           {selectedCalendar && viewMode === "week" && (
-              <div className="rounded-2xl bg-slate-100/50 p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex-1 overflow-hidden min-h-0">
+            <div className="flex gap-4">
+              {/* Блок с ближайшими событиями */}
+              <div className="w-80 flex-shrink-0">
+                <UpcomingEvents
+                  events={events}
+                  currentUserEmail={userEmail || undefined}
+                  onEventClick={(event) => openEventModal(undefined, event)}
+                />
+              </div>
+              
+              {/* Основной календарь */}
+              <div className="flex-1 min-w-0 rounded-2xl bg-slate-100/50 p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] overflow-hidden min-h-0">
             <WeekView
               days={weekDays}
               events={events}
