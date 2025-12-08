@@ -1245,13 +1245,13 @@ useEffect(() => {
   return (
     <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
-        <header className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_20px_70px_rgba(15,23,42,0.12)] flex-shrink-0">
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
+        <header className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-[0_20px_70px_rgba(15,23,42,0.12)] flex-shrink-0">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
             Корпоративный календарь
           </p>
-          <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="mt-1 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold">Командные календари</h1>
+              <h1 className="text-lg font-semibold">Командные календари</h1>
             </div>
             <div className="flex flex-wrap gap-3 text-sm text-slate-500">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">

@@ -38,6 +38,7 @@ export function WeekView({
   const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
   const draggingRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
   // Состояние для отслеживания текущего времени (обновляется каждую секунду)
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -131,6 +132,15 @@ export function WeekView({
     
     return () => clearInterval(interval);
   }, []);
+
+  // Автоскролл к 8 утра при монтировании компонента
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // Позиция 8 утра: 8 часов * 60px = 480px
+      const scrollTo8AM = 8 * HOUR_HEIGHT;
+      scrollContainerRef.current.scrollTop = scrollTo8AM;
+    }
+  }, [HOUR_HEIGHT]);
   
   // Функция проверки, начинается ли событие в ближайшие 5 минут
   const isEventStartingSoon = useCallback((event: EventRecord) => {
@@ -372,7 +382,7 @@ export function WeekView({
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
           <div
             className="border-r border-slate-200 bg-white"
