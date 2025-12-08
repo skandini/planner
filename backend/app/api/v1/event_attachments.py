@@ -176,12 +176,13 @@ def download_attachment(
     "/attachments/{attachment_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete attachment",
+    response_class=Response,
 )
 def delete_attachment(
     attachment_id: UUID,
     session: SessionDep,
     current_user: User = Depends(get_current_user),
-) -> None:
+) -> Response:
     """Удалить файл."""
     attachment = session.get(EventAttachment, attachment_id)
     if not attachment:
@@ -215,4 +216,6 @@ def delete_attachment(
     # Удаляем запись из БД
     session.delete(attachment)
     session.commit()
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
