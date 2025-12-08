@@ -179,6 +179,14 @@ export default function Home() {
         const headers = new Headers(init.headers as HeadersInit | undefined);
         headers.set("Authorization", `Bearer ${token}`);
         
+        // Если body это FormData, не устанавливаем Content-Type вручную
+        // Браузер должен установить его автоматически с правильным boundary
+        const isFormData = init.body instanceof FormData;
+        if (isFormData) {
+          // Удаляем Content-Type если он был установлен, чтобы браузер установил его автоматически
+          headers.delete("Content-Type");
+        }
+        
         try {
           const url = typeof input === "string" ? input : input.toString();
           
