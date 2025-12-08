@@ -38,7 +38,12 @@ export function EventAttachments({
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!eventId || !canManage) return;
+    if (!eventId || !canManage) {
+      if (!eventId) {
+        setError("Сначала создайте событие, затем добавьте файлы");
+      }
+      return;
+    }
 
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -253,19 +258,27 @@ export function EventAttachments({
         </div>
       )}
 
-      {canManage && eventId && (
+      {canManage && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
-          <p>Максимум: {formatFileSize(MAX_TOTAL_SIZE)} на событие</p>
-          <p>Максимум: {formatFileSize(MAX_FILE_SIZE)} на файл</p>
-          {remainingSize > 0 && (
-            <p className="mt-1 font-medium text-slate-700">
-              Осталось: {formatFileSize(remainingSize)}
+          {!eventId ? (
+            <p className="text-amber-700 font-medium">
+              💡 Создайте событие, чтобы добавить файлы
             </p>
-          )}
-          {remainingSize <= 0 && (
-            <p className="mt-1 font-medium text-red-600">
-              Достигнут лимит размера файлов
-            </p>
+          ) : (
+            <>
+              <p>Максимум: {formatFileSize(MAX_TOTAL_SIZE)} на событие</p>
+              <p>Максимум: {formatFileSize(MAX_FILE_SIZE)} на файл</p>
+              {remainingSize > 0 && (
+                <p className="mt-1 font-medium text-slate-700">
+                  Осталось: {formatFileSize(remainingSize)}
+                </p>
+              )}
+              {remainingSize <= 0 && (
+                <p className="mt-1 font-medium text-red-600">
+                  Достигнут лимит размера файлов
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

@@ -962,16 +962,14 @@ useEffect(() => {
         );
       }
 
-      setEventForm(DEFAULT_EVENT_FORM);
-      setEditingEventId(null);
-      setEditingRecurrenceInfo(null);
-      setIsEventModalOpen(false);
+      // Перезагружаем события для синхронизации
+      await loadEvents();
       
-      // Перезагружаем события для синхронизации (на случай, если были изменения на сервере)
-      // Небольшая задержка, чтобы дать серверу время обработать все изменения
-      setTimeout(() => {
-        loadEvents();
-      }, 500);
+      // После создания события переключаемся в режим редактирования,
+      // чтобы можно было сразу добавить файлы
+      setEditingEventId(createdEvent.id);
+      setEditingRecurrenceInfo(null);
+      // Оставляем модальное окно открытым для добавления файлов
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",

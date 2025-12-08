@@ -42,6 +42,7 @@ interface EventModalEnhancedProps {
   editingEvent?: EventRecord;
   onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
   currentUserEmail?: string;
+  onEventUpdated?: () => void | Promise<void>;
 }
 
 export function EventModalEnhanced({
@@ -403,17 +404,15 @@ export function EventModalEnhanced({
               )}
 
               {/* Вложения */}
-              {editingEvent && (
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
-                  <EventAttachments
-                    eventId={editingEvent.id}
-                    attachments={editingEvent.attachments || []}
-                    authFetch={authFetch}
-                    canManage={canManageEvents}
-                    onAttachmentsChange={onEventUpdated}
-                  />
-                </div>
-              )}
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <EventAttachments
+                  eventId={editingEvent?.id || null}
+                  attachments={editingEvent?.attachments || []}
+                  authFetch={authFetch}
+                  canManage={canManageEvents}
+                  onAttachmentsChange={onEventUpdated}
+                />
+              </div>
 
               {/* Повторения */}
               <div className="rounded-lg border border-slate-200 bg-white">
