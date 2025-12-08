@@ -103,20 +103,18 @@ export function ProfileSettings({
     setError(null);
 
     try {
+      // Подготавливаем payload с правильными типами
       const payload: {
         email: string;
         full_name: string | null;
         organization_id: string | null;
       } = {
-        email: formData.email,
-        full_name: formData.full_name || null,
-        organization_id: formData.organization_id || null,
+        email: formData.email.trim(),
+        full_name: formData.full_name.trim() || null,
+        organization_id: formData.organization_id && formData.organization_id.trim() 
+          ? formData.organization_id.trim() 
+          : null,
       };
-
-      // Если organization_id пустая строка, отправляем null
-      if (!payload.organization_id) {
-        payload.organization_id = null;
-      }
 
       const response = await authFetch(`${USERS_ENDPOINT}me`, {
         method: "PUT",
