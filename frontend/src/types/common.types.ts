@@ -24,4 +24,9 @@ export type PendingMoveContext = {
   newEnd: Date;
 };
 
+export type AuthenticatedFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
+
 
