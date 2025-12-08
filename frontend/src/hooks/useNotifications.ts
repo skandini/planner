@@ -38,52 +38,6 @@ export function useNotifications() {
     }
   }, [authFetch, accessToken]);
 
-  // Функция для воспроизведения звукового сигнала
-  const playNotificationSound = useCallback(() => {
-    try {
-      // Используем Web Audio API для создания звукового сигнала
-      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const audioContext = new AudioContextClass();
-      
-      // Resume AudioContext если он в suspended состоянии (требуется user gesture)
-      if (audioContext.state === "suspended") {
-        audioContext.resume().catch((err) => {
-          console.debug("Failed to resume AudioContext:", err);
-          return;
-        });
-      }
-      
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // Частота 800 Гц
-      
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1); // Плавное нарастание
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3); // Плавное затухание
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Ждем, пока AudioContext будет готов
-      audioContext.resume().then(() => {
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3); // Длительность 300мс
-        
-        oscillator.onended = () => {
-          audioContext.close();
-        };
-      }).catch((err) => {
-        console.debug("Failed to start audio:", err);
-        audioContext.close();
-      });
-    } catch (err) {
-      // Игнорируем ошибки, если браузер не поддерживает Web Audio API
-      console.debug("Audio notification not available:", err);
-    }
-  }, []);
-
   useEffect(() => {
     if (!accessToken) {
       setNotifications([]);
@@ -106,25 +60,6 @@ export function useNotifications() {
       clearInterval(interval);
     };
   }, [loadNotifications, loadUnreadCount, accessToken]);
-
-  // Отдельный useEffect для воспроизведения звука при новых уведомлениях
-  useEffect(() => {
-    if (!accessToken || notifications.length === 0) {
-      return;
-    }
-    
-    // Проверяем, есть ли новые непрочитанные уведомления
-    const newUnreadNotifications = notifications.filter(n => !n.is_read);
-    if (newUnreadNotifications.length > 0) {
-      // Воспроизводим звук только если есть новые непрочитанные уведомления
-      // Используем небольшой таймаут, чтобы избежать множественных воспроизведений
-      const soundTimeout = setTimeout(() => {
-        playNotificationSound();
-      }, 300);
-      
-      return () => clearTimeout(soundTimeout);
-    }
-  }, [notifications, accessToken, playNotificationSound]);
 
   const markAsRead = useCallback(
     async (notificationId: string) => {

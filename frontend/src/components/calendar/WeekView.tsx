@@ -143,52 +143,6 @@ export function WeekView({
     return diffMinutes >= 0 && diffMinutes <= 5;
   }, [currentTime]);
   
-  // Воспроизведение звукового сигнала каждую минуту для событий, начинающихся в ближайшие 5 минут
-  useEffect(() => {
-    const now = currentTime;
-    const currentMinute = now.getMinutes();
-    
-    // Проверяем, есть ли события, начинающиеся в ближайшие 5 минут
-    const upcomingEvents = events.filter((event) => {
-      const eventStart = parseUTC(event.starts_at);
-      const diffMs = eventStart.getTime() - now.getTime();
-      const diffMinutes = diffMs / (1000 * 60);
-      return diffMinutes >= 0 && diffMinutes <= 5;
-    });
-    
-    // Воспроизводим звук каждую минуту, если есть предстоящие события
-    if (upcomingEvents.length > 0 && lastSoundMinuteRef.current !== currentMinute) {
-      lastSoundMinuteRef.current = currentMinute;
-      
-      // Создаем звуковой сигнал (короткий бип)
-      try {
-        const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        const audioContext = new AudioContextClass();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800; // Частота звука (Гц)
-        oscillator.type = "sine";
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // Громкость
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2); // Длительность 200мс
-        
-        // Очистка после завершения
-        setTimeout(() => {
-          audioContext.close();
-        }, 300);
-      } catch (err) {
-        // Игнорируем ошибки, если браузер не поддерживает Web Audio API
-        console.debug("Audio notification not available:", err);
-      }
-    }
-  }, [currentTime, events]);
   
   // Состояние для выделения диапазона времени
   const [selection, setSelection] = useState<{
