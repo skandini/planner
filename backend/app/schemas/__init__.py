@@ -28,6 +28,7 @@ from .room import RoomCreate, RoomRead, RoomUpdate
 from .user import (
     RefreshTokenRequest,
     TokenPair,
+    UserBase,
     UserCreate,
     UserLogin,
     UserRead,
@@ -60,6 +61,7 @@ __all__ = [
     "RoomUpdate",
     "TokenPair",
     "RefreshTokenRequest",
+    "UserBase",
     "UserCreate",
     "UserLogin",
     "UserRead",
