@@ -1428,6 +1428,15 @@ useEffect(() => {
             </ul>
           </section>
 
+          {/* Блок с ближайшими событиями */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
+            <UpcomingEvents
+              events={events}
+              currentUserEmail={userEmail || undefined}
+              onEventClick={(event) => openEventModal(undefined, event)}
+            />
+          </section>
+
             <form
               onSubmit={handleSubmit}
               className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0"
