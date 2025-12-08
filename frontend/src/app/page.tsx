@@ -1245,43 +1245,43 @@ useEffect(() => {
   return (
     <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
-        <header className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-[0_20px_70px_rgba(15,23,42,0.12)] flex-shrink-0">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-            Корпоративный календарь
-          </p>
-          <div className="mt-1 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-lg font-semibold">Командные календари</h1>
+        <header className="rounded-lg border border-slate-200 bg-white/90 px-2 py-1 shadow-sm flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400 whitespace-nowrap">
+                Корпоративный календарь
+              </p>
+              <h1 className="text-xs font-semibold truncate">Командные календари</h1>
             </div>
-            <div className="flex flex-wrap gap-3 text-sm text-slate-500">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
+            <div className="flex items-center gap-1.5 text-[0.65rem] text-slate-500 flex-shrink-0">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-center">
+                <p className="text-[0.55rem] uppercase tracking-wide text-slate-400">
                   API
                 </p>
-                <p className="font-semibold text-lime-600">
-                  {API_BASE_URL.replace(/https?:\/\//, "")}
+                <p className="font-semibold text-lime-600 text-[0.65rem]">
+                  {API_BASE_URL.replace(/https?:\/\//, "").substring(0, 15)}...
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-center">
+                <p className="text-[0.55rem] uppercase tracking-wide text-slate-400">
                   Календарей
                 </p>
-                <p className="font-semibold">
+                <p className="font-semibold text-[0.65rem]">
                   {loading ? "…" : calendars.length}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-400">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-center max-w-[120px]">
+                <p className="text-[0.55rem] uppercase tracking-wide text-slate-400 truncate">
                   Пользователь
                 </p>
-                <p className="font-semibold">
-                  {userEmail ?? "—"}
+                <p className="font-semibold text-[0.65rem] truncate">
+                  {userEmail ? userEmail.split("@")[0] : "—"}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleManualLogout}
-                className="rounded-2xl border border-slate-200 px-4 py-2 font-semibold text-slate-600 transition hover:bg-slate-100"
+                className="rounded-lg border border-slate-200 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 transition hover:bg-slate-100 whitespace-nowrap"
               >
                 Выйти
               </button>
