@@ -438,6 +438,31 @@ export function WeekView({
                   />
                 ))}
 
+                {/* Красная линия текущего времени - показываем только для сегодняшнего дня */}
+                {isToday && (() => {
+                  const now = currentTime;
+                  const todayStart = new Date(now);
+                  todayStart.setHours(0, 0, 0, 0);
+                  const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+                  const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  
+                  // Показываем линию только если она в пределах видимой области (0-23:59)
+                  if (topPx >= 0 && topPx <= DAY_HEIGHT) {
+                    return (
+                      <div
+                        className="absolute left-0 right-0 z-30 pointer-events-none"
+                        style={{ top: `${topPx}px` }}
+                      >
+                        {/* Красная линия */}
+                        <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.5)]" />
+                        {/* Красная точка слева */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.5)]" />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
                 {/* Визуальное выделение диапазона времени */}
                 {isSelecting && selectionHeight > 0 && (
                   <div

@@ -1743,6 +1743,7 @@ useEffect(() => {
               currentUserEmail={userEmail || undefined}
             />
               </div>
+            </div>
           )}
 
           {selectedCalendar && viewMode === "month" && (
