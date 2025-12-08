@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from sqlmodel import select
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
 from app.models import User
-from app.schemas import UserRead
+from app.schemas import UserBase, UserRead
 
 router = APIRouter()
 
