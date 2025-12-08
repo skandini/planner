@@ -7,6 +7,7 @@ import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
+import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { toUTCDateISO } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT, ROOM_ENDPOINT } from "@/lib/constants";
@@ -193,25 +194,29 @@ export function EventModalEnhanced({
     selectedCalendarId,
   ]);
 
-  const conflictCount = conflicts.reduce((sum, conflict) => sum + conflict.events.length, 0);
-  const hasConflicts = conflictCount > 0;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        {/* Компактный заголовок */}
-        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-6xl max-h-[96vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
+        {/* Современный заголовок */}
+        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                {isEditing ? "Редактировать событие" : "Новое событие"}
-              </h2>
-              <p className="mt-0.5 text-sm text-slate-500">{calendarName || "Новый календарь"}</p>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 shadow-lg shadow-lime-500/30">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {isEditing ? "Редактировать событие" : "Новое событие"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">{calendarName || "Новый календарь"}</p>
+              </div>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
               aria-label="Закрыть"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,12 +227,12 @@ export function EventModalEnhanced({
         </div>
 
         {/* Контент */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(95vh - 180px)" }}>
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(96vh - 200px)" }}>
           <form onSubmit={onSubmit} className="p-6">
             {error && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 <div className="flex items-center gap-2">
-                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                   <span>{error}</span>
@@ -242,91 +247,105 @@ export function EventModalEnhanced({
             )}
 
             <div className="space-y-6">
-              {/* Основная информация - компактно */}
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Название <span className="text-red-500">*</span>
-                  </span>
-                  <input
-                    required
-                    type="text"
-                    disabled={isReadOnly}
-                    value={form.title}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, title: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
-                    placeholder="Например, Стендап команды"
-                  />
-                </label>
-
-                {/* Дата и время в одну строку */}
-                <div className="grid grid-cols-2 gap-4">
+              {/* Основная информация */}
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Левая колонка */}
+                <div className="space-y-4">
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Начало <span className="text-red-500">*</span>
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">
+                      Название <span className="text-red-500">*</span>
                     </span>
                     <input
                       required
-                      type={form.all_day ? "date" : "datetime-local"}
+                      type="text"
                       disabled={isReadOnly}
-                      value={form.starts_at}
+                      value={form.title}
                       onChange={(e) =>
-                        setForm((prev) => ({ ...prev, starts_at: e.target.value }))
+                        setForm((prev) => ({ ...prev, title: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      placeholder="Например, Стендап команды"
                     />
                   </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Конец <span className="text-red-500">*</span>
-                    </span>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-slate-600">
+                        Начало <span className="text-red-500">*</span>
+                      </span>
+                      <input
+                        required
+                        type={form.all_day ? "date" : "datetime-local"}
+                        disabled={isReadOnly}
+                        value={form.starts_at}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, starts_at: e.target.value }))
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-slate-600">
+                        Конец <span className="text-red-500">*</span>
+                      </span>
+                      <input
+                        required
+                        type={form.all_day ? "date" : "datetime-local"}
+                        disabled={isReadOnly}
+                        value={form.ends_at}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, ends_at: e.target.value }))
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="flex items-center gap-2">
                     <input
-                      required
-                      type={form.all_day ? "date" : "datetime-local"}
+                      type="checkbox"
                       disabled={isReadOnly}
-                      value={form.ends_at}
+                      checked={form.all_day}
                       onChange={(e) =>
-                        setForm((prev) => ({ ...prev, ends_at: e.target.value }))
+                        setForm((prev) => ({ ...prev, all_day: e.target.checked }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      className="h-4 w-4 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
+                    />
+                    <span className="text-sm text-slate-700">Весь день</span>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">Описание</span>
+                    <textarea
+                      value={form.description}
+                      disabled={isReadOnly}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, description: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      rows={3}
+                      placeholder="Дополнительная информация..."
                     />
                   </label>
                 </div>
 
-                {/* Компактный чекбокс "Весь день" */}
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    disabled={isReadOnly}
-                    checked={form.all_day}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, all_day: e.target.checked }))
-                    }
-                    className="h-4 w-4 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
+                {/* Правая колонка - Участники */}
+                <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
+                  <ParticipantSearch
+                    form={form}
+                    setForm={setForm}
+                    users={users}
+                    usersLoading={usersLoading}
+                    usersError={usersError}
+                    calendarMembers={members}
+                    membersLoading={membersLoading}
+                    readOnly={isReadOnly}
                   />
-                  <span className="text-sm text-slate-700">Весь день</span>
-                </label>
-
-                {/* Описание - компактно */}
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-slate-700">Описание</span>
-                  <textarea
-                    value={form.description}
-                    disabled={isReadOnly}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, description: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
-                    rows={2}
-                    placeholder="Дополнительная информация..."
-                  />
-                </label>
+                </div>
               </div>
 
-              {/* Участники и таймлайн */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5">
+              {/* Таймлайн и переговорки */}
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
                 <ResourcePanel
                   rooms={rooms}
                   roomsLoading={roomsLoading}
@@ -354,9 +373,9 @@ export function EventModalEnhanced({
 
               {/* Статусы участников (только при редактировании) */}
               {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <div className="mb-3">
-                    <h3 className="text-sm font-semibold text-slate-900">Ответы участников</h3>
+                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                  <div className="mb-4">
+                    <h3 className="text-base font-semibold text-slate-900">Ответы участников</h3>
                     <p className="mt-1 text-xs text-slate-500">
                       {editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли,{" "}
                       {editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили,{" "}
@@ -382,7 +401,7 @@ export function EventModalEnhanced({
                 </div>
               )}
 
-              {/* Повторения - раскрывающийся блок */}
+              {/* Повторения */}
               <div className="rounded-lg border border-slate-200 bg-white">
                 <button
                   type="button"
@@ -404,7 +423,7 @@ export function EventModalEnhanced({
                       onClick={(e) => e.stopPropagation()}
                       className="h-4 w-4 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
                     />
-                    <span className="text-sm font-medium text-slate-900">Повторять событие</span>
+                    <span className="text-sm font-semibold text-slate-900">Повторять событие</span>
                   </div>
                   <svg
                     className={`h-5 w-5 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
@@ -497,9 +516,7 @@ export function EventModalEnhanced({
                         />
                       </label>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      Максимум — 180 повторений
-                    </p>
+                    <p className="text-xs text-slate-500">Максимум — 180 повторений</p>
                   </div>
                 )}
               </div>

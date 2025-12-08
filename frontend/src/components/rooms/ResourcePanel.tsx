@@ -7,8 +7,7 @@ import type { Room } from "@/types/room.types";
 import type { UserProfile, ParticipantProfile } from "@/types/user.types";
 import type { TimelineRowData } from "@/types/common.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
-import { ParticipantsSection } from "@/components/participants/ParticipantsSection";
-import { UnifiedAvailabilityTimeline } from "@/components/availability/UnifiedAvailabilityTimeline";
+import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
 import { ConflictSummary } from "@/components/availability/ConflictSummary";
 import { inputToDate } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
@@ -410,19 +409,7 @@ export function ResourcePanel({
         )}
       </div>
 
-      <ParticipantsSection
-        form={form}
-        setForm={setForm}
-        users={users}
-        usersLoading={usersLoading}
-        usersError={usersError}
-        calendarMembers={members}
-        membersLoading={membersLoading}
-        onEnsureMembership={ensureMembership}
-        readOnly={readOnly}
-      />
-
-      <UnifiedAvailabilityTimeline
+      <EnhancedTimeline
         rows={timelineRows}
         referenceDate={selectedDate}
         selectedStart={form.starts_at}
