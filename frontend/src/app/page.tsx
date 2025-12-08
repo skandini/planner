@@ -28,6 +28,7 @@ import type { Room } from "@/types/room.types";
 import type { ViewMode, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
 import { WeekView } from "@/components/calendar/WeekView";
 import { MonthView } from "@/components/calendar/MonthView";
+import { UpcomingEvents } from "@/components/calendar/UpcomingEvents";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventModalEnhanced as EventModal } from "@/components/events/EventModalEnhanced";

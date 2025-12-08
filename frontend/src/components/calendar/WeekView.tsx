@@ -40,8 +40,17 @@ export function WeekView({
   const draggingRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
-  // Состояние для отслеживания текущего времени (обновляется каждую секунду)
+  // Состояние для отслеживания текущего времени (обновляется каждую минуту)
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  
+  // Обновляем текущее время каждую минуту
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Обновляем каждую минуту
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // Состояние для всплывающего окна с участниками
   const [hoveredEvent, setHoveredEvent] = useState<{
