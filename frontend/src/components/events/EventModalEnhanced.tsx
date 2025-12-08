@@ -73,10 +73,18 @@ export function EventModalEnhanced({
   onUpdateParticipantStatus,
   currentUserEmail,
   onEventUpdated,
+  onPendingFilesReady,
 }: EventModalEnhancedProps) {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  
+  // Передаем временные файлы в родительский компонент
+  useEffect(() => {
+    if (onPendingFilesReady) {
+      onPendingFilesReady(pendingFiles);
+    }
+  }, [pendingFiles, onPendingFilesReady]);
   const [conflicts, setConflicts] = useState<ConflictEntry[]>([]);
   const [conflictsLoading, setConflictsLoading] = useState(false);
   const [conflictsError, setConflictsError] = useState<string | null>(null);
