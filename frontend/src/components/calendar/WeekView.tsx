@@ -41,7 +41,6 @@ export function WeekView({
   
   // Состояние для отслеживания текущего времени (обновляется каждую секунду)
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const lastSoundMinuteRef = useRef<number | null>(null);
   
   // Состояние для всплывающего окна с участниками
   const [hoveredEvent, setHoveredEvent] = useState<{
