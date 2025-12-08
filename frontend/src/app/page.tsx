@@ -110,6 +110,8 @@ export default function Home() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const { accessToken, userEmail, logout, refreshAccessToken } = useAuth();
   const isAuthenticated = Boolean(accessToken);
   const router = useRouter();
