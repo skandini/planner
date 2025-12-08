@@ -17,7 +17,7 @@ export const ROLE_LABELS: Record<CalendarRole, string> = {
   viewer: "Наблюдатель",
 };
 export const WORKDAY_START_HOUR = 8;
-export const WORKDAY_END_HOUR = 19;
+export const WORKDAY_END_HOUR = 20;
 export const SLOT_DURATION_MINUTES = 30;
 
 export const DEFAULT_FORM_STATE: CalendarDraft = {
