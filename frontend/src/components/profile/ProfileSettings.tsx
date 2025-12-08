@@ -15,6 +15,9 @@ interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
+  position: string | null;
+  department: string | null;
   organization_id: string | null;
   is_active: boolean;
   role: string;
@@ -71,9 +74,9 @@ export function ProfileSettings({
         email: data.email,
         full_name: data.full_name || "",
         organization_id: data.organization_id || "",
-        phone: "",
-        position: "",
-        department: "",
+        phone: data.phone || "",
+        position: data.position || "",
+        department: data.department || "",
       });
     } catch (err) {
       console.error("Profile load error:", err);
@@ -108,10 +111,16 @@ export function ProfileSettings({
       const payload: {
         email: string;
         full_name: string | null;
+        phone: string | null;
+        position: string | null;
+        department: string | null;
         organization_id: string | null;
       } = {
         email: formData.email.trim(),
         full_name: formData.full_name.trim() || null,
+        phone: formData.phone.trim() || null,
+        position: formData.position.trim() || null,
+        department: formData.department.trim() || null,
         organization_id: formData.organization_id && formData.organization_id.trim() 
           ? formData.organization_id.trim() 
           : null,

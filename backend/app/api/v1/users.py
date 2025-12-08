@@ -39,6 +39,9 @@ def update_current_user_profile(
     """Update current authenticated user profile."""
     current_user.email = payload.email.lower()
     current_user.full_name = payload.full_name
+    current_user.phone = payload.phone
+    current_user.position = payload.position
+    current_user.department = payload.department
     current_user.organization_id = payload.organization_id
     session.add(current_user)
     session.commit()
