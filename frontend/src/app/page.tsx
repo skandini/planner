@@ -908,6 +908,9 @@ useEffect(() => {
         setEvents((prev) =>
           prev.map((e) => {
             if (e.id === editingEventId) {
+              const recurrenceRule = payload.recurrence_rule 
+                ? (payload.recurrence_rule as RecurrenceRule)
+                : null;
               return {
                 ...e,
                 title: payload.title as string,
@@ -917,7 +920,7 @@ useEffect(() => {
                 ends_at: payload.ends_at as string,
                 all_day: (payload.all_day as boolean) || false,
                 room_id: (payload.room_id as string) || null,
-                recurrence_rule: payload.recurrence_rule || null,
+                recurrence_rule: recurrenceRule,
               };
             }
             return e;
