@@ -31,9 +31,13 @@ export function WeekView({
   onUpdateParticipantStatus,
   currentUserEmail,
 }: WeekViewProps) {
-  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const hours = useMemo(() => {
+    const startHour = 8;
+    const endHour = 19;
+    return Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour);
+  }, []);
   const HOUR_HEIGHT = 40; // Высота одного часа в пикселях
-  const DAY_HEIGHT = 24 * HOUR_HEIGHT; // 960px
+  const DAY_HEIGHT = (19 - 8 + 1) * HOUR_HEIGHT; // Высота для диапазона 8:00-19:00
   const todayKey = new Date().toDateString();
   const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
