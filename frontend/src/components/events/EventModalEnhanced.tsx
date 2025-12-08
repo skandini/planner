@@ -71,6 +71,7 @@ export function EventModalEnhanced({
   editingEvent,
   onUpdateParticipantStatus,
   currentUserEmail,
+  onEventUpdated,
 }: EventModalEnhancedProps) {
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
