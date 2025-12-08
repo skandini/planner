@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
@@ -20,8 +21,9 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 МБ в байтах
 # Максимальный размер всех файлов для события: 20 МБ
 MAX_TOTAL_SIZE = 20 * 1024 * 1024  # 20 МБ в байтах
 
-# Директория для хранения файлов
-UPLOAD_DIR = Path("uploads/event_attachments")
+# Директория для хранения файлов (относительно корня проекта backend)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+UPLOAD_DIR = BASE_DIR / "uploads" / "event_attachments"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -210,6 +212,9 @@ def delete_attachment(
 
     # Удаляем файл с диска
     file_path = Path(attachment.file_path)
+    # Если путь относительный, делаем его абсолютным
+    if not file_path.is_absolute():
+        file_path = BASE_DIR / file_path
     if file_path.exists():
         file_path.unlink()
 

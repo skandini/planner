@@ -43,9 +43,14 @@ def create_application() -> FastAPI:
         import traceback
         print(f"[ERROR] Unhandled exception: {str(exc)}")
         print(traceback.format_exc())
+        # Важно: JSONResponse автоматически получает CORS заголовки от CORSMiddleware
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": f"Internal server error: {str(exc)}"},
+            headers={
+                "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+                "Access-Control-Allow-Credentials": "true",
+            },
         )
 
     app.include_router(api_router, prefix=settings.API_V1_STR)
