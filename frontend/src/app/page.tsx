@@ -1650,6 +1650,7 @@ useEffect(() => {
               accent={selectedCalendar.color}
               onEventClick={(event) => openEventModal(undefined, event)}
               rooms={rooms}
+              currentUserEmail={userEmail || undefined}
             />
               </div>
           )}
