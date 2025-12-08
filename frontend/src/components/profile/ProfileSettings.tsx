@@ -103,18 +103,37 @@ export function ProfileSettings({
     setError(null);
 
     try {
+      const payload: {
+        email: string;
+        full_name: string | null;
+        organization_id: string | null;
+      } = {
+        email: formData.email,
+        full_name: formData.full_name || null,
+        organization_id: formData.organization_id || null,
+      };
+
+      // Если organization_id пустая строка, отправляем null
+      if (!payload.organization_id) {
+        payload.organization_id = null;
+      }
+
       const response = await authFetch(`${USERS_ENDPOINT}me`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          full_name: formData.full_name || null,
-          organization_id: formData.organization_id || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error("Profile update error:", errorData);
+        // Если это ошибка валидации, показываем детали
+        if (response.status === 422 && Array.isArray(errorData.detail)) {
+          const validationErrors = errorData.detail.map((err: any) => 
+            `${err.loc?.join('.')}: ${err.msg}`
+          ).join(', ');
+          throw new Error(`Ошибка валидации: ${validationErrors}`);
+        }
         throw new Error(errorData.detail || "Не удалось обновить профиль");
       }
 
