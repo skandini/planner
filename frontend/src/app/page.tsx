@@ -1365,11 +1365,23 @@ useEffect(() => {
                   >
                     {currentUser?.avatar_url ? (
                       <img
-                        src={currentUser.avatar_url.startsWith('http') ? currentUser.avatar_url : `${API_BASE_URL.replace('/api/v1', '')}${currentUser.avatar_url.startsWith('/') ? '' : '/'}${currentUser.avatar_url}`}
+                        src={(() => {
+                          const avatarUrl = currentUser.avatar_url!;
+                          if (avatarUrl.startsWith('http')) {
+                            return avatarUrl;
+                          }
+                          const baseUrl = API_BASE_URL.replace('/api/v1', '');
+                          const fullUrl = `${baseUrl}${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
+                          console.log('Avatar URL constructed:', fullUrl, 'from:', avatarUrl);
+                          return fullUrl;
+                        })()}
                         alt={currentUser.full_name || "Пользователь"}
                         className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-slate-200"
                         onError={(e) => {
-                          console.error('Avatar load error:', currentUser.avatar_url, 'Full URL:', `${API_BASE_URL.replace('/api/v1', '')}${currentUser.avatar_url.startsWith('/') ? '' : '/'}${currentUser.avatar_url}`);
+                          const avatarUrl = currentUser.avatar_url!;
+                          const baseUrl = API_BASE_URL.replace('/api/v1', '');
+                          const fullUrl = `${baseUrl}${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
+                          console.error('Avatar load error:', avatarUrl, 'Full URL:', fullUrl);
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
                         onLoad={() => {
