@@ -13,6 +13,7 @@ export type TimelineRowData = {
   id: string;
   label: string;
   meta?: string | null;
+  avatarUrl?: string | null;
   availability: EventRecord[];
   loading: boolean;
   type: "room" | "participant";

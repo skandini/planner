@@ -295,16 +295,19 @@ export function ResourcePanel({
         id: `room-${selectedRoom.id}`,
         label: selectedRoom.name,
         meta: selectedRoom.location,
+        avatarUrl: null,
         availability: roomAvailability,
         loading: loadingAvailability,
         type: "room",
       });
     }
     selectedParticipantProfiles.forEach((participant) => {
+      const profile = users.find((u) => u.id === participant.user_id);
       rows.push({
         id: `participant-${participant.user_id}`,
         label: participant.label,
         meta: participant.email,
+        avatarUrl: profile?.avatar_url ?? null,
         availability: participantAvailability[participant.user_id] ?? [],
         loading: participantAvailabilityLoading,
         type: "participant",

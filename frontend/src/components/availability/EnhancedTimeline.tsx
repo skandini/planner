@@ -167,9 +167,20 @@ export function EnhancedTimeline({
             >
               {/* Название ресурса */}
               <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-700">
-                  {row.label[0].toUpperCase()}
-                </div>
+                {row.avatarUrl ? (
+                  <img
+                    src={row.avatarUrl.startsWith("http") ? row.avatarUrl : `${row.avatarUrl.startsWith("/") ? "" : "/"}${row.avatarUrl}`}
+                    alt={row.label}
+                    className="h-8 w-8 rounded-lg object-cover border border-white shadow"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-700">
+                    {row.label[0].toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold text-slate-900 truncate">{row.label}</p>
@@ -236,13 +247,43 @@ export function EnhancedTimeline({
               className="grid items-center gap-2 rounded-lg border border-lime-200 bg-gradient-to-r from-lime-50 to-emerald-50 p-2"
               style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}
             >
-              <div className="flex h-8 items-center gap-2 rounded-lg bg-white/80 px-3 py-2">
+              <div className="flex items-center gap-3 rounded-lg bg-white/80 px-3 py-2">
                 <svg className="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div className="min-w-0 leading-tight">
                   <p className="text-xs font-bold text-lime-800">Все свободны</p>
                   <p className="text-[0.65rem] text-lime-700">Переговорка и участники доступны</p>
+                  {/* Аватары участников при полностью свободном слоте */}
+                  {resourceRows.filter((r) => r.type === "participant").length > 0 && (
+                    <div className="mt-1 flex -space-x-2">
+                      {resourceRows
+                        .filter((r) => r.type === "participant")
+                        .slice(0, 6)
+                        .map((row) => {
+                          const avatar = row.avatarUrl;
+                          const initial = row.label[0]?.toUpperCase() || "U";
+                          return (
+                            <div key={row.id} className="relative">
+                              {avatar ? (
+                                <img
+                                  src={avatar.startsWith("http") ? avatar : `${avatar.startsWith("/") ? "" : "/"}${avatar}`}
+                                  alt={row.label}
+                                  className="h-7 w-7 rounded-full object-cover border-2 border-white shadow"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center border-2 border-white shadow text-[0.7rem] font-semibold text-slate-700">
+                                  {initial}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               </div>
               {timeSlots.map((slot) => {
