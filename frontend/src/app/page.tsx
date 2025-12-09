@@ -1348,7 +1348,7 @@ useEffect(() => {
                   <button
                     type="button"
                     onClick={() => setIsProfileSettingsOpen(true)}
-                    className="flex items-center gap-2 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-3 py-1 hover:bg-white/80 transition-all cursor-pointer max-w-[180px]"
+                    className="flex items-center gap-2.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-4 py-1.5 hover:bg-white/80 transition-all cursor-pointer max-w-[200px]"
                   >
                     {currentUser?.avatar_url ? (
                       <img
@@ -1359,11 +1359,10 @@ useEffect(() => {
                           }
                           const baseUrl = API_BASE_URL.replace('/api/v1', '');
                           const fullUrl = `${baseUrl}${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
-                          console.log('Avatar URL constructed:', fullUrl, 'from:', avatarUrl);
                           return fullUrl;
                         })()}
                         alt={currentUser.full_name || "Пользователь"}
-                        className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-slate-200"
+                        className="w-6 h-6 rounded-full object-cover flex-shrink-0 border border-slate-200"
                         onError={(e) => {
                           const avatarUrl = currentUser.avatar_url!;
                           const baseUrl = API_BASE_URL.replace('/api/v1', '');
@@ -1376,21 +1375,21 @@ useEffect(() => {
                         }}
                       />
                     ) : (
-                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center flex-shrink-0">
-                        <span className="text-[0.6rem] font-semibold text-white">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[0.7rem] font-semibold text-white">
                           {(currentUser?.full_name || userEmail || "U")[0].toUpperCase()}
                         </span>
                       </div>
                     )}
-                    <span className="text-[0.7rem] font-semibold text-slate-700 truncate">
+                    <span className="text-sm font-semibold text-slate-700 truncate">
                       {currentUser?.full_name || userEmail?.split("@")[0] || "Пользователь"}
                     </span>
-                    <svg className="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </button>
-                  <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-[0.6rem] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                  <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     Настройки профиля
                   </div>
                 </div>
