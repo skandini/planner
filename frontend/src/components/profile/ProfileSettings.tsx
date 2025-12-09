@@ -52,6 +52,9 @@ export function ProfileSettings({
     position: "",
     department: "",
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -79,6 +82,16 @@ export function ProfileSettings({
         position: data.position || "",
         department: data.department || "",
       });
+      // Устанавливаем превью аватара если есть
+      if (data.avatar_url) {
+        const avatarUrl = data.avatar_url.startsWith('http') 
+          ? data.avatar_url 
+          : `http://localhost:8000${data.avatar_url}`;
+        setAvatarPreview(avatarUrl);
+      } else {
+        setAvatarPreview(null);
+      }
+      setAvatarFile(null); // Сбрасываем выбранный файл при загрузке
     } catch (err) {
       console.error("Profile load error:", err);
       setError(err instanceof Error ? err.message : "Ошибка загрузки профиля");
@@ -101,12 +114,55 @@ export function ProfileSettings({
     }
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Проверка размера (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Размер файла не должен превышать 5 МБ");
+        return;
+      }
+      // Проверка типа
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError("Разрешены только изображения (JPG, PNG, GIF, WebP)");
+        return;
+      }
+      setAvatarFile(file);
+      setError(null);
+      // Создаем превью
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
     try {
+      // Сначала загружаем аватар если выбран новый
+      if (avatarFile) {
+        setUploadingAvatar(true);
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+        
+        const uploadResponse = await authFetch(`${USERS_ENDPOINT}me/avatar`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json().catch(() => ({}));
+          throw new Error(errorData.detail || "Не удалось загрузить аватар");
+        }
+        setUploadingAvatar(false);
+      }
+      
       // Подготавливаем payload с правильными типами
       // Backend ожидает UUID для organization_id или null, не пустую строку
       const payload: {
@@ -193,6 +249,47 @@ export function ProfileSettings({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Аватар */}
+              <div className="space-y-4 border-b border-slate-200 pb-6">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Фотография профиля
+                </h3>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Аватар"
+                        className="h-20 w-20 rounded-full object-cover border-2 border-slate-200"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center border-2 border-slate-200">
+                        <svg className="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                        disabled={uploadingAvatar}
+                      />
+                      <span className="inline-block rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        {avatarFile ? "Изменить фото" : "Загрузить фото"}
+                      </span>
+                    </label>
+                    <p className="mt-1 text-xs text-slate-500">
+                      JPG, PNG, GIF или WebP, максимум 5 МБ
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Основная информация */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -317,10 +414,10 @@ export function ProfileSettings({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || uploadingAvatar}
                   className="rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:from-lime-600 hover:to-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {saving ? "Сохранение..." : "Сохранить"}
+                  {saving || uploadingAvatar ? "Сохранение..." : "Сохранить"}
                 </button>
               </div>
             </form>
