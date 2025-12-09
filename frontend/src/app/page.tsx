@@ -341,6 +341,22 @@ export default function Home() {
     }
   }, [accessToken, authFetch]);
 
+  const loadOrganizations = useCallback(async () => {
+    if (!accessToken) {
+      setOrganizations([]);
+      return;
+    }
+    try {
+      const response = await authFetch(ORGANIZATIONS_ENDPOINT, { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizations(data);
+      }
+    } catch (err) {
+      console.error("Failed to load organizations:", err);
+    }
+  }, [accessToken, authFetch]);
+
   const loadCalendars = useCallback(async () => {
     if (!accessToken) {
       setCalendars([]);
