@@ -34,6 +34,7 @@ interface ResourcePanelProps {
   conflicts: ConflictEntry[];
   conflictsLoading: boolean;
   conflictsError: string | null;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function ResourcePanel({
@@ -58,6 +59,7 @@ export function ResourcePanel({
   conflicts,
   conflictsLoading,
   conflictsError,
+  getUserOrganizationAbbreviation,
 }: ResourcePanelProps) {
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
@@ -417,6 +419,7 @@ export function ResourcePanel({
         isAllDay={isAllDay}
         errorMessage={participantAvailabilityError}
         conflictMap={conflictMap}
+      getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
       />
 
       <ConflictSummary

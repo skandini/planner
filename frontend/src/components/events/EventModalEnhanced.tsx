@@ -387,6 +387,7 @@ export function EventModalEnhanced({
                   conflicts={conflicts}
                   conflictsLoading={conflictsLoading}
                   conflictsError={conflictsError}
+                getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                 />
               </div>
 

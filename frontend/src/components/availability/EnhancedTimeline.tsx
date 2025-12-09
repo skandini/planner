@@ -14,6 +14,7 @@ interface EnhancedTimelineProps {
   isAllDay: boolean;
   errorMessage: string | null;
   conflictMap?: Map<string, Array<{ start: Date; end: Date }>>;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function EnhancedTimeline({
@@ -24,6 +25,7 @@ export function EnhancedTimeline({
   isAllDay,
   errorMessage,
   conflictMap,
+  getUserOrganizationAbbreviation,
 }: EnhancedTimelineProps) {
   const selectionRange = useMemo(() => {
     const start = inputToDate(selectedStart, { allDay: isAllDay });
@@ -169,7 +171,20 @@ export function EnhancedTimeline({
                   {row.label[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{row.label}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{row.label}</p>
+                    {row.type === "participant" && getUserOrganizationAbbreviation && (
+                      (() => {
+                        const rawId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
+                        const orgAbbr = getUserOrganizationAbbreviation(rawId);
+                        return orgAbbr ? (
+                          <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 flex-shrink-0">
+                            {orgAbbr}
+                          </span>
+                        ) : null;
+                      })()
+                    )}
+                  </div>
                   {row.meta && (
                     <p className="text-xs text-slate-500 truncate">{row.meta}</p>
                   )}
@@ -218,16 +233,40 @@ export function EnhancedTimeline({
           {/* Строка "Все свободны" */}
           {resourceRows.length > 0 && (
             <div
-              className="grid gap-2 rounded-lg border-2 border-lime-200 bg-gradient-to-r from-lime-50 to-emerald-50 p-2"
+              className="grid gap-2 rounded-lg border border-lime-200 bg-gradient-to-r from-lime-50 to-emerald-50 p-2"
               style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}
             >
               <div className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2">
                 <svg className="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-bold text-lime-800">Все свободны</p>
                   <p className="text-[0.65rem] text-lime-700">Переговорка и участники доступны</p>
+                  {/* Показываем участников с тегами юрлица */}
+                  {resourceRows.filter((r) => r.type === "participant").length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {resourceRows
+                        .filter((r) => r.type === "participant")
+                        .map((row) => {
+                          const rawId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
+                          const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(rawId) : "";
+                          return (
+                            <span
+                              key={row.id}
+                              className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 border border-lime-200"
+                            >
+                              <span className="truncate max-w-[120px]">{row.label}</span>
+                              {orgAbbr && (
+                                <span className="rounded-full bg-slate-200 px-1 py-0.5 text-[0.6rem] font-bold text-slate-700">
+                                  {orgAbbr}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               </div>
               {timeSlots.map((slot) => {
