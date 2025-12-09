@@ -743,8 +743,60 @@ export function WeekView({
           {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 && (
             <div>
               <div className="mb-2">
-                <p className="text-xs font-semibold text-slate-700">Участники</p>
-                <p className="text-[0.65rem] text-slate-500 mt-0.5">
+                <p className="text-xs font-semibold text-slate-700 mb-2">Участники</p>
+                {/* Аватарки участников в кружочках */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {hoveredEvent.event.participants.map((participant) => {
+                    const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
+                    const avatarUrl = user?.avatar_url;
+                    const displayName = participant.full_name || participant.email.split("@")[0];
+                    const initials = displayName.charAt(0).toUpperCase();
+                    
+                    return (
+                      <div
+                        key={participant.user_id || participant.email}
+                        className="relative group/avatar"
+                        title={displayName}
+                      >
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
+                            alt={displayName}
+                            className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                              if (fallback) fallback.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer ${avatarUrl ? 'hidden' : ''}`}>
+                          <span className="text-[0.65rem] font-semibold text-white">
+                            {initials}
+                          </span>
+                        </div>
+                        {/* Статус участника (цветная точка) */}
+                        <div
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                            participant.response_status === "accepted"
+                              ? "bg-lime-500"
+                              : participant.response_status === "declined"
+                              ? "bg-red-500"
+                              : "bg-amber-500"
+                          }`}
+                          title={
+                            participant.response_status === "accepted"
+                              ? "Принял"
+                              : participant.response_status === "declined"
+                              ? "Отклонил"
+                              : "Ожидает ответа"
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[0.65rem] text-slate-500 mb-2">
                   {hoveredEvent.event.participants.length}{" "}
                   {hoveredEvent.event.participants.length === 1 ? "участник" : 
                    hoveredEvent.event.participants.length < 5 ? "участника" : "участников"}
