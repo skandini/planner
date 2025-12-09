@@ -16,6 +16,7 @@ interface MonthViewProps {
   onEventClick: (event: EventRecord) => void;
   rooms?: Room[];
   currentUserEmail?: string;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function MonthView({
@@ -28,6 +29,7 @@ export function MonthView({
   onEventClick,
   rooms = [],
   currentUserEmail,
+  getUserOrganizationAbbreviation,
 }: MonthViewProps) {
   const currentMonth = selectedDate.getMonth();
   

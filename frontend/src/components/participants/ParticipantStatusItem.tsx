@@ -10,6 +10,7 @@ interface ParticipantStatusItemProps {
   canManage: boolean;
   isCurrentUser?: boolean;
   currentUserEmail?: string;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function ParticipantStatusItem({
@@ -19,6 +20,7 @@ export function ParticipantStatusItem({
   canManage,
   isCurrentUser = false,
   currentUserEmail,
+  getUserOrganizationAbbreviation,
 }: ParticipantStatusItemProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const statusLabels: Record<string, string> = {
@@ -48,12 +50,21 @@ export function ParticipantStatusItem({
   const currentStatus = participant.response_status || "needs_action";
   const needsResponse = isCurrentUser && (currentStatus === "needs_action" || currentStatus === "pending" || !currentStatus);
 
+  const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-900">
-          {participant.full_name || participant.email}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-slate-900">
+            {participant.full_name || participant.email}
+          </p>
+          {orgAbbr && (
+            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 flex-shrink-0">
+              {orgAbbr}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-slate-500 truncate">{participant.email}</p>
       </div>
       {needsResponse && onUpdateStatus ? (

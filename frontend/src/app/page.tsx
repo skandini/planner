@@ -1870,6 +1870,7 @@ export default function Home() {
               onEventClick={(event) => openEventModal(undefined, event)}
               rooms={rooms}
               currentUserEmail={userEmail || undefined}
+              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             />
               </div>
           )}

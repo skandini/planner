@@ -412,6 +412,7 @@ export function EventModalEnhanced({
                           canManage={canManageEvents}
                           isCurrentUser={isCurrentUser}
                           currentUserEmail={currentUserEmail}
+                          getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                         />
                       );
                     })}
