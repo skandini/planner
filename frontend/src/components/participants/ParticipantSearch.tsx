@@ -16,6 +16,7 @@ interface ParticipantSearchProps {
   readOnly: boolean;
   organizations?: Array<{id: string; name: string; slug: string}>;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
+  apiBaseUrl?: string;
 }
 
 export function ParticipantSearch({
@@ -29,6 +30,7 @@ export function ParticipantSearch({
   readOnly,
   organizations = [],
   getUserOrganizationAbbreviation,
+  apiBaseUrl = "http://localhost:8000",
 }: ParticipantSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -57,6 +59,14 @@ export function ParticipantSearch({
   const selectedUsers = useMemo(() => {
     return users.filter((user) => form.participant_ids.includes(user.id));
   }, [users, form.participant_ids]);
+
+  const getAvatarUrl = (user: UserProfile) => {
+    if (!user.avatar_url) return null;
+    if (user.avatar_url.startsWith("http")) return user.avatar_url;
+    const base = apiBaseUrl.replace(/\/$/, "");
+    const path = user.avatar_url.startsWith("/") ? user.avatar_url : `/${user.avatar_url}`;
+    return `${base}${path}`;
+  };
 
   const toggleParticipant = (userId: string) => {
     if (readOnly) return;
@@ -110,17 +120,35 @@ export function ParticipantSearch({
                   ? "Редактор"
                   : null
               : null;
+            const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
+            const avatarUrl = getAvatarUrl(user);
             return (
               <div
                 key={user.id}
                 className="group flex items-center gap-2 rounded-full border border-lime-200 bg-lime-50 px-3 py-1.5 pr-2 transition hover:border-lime-300 hover:bg-lime-100"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-lime-400 to-emerald-500 text-xs font-semibold text-white">
-                  {(user.full_name || user.email)[0].toUpperCase()}
-                </div>
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={user.full_name || user.email}
+                    className="h-6 w-6 rounded-full object-cover border border-white shadow"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-lime-400 to-emerald-500 text-xs font-semibold text-white">
+                    {(user.full_name || user.email)[0].toUpperCase()}
+                  </div>
+                )}
                 <span className="text-sm font-medium text-slate-900">
                   {user.full_name || user.email}
                 </span>
+                {orgAbbr && (
+                  <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700">
+                    {orgAbbr}
+                  </span>
+                )}
                 {badge && (
                   <span className="rounded-full bg-white px-2 py-0.5 text-[0.65rem] font-medium text-slate-600">
                     {badge}
@@ -203,6 +231,7 @@ export function ParticipantSearch({
                           : null
                       : null;
                     const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
+                    const avatarUrl = getAvatarUrl(user);
                     return (
                       <button
                         key={user.id}
@@ -212,9 +241,20 @@ export function ParticipantSearch({
                         }}
                         className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-slate-50"
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-semibold text-slate-700">
-                          {(user.full_name || user.email)[0].toUpperCase()}
-                        </div>
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={user.full_name || user.email}
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-white shadow-sm object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-semibold text-slate-700">
+                            {(user.full_name || user.email)[0].toUpperCase()}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-slate-900 truncate">

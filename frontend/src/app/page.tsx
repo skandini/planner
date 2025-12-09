@@ -1919,6 +1919,7 @@ export default function Home() {
             editingEvent={editingEventId ? events.find((e) => e.id === editingEventId) : undefined}
             organizations={organizations}
             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+            apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
             onEventUpdated={async () => {
               // Перезагружаем событие после обновления вложений
               if (editingEventId) {
