@@ -44,6 +44,8 @@ interface EventModalEnhancedProps {
   currentUserEmail?: string;
   onEventUpdated?: () => void | Promise<void>;
   onPendingFilesReady?: (files: File[]) => void;
+  organizations?: Array<{id: string; name: string; slug: string}>;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function EventModalEnhanced({
@@ -74,6 +76,8 @@ export function EventModalEnhanced({
   currentUserEmail,
   onEventUpdated,
   onPendingFilesReady,
+  organizations = [],
+  getUserOrganizationAbbreviation,
 }: EventModalEnhancedProps) {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
@@ -353,6 +357,8 @@ export function EventModalEnhanced({
                     calendarMembers={members}
                     membersLoading={membersLoading}
                     readOnly={isReadOnly}
+                    organizations={organizations}
+                    getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                   />
                 </div>
               </div>

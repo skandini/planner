@@ -19,6 +19,7 @@ interface WeekViewProps {
   currentUserEmail?: string;
   users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
   apiBaseUrl?: string;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function WeekView({
@@ -34,6 +35,7 @@ export function WeekView({
   currentUserEmail,
   users = [],
   apiBaseUrl = "http://localhost:8000",
+  getUserOrganizationAbbreviation,
 }: WeekViewProps) {
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 60; // Высота одного часа в пикселях (увеличено для более крупного отображения)

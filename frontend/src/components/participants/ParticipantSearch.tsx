@@ -14,6 +14,8 @@ interface ParticipantSearchProps {
   calendarMembers: CalendarMember[];
   membersLoading: boolean;
   readOnly: boolean;
+  organizations?: Array<{id: string; name: string; slug: string}>;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function ParticipantSearch({
@@ -25,6 +27,8 @@ export function ParticipantSearch({
   calendarMembers,
   membersLoading,
   readOnly,
+  organizations = [],
+  getUserOrganizationAbbreviation,
 }: ParticipantSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -62,6 +66,9 @@ export function ParticipantSearch({
         ? prev.participant_ids.filter((id) => id !== userId)
         : [...prev.participant_ids, userId],
     }));
+    // Закрываем список поиска после выбора участника
+    setSearchQuery("");
+    setIsExpanded(false);
   };
 
   const removeParticipant = (userId: string) => {

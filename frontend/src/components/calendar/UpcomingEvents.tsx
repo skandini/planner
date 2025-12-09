@@ -10,6 +10,7 @@ interface UpcomingEventsProps {
   onEventClick: (event: EventRecord) => void;
   users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
   apiBaseUrl?: string;
+  getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
 }
 
 export function UpcomingEvents({
@@ -18,6 +19,7 @@ export function UpcomingEvents({
   onEventClick,
   users = [],
   apiBaseUrl = "http://localhost:8000",
+  getUserOrganizationAbbreviation,
 }: UpcomingEventsProps) {
   const now = new Date();
   
@@ -172,12 +174,13 @@ export function UpcomingEvents({
                               const avatarUrl = user?.avatar_url;
                               const displayName = participant.full_name || participant.email.split("@")[0];
                               const initials = displayName.charAt(0).toUpperCase();
+                              const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
                               
                               return (
                                 <div
                                   key={participant.user_id || participant.email}
-                                  className="relative"
-                                  title={displayName}
+                                  className="relative group"
+                                  title={`${displayName}${orgAbbr ? ` (${orgAbbr})` : ''}`}
                                 >
                                   {avatarUrl ? (
                                     <img

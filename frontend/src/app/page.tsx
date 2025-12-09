@@ -113,6 +113,7 @@ export default function Home() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<Array<{id: string; name: string; slug: string}>>([]);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [userOrganization, setUserOrganization] = useState<{logo_url: string | null; primary_color: string | null; secondary_color: string | null; name: string} | null>(null);
@@ -391,12 +392,33 @@ export default function Home() {
     loadRooms();
   }, [loadCalendars, loadRooms]);
 
-useEffect(() => {
-  if (isAuthenticated) {
-    loadUsers();
-    loadCurrentUser();
-  }
-}, [isAuthenticated, loadUsers, loadCurrentUser]);
+  // Функция для получения сокращения организации по slug
+  const getOrganizationAbbreviation = useCallback((slug: string | null | undefined): string => {
+    if (!slug) return "";
+    const slugLower = slug.toLowerCase();
+    if (slugLower.includes("корстоун") || slugLower.includes("corstone")) return "CS";
+    if (slugLower.includes("электрон") || slugLower.includes("electron")) return "EX";
+    if (slugLower.includes("ктб") || slugLower.includes("ktb")) return "KTB";
+    return "";
+  }, []);
+
+  // Функция для получения сокращения организации пользователя по его organization_id
+  const getUserOrganizationAbbreviation = useCallback((userId: string | null | undefined): string => {
+    if (!userId) return "";
+    const user = users.find(u => u.id === userId);
+    if (!user || !user.organization_id) return "";
+    const org = organizations.find(o => o.id === user.organization_id);
+    if (!org) return "";
+    return getOrganizationAbbreviation(org.slug);
+  }, [users, organizations, getOrganizationAbbreviation]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadUsers();
+      loadCurrentUser();
+      loadOrganizations();
+    }
+  }, [isAuthenticated, loadUsers, loadCurrentUser, loadOrganizations]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1809,6 +1831,15 @@ useEffect(() => {
                   console.error("Failed to update participant status:", err);
                 }
               }}
+              currentUserEmail={userEmail}
+              users={users}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+            />
+                } catch (err) {
+                  console.error("Failed to update participant status:", err);
+                }
+              }}
               currentUserEmail={userEmail || undefined}
               users={users}
               apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
@@ -1877,6 +1908,8 @@ useEffect(() => {
             onRefreshMembers={loadCalendarMembers}
             recurrenceInfo={editingRecurrenceInfo}
             editingEvent={editingEventId ? events.find((e) => e.id === editingEventId) : undefined}
+            organizations={organizations}
+            getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             onEventUpdated={async () => {
               // Перезагружаем событие после обновления вложений
               if (editingEventId) {
