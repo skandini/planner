@@ -22,7 +22,8 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 МБ в байтах
 MAX_TOTAL_SIZE = 20 * 1024 * 1024  # 20 МБ в байтах
 
 # Директория для хранения файлов (относительно корня проекта backend)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Use the same BASE_DIR as in main.py (backend directory)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads" / "event_attachments"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 

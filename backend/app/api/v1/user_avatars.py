@@ -13,7 +13,8 @@ router = APIRouter()
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Use the same BASE_DIR as in main.py (backend directory)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads" / "user_avatars"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
