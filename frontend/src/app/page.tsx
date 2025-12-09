@@ -114,6 +114,7 @@ export default function Home() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [userOrganization, setUserOrganization] = useState<{logo_url: string | null; primary_color: string | null; secondary_color: string | null; name: string} | null>(null);
   const { accessToken, userEmail, logout, refreshAccessToken } = useAuth();
   const isAuthenticated = Boolean(accessToken);
   const router = useRouter();

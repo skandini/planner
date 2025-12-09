@@ -19,6 +19,7 @@ interface UserProfile {
   position: string | null;
   department: string | null;
   organization_id: string | null;
+  avatar_url: string | null;
   is_active: boolean;
   role: string;
   created_at: string;
