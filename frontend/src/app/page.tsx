@@ -1365,9 +1365,16 @@ useEffect(() => {
                   >
                     {currentUser?.avatar_url ? (
                       <img
-                        src={currentUser.avatar_url.startsWith('http') ? currentUser.avatar_url : `http://localhost:8000${currentUser.avatar_url}`}
+                        src={currentUser.avatar_url.startsWith('http') ? currentUser.avatar_url : `${API_BASE_URL.replace('/api/v1', '')}${currentUser.avatar_url.startsWith('/') ? '' : '/'}${currentUser.avatar_url}`}
                         alt={currentUser.full_name || "Пользователь"}
                         className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-slate-200"
+                        onError={(e) => {
+                          console.error('Avatar load error:', currentUser.avatar_url, 'Full URL:', `${API_BASE_URL.replace('/api/v1', '')}${currentUser.avatar_url.startsWith('/') ? '' : '/'}${currentUser.avatar_url}`);
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.log('Avatar loaded successfully');
+                        }}
                       />
                     ) : (
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center flex-shrink-0">
