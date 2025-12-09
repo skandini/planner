@@ -18,6 +18,7 @@ class User(SQLModel, table=True):
     phone: Optional[str] = Field(default=None, max_length=50)
     position: Optional[str] = Field(default=None, max_length=255)
     department: Optional[str] = Field(default=None, max_length=255)
+    avatar_url: Optional[str] = Field(default=None, max_length=500)
     hashed_password: str = Field(max_length=255)
     is_active: bool = Field(default=True)
     role: str = Field(default="employee", max_length=50)

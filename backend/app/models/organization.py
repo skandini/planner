@@ -16,5 +16,8 @@ class Organization(SQLModel, table=True):
     slug: str = Field(max_length=255, unique=True, index=True)
     timezone: str = Field(default="UTC", max_length=64)
     description: Optional[str] = Field(default=None, max_length=500)
+    logo_url: Optional[str] = Field(default=None, max_length=500)
+    primary_color: Optional[str] = Field(default=None, max_length=7)  # Hex color
+    secondary_color: Optional[str] = Field(default=None, max_length=7)  # Hex color
 
 

@@ -11,6 +11,9 @@ class OrganizationBase(BaseModel):
     slug: str
     timezone: str = "UTC"
     description: Optional[str] = None
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
 
 
 class OrganizationCreate(OrganizationBase):

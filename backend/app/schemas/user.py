@@ -14,6 +14,7 @@ class UserBase(BaseModel):
     position: Optional[str] = None
     department: Optional[str] = None
     organization_id: Optional[UUID] = None
+    avatar_url: Optional[str] = None
 
 
 class UserCreate(UserBase):
