@@ -86,7 +86,8 @@ export function ProfileSettings({
       if (data.avatar_url) {
         const avatarUrl = data.avatar_url.startsWith('http') 
           ? data.avatar_url 
-          : `${API_BASE_URL.replace('/api/v1', '')}${data.avatar_url}`;
+          : `${API_BASE_URL.replace('/api/v1', '')}${data.avatar_url.startsWith('/') ? '' : '/'}${data.avatar_url}`;
+        console.log('Setting avatar preview URL:', avatarUrl, 'from:', data.avatar_url);
         setAvatarPreview(avatarUrl);
       } else {
         setAvatarPreview(null);

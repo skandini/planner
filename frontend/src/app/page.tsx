@@ -316,6 +316,8 @@ export default function Home() {
       const response = await authFetch(`${USERS_ENDPOINT}me`, { cache: "no-store" });
       if (response.ok) {
         const data: UserProfile = await response.json();
+        console.log('Loaded user profile:', data);
+        console.log('Avatar URL:', data.avatar_url);
         setCurrentUser(data);
         
         // Загружаем информацию об организации если есть
