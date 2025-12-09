@@ -1822,6 +1822,8 @@ useEffect(() => {
                 }
               }}
               currentUserEmail={userEmail || undefined}
+              users={users}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
             />
               </div>
           )}
