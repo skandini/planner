@@ -202,13 +202,13 @@ export function ParticipantSearch({
                           ? "Редактор"
                           : null
                       : null;
+                    const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
                     return (
                       <button
                         key={user.id}
                         type="button"
                         onClick={() => {
                           toggleParticipant(user.id);
-                          setSearchQuery("");
                         }}
                         className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-slate-50"
                       >
@@ -216,9 +216,16 @@ export function ParticipantSearch({
                           {(user.full_name || user.email)[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {user.full_name || user.email}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {user.full_name || user.email}
+                            </p>
+                            {orgAbbr && (
+                              <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 flex-shrink-0">
+                                {orgAbbr}
+                              </span>
+                            )}
+                          </div>
                           {user.full_name && (
                             <p className="text-xs text-slate-500 truncate">{user.email}</p>
                           )}
