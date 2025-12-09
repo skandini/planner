@@ -1288,7 +1288,7 @@ useEffect(() => {
     <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
         <header 
-          className="relative overflow-hidden rounded-xl border border-slate-200/50 backdrop-blur-sm px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex-shrink-0"
+          className="relative overflow-hidden rounded-xl border border-slate-200/50 backdrop-blur-sm px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex-shrink-0"
           style={{
             background: userOrganization?.primary_color 
               ? `linear-gradient(to right, ${userOrganization.primary_color}15, ${userOrganization.secondary_color || userOrganization.primary_color}08, ${userOrganization.primary_color}15)`
@@ -1344,19 +1344,6 @@ useEffect(() => {
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {/* Блоки статистики */}
               <div className="flex items-center gap-1">
-                <div className="group relative">
-                  <div className="flex items-center gap-2 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-3 py-1 hover:bg-white/80 transition-all cursor-default">
-                    <div className="w-2 h-2 rounded-full bg-lime-500 animate-pulse" />
-                    <span className="text-[0.7rem] font-semibold text-slate-700">
-                      {loading ? "…" : calendars.length}
-                    </span>
-                    <span className="text-[0.65rem] text-slate-500">календарей</span>
-                  </div>
-                  <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-[0.6rem] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    Календарей
-                  </div>
-                </div>
-                
                 <div className="group relative">
                   <button
                     type="button"
