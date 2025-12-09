@@ -8,12 +8,16 @@ interface UpcomingEventsProps {
   events: EventRecord[];
   currentUserEmail?: string;
   onEventClick: (event: EventRecord) => void;
+  users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
+  apiBaseUrl?: string;
 }
 
 export function UpcomingEvents({
   events,
   currentUserEmail,
   onEventClick,
+  users = [],
+  apiBaseUrl = "http://localhost:8000",
 }: UpcomingEventsProps) {
   const now = new Date();
   
@@ -161,14 +165,67 @@ export function UpcomingEvents({
                         </p>
                       )}
                       {event.participants && event.participants.length > 0 && (
-                        <p className="text-xs text-slate-500 mt-1">
-                          👥 {event.participants.length}{" "}
-                          {event.participants.length === 1
-                            ? "участник"
-                            : event.participants.length < 5
-                              ? "участника"
-                              : "участников"}
-                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex -space-x-1.5">
+                            {event.participants.slice(0, 5).map((participant) => {
+                              const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
+                              const avatarUrl = user?.avatar_url;
+                              const displayName = participant.full_name || participant.email.split("@")[0];
+                              const initials = displayName.charAt(0).toUpperCase();
+                              
+                              return (
+                                <div
+                                  key={participant.user_id || participant.email}
+                                  className="relative"
+                                  title={displayName}
+                                >
+                                  {avatarUrl ? (
+                                    <img
+                                      src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
+                                      alt={displayName}
+                                      className="w-6 h-6 rounded-full object-cover border-2 border-white shadow-sm"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                        const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                        if (fallback) fallback.classList.remove('hidden');
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center border-2 border-white shadow-sm ${avatarUrl ? 'hidden' : ''}`}>
+                                    <span className="text-[0.55rem] font-semibold text-white">
+                                      {initials}
+                                    </span>
+                                  </div>
+                                  {/* Статус участника (цветная точка) */}
+                                  <div
+                                    className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
+                                      participant.response_status === "accepted"
+                                        ? "bg-lime-500"
+                                        : participant.response_status === "declined"
+                                        ? "bg-red-500"
+                                        : "bg-amber-500"
+                                    }`}
+                                  />
+                                </div>
+                              );
+                            })}
+                            {event.participants.length > 5 && (
+                              <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center">
+                                <span className="text-[0.55rem] font-semibold text-slate-600">
+                                  +{event.participants.length - 5}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            {event.participants.length}{" "}
+                            {event.participants.length === 1
+                              ? "участник"
+                              : event.participants.length < 5
+                                ? "участника"
+                                : "участников"}
+                          </span>
+                        </div>
                       )}
                     </div>
                     {isStartingSoon && (

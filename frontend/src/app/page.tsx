@@ -1517,6 +1517,8 @@ useEffect(() => {
               events={events}
               currentUserEmail={userEmail || undefined}
               onEventClick={(event) => openEventModal(undefined, event)}
+              users={users}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
             />
           </section>
 
