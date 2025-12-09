@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { AuthenticatedFetch } from "@/types/common.types";
-import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT } from "@/lib/constants";
+import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 
 interface Organization {
   id: string;
@@ -86,7 +86,7 @@ export function ProfileSettings({
       if (data.avatar_url) {
         const avatarUrl = data.avatar_url.startsWith('http') 
           ? data.avatar_url 
-          : `http://localhost:8000${data.avatar_url}`;
+          : `${API_BASE_URL.replace('/api/v1', '')}${data.avatar_url}`;
         setAvatarPreview(avatarUrl);
       } else {
         setAvatarPreview(null);

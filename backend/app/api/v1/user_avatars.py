@@ -70,14 +70,13 @@ async def upload_avatar(
             detail=f"Failed to save file: {e}",
         )
     
-    # Update user record
-    current_user.avatar_url = str(file_path)
+    # Update user record with relative URL
+    avatar_url = f"/uploads/user_avatars/{filename}"
+    current_user.avatar_url = avatar_url
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
     
-    # Return relative URL for frontend
-    avatar_url = f"/uploads/user_avatars/{filename}"
     return {"avatar_url": avatar_url}
 
 

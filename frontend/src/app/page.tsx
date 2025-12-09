@@ -1328,11 +1328,9 @@ useEffect(() => {
               )}
               <div className="flex flex-col min-w-0">
                 <h1 
-                  className="text-xs font-bold bg-clip-text text-transparent truncate"
+                  className="text-xs font-bold truncate"
                   style={{
-                    background: userOrganization?.primary_color
-                      ? `linear-gradient(to right, ${userOrganization.primary_color}, ${userOrganization.secondary_color || userOrganization.primary_color})`
-                      : "linear-gradient(to right, rgb(15 23 42), rgb(51 65 85))",
+                    color: userOrganization?.primary_color || "rgb(15 23 42)",
                   }}
                 >
                   {userOrganization?.name || "Планировщик Corestone"}
