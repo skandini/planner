@@ -17,6 +17,8 @@ interface WeekViewProps {
   onTimeSlotClick?: (date: Date, startTime: Date, endTime: Date) => void;
   onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
   currentUserEmail?: string;
+  users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
+  apiBaseUrl?: string;
 }
 
 export function WeekView({
@@ -30,6 +32,8 @@ export function WeekView({
   onTimeSlotClick,
   onUpdateParticipantStatus,
   currentUserEmail,
+  users = [],
+  apiBaseUrl = "http://localhost:8000",
 }: WeekViewProps) {
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 60; // Высота одного часа в пикселях (увеличено для более крупного отображения)
