@@ -1399,9 +1399,9 @@ useEffect(() => {
               <button
                 type="button"
                 onClick={handleManualLogout}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/60 px-2.5 py-1 text-[0.65rem] font-semibold text-slate-700 transition-all hover:from-slate-200 hover:to-slate-100 hover:shadow-sm active:scale-95 whitespace-nowrap"
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/60 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:from-slate-200 hover:to-slate-100 hover:shadow-sm active:scale-95 whitespace-nowrap"
               >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 <span>Выйти</span>
