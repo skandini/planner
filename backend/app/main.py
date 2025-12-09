@@ -64,6 +64,10 @@ def create_application() -> FastAPI:
     BASE_DIR = Path(__file__).resolve().parent.parent
     uploads_dir = BASE_DIR / "uploads"
     uploads_dir.mkdir(exist_ok=True)
+    # Ensure subdirectories exist
+    (uploads_dir / "user_avatars").mkdir(exist_ok=True)
+    (uploads_dir / "event_attachments").mkdir(exist_ok=True)
+    print(f"[INFO] Static files directory: {uploads_dir.resolve()}")
     app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
     @app.on_event("startup")
