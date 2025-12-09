@@ -1831,18 +1831,10 @@ export default function Home() {
                   console.error("Failed to update participant status:", err);
                 }
               }}
-              currentUserEmail={userEmail}
-              users={users}
-              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
-              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-            />
-                } catch (err) {
-                  console.error("Failed to update participant status:", err);
-                }
-              }}
               currentUserEmail={userEmail || undefined}
               users={users}
               apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             />
               </div>
           )}

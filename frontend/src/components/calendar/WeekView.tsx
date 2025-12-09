@@ -819,6 +819,7 @@ export function WeekView({
                     needs_action: "bg-slate-100 text-slate-600 border-slate-300",
                   };
                   const status = participant.response_status || "pending";
+                  const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
                   
                   return (
                     <div
@@ -826,9 +827,16 @@ export function WeekView({
                       className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-slate-900 truncate">
-                          {participant.full_name || participant.email}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {participant.full_name || participant.email}
+                          </p>
+                          {orgAbbr && (
+                            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.6rem] font-semibold text-slate-700 flex-shrink-0">
+                              {orgAbbr}
+                            </span>
+                          )}
+                        </div>
                         {participant.full_name && (
                           <p className="text-[0.65rem] text-slate-500 truncate">
                             {participant.email}
