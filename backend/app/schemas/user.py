@@ -12,13 +12,34 @@ class UserBase(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     position: Optional[str] = None
-    department: Optional[str] = None
+    department: Optional[str] = None  # Legacy field
+    department_id: Optional[UUID] = None
+    manager_id: Optional[UUID] = None
     organization_id: Optional[UUID] = None
     avatar_url: Optional[str] = None
+    # Настройки проекта
+    show_local_time: bool = True
+    show_moscow_time: bool = True
 
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
+
+
+class UserUpdate(BaseModel):
+    """Schema for partial user updates."""
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None  # Legacy field
+    department_id: Optional[UUID] = None
+    manager_id: Optional[UUID] = None
+    organization_id: Optional[UUID] = None
+    avatar_url: Optional[str] = None
+    # Настройки проекта
+    show_local_time: Optional[bool] = None
+    show_moscow_time: Optional[bool] = None
 
 
 class UserLogin(BaseModel):

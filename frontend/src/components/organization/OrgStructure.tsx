@@ -147,14 +147,27 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
 
   const updateUserDepartment = useCallback(
     async (userId: string, departmentId: string | null) => {
-      const resp = await authFetch(`${USERS_ENDPOINT}${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ department_id: departmentId }),
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.detail || "Не удалось обновить сотрудника");
+      try {
+        const resp = await authFetch(`${USERS_ENDPOINT}${userId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ department_id: departmentId }),
+        });
+        if (!resp.ok) {
+          let errorMessage = "Не удалось обновить сотрудника";
+          try {
+            const errData = await resp.json();
+            errorMessage = errData.detail || errData.message || JSON.stringify(errData);
+          } catch (e) {
+            errorMessage = `Ошибка ${resp.status}: ${resp.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error(String(err));
       }
     },
     [authFetch]
@@ -234,7 +247,8 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                     setDragOverDept(null);
                   } catch (err) {
                     console.error("Ошибка перемещения сотрудника:", err);
-                    setError(err instanceof Error ? err.message : "Не удалось переместить сотрудника");
+                    const errorMessage = err instanceof Error ? err.message : String(err);
+                    setError(errorMessage);
                     setDraggedUser(null);
                     setDragOverDept(null);
                   }
@@ -562,8 +576,9 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                               // Обновляем страницу для обновления проп users
                               setTimeout(() => window.location.reload(), 500);
                             } catch (err) {
-                              console.error(err);
-                              setError(err instanceof Error ? err.message : "Не удалось обновить сотрудника");
+                              console.error("Ошибка обновления сотрудника:", err);
+                              const errorMessage = err instanceof Error ? err.message : String(err);
+                              setError(errorMessage);
                             }
                           }}
                         />

@@ -9,6 +9,12 @@ from .calendar import (
     ConflictEntry,
     ConflictEventSummary,
 )
+from .department import (
+    DepartmentCreate,
+    DepartmentRead,
+    DepartmentReadWithChildren,
+    DepartmentUpdate,
+)
 from .event import (
     EventCreate,
     EventRead,
@@ -32,6 +38,7 @@ from .user import (
     UserCreate,
     UserLogin,
     UserRead,
+    UserUpdate,
 )
 
 __all__ = [
@@ -44,6 +51,10 @@ __all__ = [
     "CalendarMemberUpdate",
     "ConflictEntry",
     "ConflictEventSummary",
+    "DepartmentCreate",
+    "DepartmentRead",
+    "DepartmentReadWithChildren",
+    "DepartmentUpdate",
     "EventAttachmentRead",
     "EventCreate",
     "EventRead",
@@ -65,5 +76,6 @@ __all__ = [
     "UserCreate",
     "UserLogin",
     "UserRead",
+    "UserUpdate",
 ]
 
