@@ -422,7 +422,8 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                             onChange={async () => {
                               try {
                                 await updateUserDepartment(u.id, isChecked ? null : editing.id);
-                                await loadDepartments();
+                              await loadDepartments();
+                              window.location.reload();
                               } catch (err) {
                                 console.error(err);
                               }
