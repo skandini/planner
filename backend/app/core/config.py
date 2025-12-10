@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Corporate Calendar API"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "local"
-    DATABASE_URL: str = "sqlite:///./calendar.db"
+    # Храним БД в корне проекта, чтобы при запуске из любого каталога использовать один файл
+    DATABASE_URL: str = "sqlite:///../calendar.db"
     SECRET_KEY: str = "changeme"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
