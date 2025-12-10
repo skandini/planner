@@ -24,6 +24,9 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
   const [editing, setEditing] = useState<DepartmentWithChildren | null>(null);
   const [hoveredUser, setHoveredUser] = useState<UserProfile | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [draggedUser, setDraggedUser] = useState<UserProfile | null>(null);
+  const [dragOverDept, setDragOverDept] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState<DepartmentDraft>({
     name: "",
     description: "",
@@ -50,6 +53,22 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
   useEffect(() => {
     loadDepartments();
   }, [loadDepartments]);
+
+  // Загружаем текущего пользователя
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const resp = await authFetch(`${USERS_ENDPOINT}me`);
+        if (resp.ok) {
+          const user = await resp.json();
+          setCurrentUser(user);
+        }
+      } catch (err) {
+        console.error("Ошибка загрузки текущего пользователя:", err);
+      }
+    };
+    loadCurrentUser();
+  }, [authFetch]);
 
   const flatten = (depts: DepartmentWithChildren[]) => {
     const res: DepartmentWithChildren[] = [];
@@ -128,11 +147,15 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
 
   const updateUserDepartment = useCallback(
     async (userId: string, departmentId: string | null) => {
-      await authFetch(`${USERS_ENDPOINT}${userId}`, {
+      const resp = await authFetch(`${USERS_ENDPOINT}${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ department_id: departmentId }),
       });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.detail || "Не удалось обновить сотрудника");
+      }
     },
     [authFetch]
   );
@@ -186,7 +209,38 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
               <div className="absolute -top-6 h-6 w-px bg-gradient-to-b from-slate-200 to-slate-300" />
             )}
 
-            <div className="group w-[320px] max-w-[320px] rounded-3xl border border-slate-200/70 bg-white/90 backdrop-blur shadow-xl px-4 py-4 transition hover:-translate-y-[4px] hover:shadow-2xl">
+            <div
+              className={`group w-[320px] max-w-[320px] rounded-3xl border border-slate-200/70 bg-white/90 backdrop-blur shadow-xl px-4 py-4 transition hover:-translate-y-[4px] hover:shadow-2xl ${
+                dragOverDept === d.id ? "ring-4 ring-indigo-400 ring-offset-2 bg-indigo-50/50" : ""
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (draggedUser && draggedUser.department_id !== d.id) {
+                  setDragOverDept(d.id);
+                }
+              }}
+              onDragLeave={() => setDragOverDept(null)}
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (draggedUser && draggedUser.department_id !== d.id) {
+                  try {
+                    await updateUserDepartment(draggedUser.id, d.id);
+                    await loadDepartments();
+                    // Обновляем страницу для обновления проп users
+                    setTimeout(() => window.location.reload(), 500);
+                    setDraggedUser(null);
+                    setDragOverDept(null);
+                  } catch (err) {
+                    console.error("Ошибка перемещения сотрудника:", err);
+                    setError(err instanceof Error ? err.message : "Не удалось переместить сотрудника");
+                    setDraggedUser(null);
+                    setDragOverDept(null);
+                  }
+                }
+              }}
+            >
               {/* Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1 min-w-0">
@@ -222,8 +276,22 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
 
               {/* Manager */}
               {manager && (
-                <div className="mt-3 flex items-center gap-3 p-2 rounded-xl bg-slate-50/80 border border-slate-100">
-                  {avatar(manager)}
+                <div
+                  className={`mt-3 flex items-center gap-3 p-2 rounded-xl bg-slate-50/80 border border-slate-100 ${
+                    draggedUser?.id === manager.id ? "opacity-50" : ""
+                  }`}
+                >
+                  <div
+                    className="cursor-move"
+                    draggable
+                    onDragStart={() => setDraggedUser(manager)}
+                    onDragEnd={() => {
+                      setDraggedUser(null);
+                      setDragOverDept(null);
+                    }}
+                  >
+                    {avatar(manager)}
+                  </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900 truncate">{manager.full_name || manager.email}</div>
                     <div className="text-[11px] text-slate-600 truncate">{manager.position || "Руководитель"}</div>
@@ -265,13 +333,31 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                     {deptUsers.slice(0, 8).map((u) => (
                       <div
                         key={u.id}
-                        className="relative"
-                        onMouseEnter={(e) => {
-                          setHoveredUser(u);
-                          setHoverPos({ x: e.clientX, y: e.clientY });
+                        className={`relative cursor-move transition-opacity ${
+                          draggedUser?.id === u.id ? "opacity-50" : "opacity-100"
+                        }`}
+                        draggable
+                        onDragStart={() => setDraggedUser(u)}
+                        onDragEnd={() => {
+                          setDraggedUser(null);
+                          setDragOverDept(null);
                         }}
-                        onMouseMove={(e) => setHoverPos({ x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setHoveredUser(null)}
+                        onMouseEnter={(e) => {
+                          if (!draggedUser) {
+                            setHoveredUser(u);
+                            setHoverPos({ x: e.clientX, y: e.clientY });
+                          }
+                        }}
+                        onMouseMove={(e) => {
+                          if (!draggedUser) {
+                            setHoverPos({ x: e.clientX, y: e.clientY });
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          if (!draggedUser) {
+                            setHoveredUser(null);
+                          }
+                        }}
                       >
                         {avatar(u)}
                       </div>
@@ -284,6 +370,56 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                   </div>
                 </div>
               )}
+
+              {/* Subordinates - отдельный блок для подчиненных текущего пользователя */}
+              {currentUser && manager && manager.id === currentUser.id && (() => {
+                const subordinates = users.filter(u => u.manager_id === currentUser.id);
+                if (subordinates.length === 0) return null;
+                return (
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <div className="text-[10px] font-semibold text-emerald-700 mb-2">Мои подчиненные</div>
+                    <div className="flex flex-wrap gap-2">
+                      {subordinates.slice(0, 8).map((u) => (
+                        <div
+                          key={u.id}
+                          className={`relative cursor-move transition-opacity ${
+                            draggedUser?.id === u.id ? "opacity-50" : "opacity-100"
+                          }`}
+                          draggable
+                          onDragStart={() => setDraggedUser(u)}
+                          onDragEnd={() => {
+                            setDraggedUser(null);
+                            setDragOverDept(null);
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!draggedUser) {
+                              setHoveredUser(u);
+                              setHoverPos({ x: e.clientX, y: e.clientY });
+                            }
+                          }}
+                          onMouseMove={(e) => {
+                            if (!draggedUser) {
+                              setHoverPos({ x: e.clientX, y: e.clientY });
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            if (!draggedUser) {
+                              setHoveredUser(null);
+                            }
+                          }}
+                        >
+                          {avatar(u)}
+                        </div>
+                      ))}
+                      {subordinates.length > 8 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700">
+                          +{subordinates.length - 8}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Actions */}
               <div className="flex items-center gap-2 mt-3">
@@ -415,22 +551,24 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                     {users.map((u) => {
                       const isChecked = u.department_id === editing.id;
                       return (
-                        <label key={u.id} className="flex items-center gap-2 text-sm text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={async () => {
-                              try {
-                                await updateUserDepartment(u.id, isChecked ? null : editing.id);
+                      <label key={u.id} className="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={async () => {
+                            try {
+                              await updateUserDepartment(u.id, isChecked ? null : editing.id);
                               await loadDepartments();
-                              window.location.reload();
-                              } catch (err) {
-                                console.error(err);
-                              }
-                            }}
-                          />
-                          <span className="truncate">{u.full_name || u.email}</span>
-                        </label>
+                              // Обновляем страницу для обновления проп users
+                              setTimeout(() => window.location.reload(), 500);
+                            } catch (err) {
+                              console.error(err);
+                              setError(err instanceof Error ? err.message : "Не удалось обновить сотрудника");
+                            }
+                          }}
+                        />
+                        <span className="truncate">{u.full_name || u.email}</span>
+                      </label>
                       );
                     })}
                   </div>
