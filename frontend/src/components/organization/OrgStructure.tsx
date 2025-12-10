@@ -156,6 +156,7 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
       {nodes.map((d) => {
         const manager = d.manager_id ? users.find((u) => u.id === d.manager_id) : null;
         const deptUsers = users.filter((u) => u.department_id === d.id && u.id !== manager?.id);
+        const org = d.organization_id ? organizations.find((o) => o.id === d.organization_id) : null;
         const avatar = (u?: UserProfile) => (
           <div className="relative w-9 h-9">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-sky-200 via-white to-cyan-200 opacity-80" />
@@ -185,24 +186,21 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
               <div className="absolute -top-6 h-6 w-px bg-gradient-to-b from-slate-200 to-slate-300" />
             )}
 
-            <div className="group w-[280px] max-w-[280px] rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-cyan-50/50 backdrop-blur shadow-lg px-4 py-3 transition hover:-translate-y-[3px] hover:shadow-xl">
+            <div className="group w-[320px] max-w-[320px] rounded-3xl border border-slate-200/70 bg-white/90 backdrop-blur shadow-xl px-4 py-4 transition hover:-translate-y-[4px] hover:shadow-2xl">
+              {/* Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-slate-900 text-sm leading-tight truncate">{d.name}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                      {d.children?.length || 0} подотделов
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-2xl bg-gradient-to-br from-indigo-100 to-cyan-100 text-slate-700 shadow-inner">
+                      🏢
                     </span>
-                  </div>
-                  {manager && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-800 bg-white/90 border border-slate-200 rounded-lg px-2 py-1 w-fit shadow-sm">
-                      {avatar(manager)}
-                      <span className="truncate">{manager.full_name || manager.email}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-slate-900 text-sm leading-tight truncate">{d.name}</div>
+                      {org && (
+                        <div className="text-[11px] text-slate-500 truncate">Орг: {org.name}</div>
+                      )}
                     </div>
-                  )}
-                  {d.description && (
-                    <div className="text-[11px] text-slate-600 leading-snug line-clamp-2">{d.description}</div>
-                  )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <button
@@ -222,9 +220,47 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                 </div>
               </div>
 
+              {/* Manager */}
+              {manager && (
+                <div className="mt-3 flex items-center gap-3 p-2 rounded-xl bg-slate-50/80 border border-slate-100">
+                  {avatar(manager)}
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">{manager.full_name || manager.email}</div>
+                    <div className="text-[11px] text-slate-600 truncate">{manager.position || "Руководитель"}</div>
+                  </div>
+                  <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    Руководитель
+                  </span>
+                </div>
+              )}
+
+              {/* Description */}
+              {d.description && (
+                <div className="mt-2 text-[11px] text-slate-600 leading-snug line-clamp-2">
+                  {d.description}
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-white border border-slate-200 text-slate-700 shadow-sm">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 6h14M5 18h7" />
+                  </svg>
+                  {d.children?.length || 0} подотделов
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-white border border-slate-200 text-slate-700 shadow-sm">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4 0-6 2-6 4v1h12v-1c0-2-2-4-6-4z" />
+                  </svg>
+                  {deptUsers.length + (manager ? 1 : 0)} сотрудников
+                </span>
+              </div>
+
+              {/* Participants */}
               {deptUsers.length > 0 && (
                 <div className="mt-3">
-                  <div className="text-[10px] font-semibold text-slate-600 mb-1">Сотрудники</div>
+                  <div className="text-[10px] font-semibold text-slate-600 mb-2">Сотрудники</div>
                   <div className="flex flex-wrap gap-2">
                     {deptUsers.slice(0, 8).map((u) => (
                       <div
@@ -249,16 +285,17 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl }: Or
                 </div>
               )}
 
+              {/* Actions */}
               <div className="flex items-center gap-2 mt-3">
                 <button
                   onClick={() => openCreate(d.id)}
-                  className="text-[11px] px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white shadow-sm hover:shadow-md transition"
+                  className="text-[11px] px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white shadow-sm hover:shadow-md transition"
                 >
                   + Подотдел
                 </button>
                 <button
                   onClick={() => openEdit(d)}
-                  className="text-[11px] px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-indigo-200 hover:text-indigo-700 transition"
+                  className="text-[11px] px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-indigo-200 hover:text-indigo-700 transition"
                 >
                   Редактировать
                 </button>
