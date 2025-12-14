@@ -46,14 +46,14 @@ export function WeekView({
   const draggingRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
-  // Состояние для отслеживания текущего времени (обновляется каждую минуту)
+  // Состояние для отслеживания текущего времени (обновляется каждую секунду)
   const [currentTime, setCurrentTime] = useState(() => new Date());
   
-  // Обновляем текущее время каждую минуту
+  // Обновляем текущее время каждую секунду для плавного движения красной линии
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Обновляем каждую минуту
+    }, 1000); // Обновляем каждую секунду для плавного движения
     
     return () => clearInterval(interval);
   }, []);
@@ -140,22 +140,29 @@ export function WeekView({
     setHoveredEvent(null);
   }, []);
   
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000); // Обновляем каждую секунду
-    
-    return () => clearInterval(interval);
-  }, []);
 
-  // Автоскролл к 8 утра при монтировании компонента
+  // Автоскролл к текущему времени при монтировании компонента (если сегодня в сетке)
   useEffect(() => {
     if (scrollContainerRef.current) {
-      // Позиция 8 утра: 8 часов * 60px = 480px
-      const scrollTo8AM = 8 * HOUR_HEIGHT;
-      scrollContainerRef.current.scrollTop = scrollTo8AM;
+      const now = new Date();
+      const todayKey = new Date().toDateString();
+      const isTodayInView = days.some(day => day.toDateString() === todayKey);
+      
+      if (isTodayInView) {
+        // Прокручиваем к текущему времени с небольшим отступом сверху
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+        const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
+        // Отступ 100px сверху, чтобы линия была видна
+        scrollContainerRef.current.scrollTop = Math.max(0, topPx - 100);
+      } else {
+        // Если сегодня не в сетке, прокручиваем к 8 утра
+        const scrollTo8AM = 8 * HOUR_HEIGHT;
+        scrollContainerRef.current.scrollTop = scrollTo8AM;
+      }
     }
-  }, [HOUR_HEIGHT]);
+  }, [HOUR_HEIGHT, DAY_HEIGHT, days]);
   
   // Функция проверки, начинается ли событие в ближайшие 5 минут
   const isEventStartingSoon = useCallback((event: EventRecord) => {
@@ -459,10 +466,10 @@ export function WeekView({
                         className="absolute left-0 right-0 z-30 pointer-events-none"
                         style={{ top: `${topPx}px` }}
                       >
-                        {/* Красная линия */}
-                        <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.5)]" />
-                        {/* Красная точка слева */}
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.5)]" />
+                        {/* Красная линия с тенью для лучшей видимости */}
+                        <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                        {/* Красная точка слева с анимацией пульсации */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse" />
                       </div>
                     );
                   }

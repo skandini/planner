@@ -123,8 +123,20 @@ export function CalendarMembersManager({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_80px_rgba(15,23,42,0.35)] flex flex-col">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur"
+      style={{ animation: 'fadeIn 0.2s ease-out forwards' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_20px_80px_rgba(15,23,42,0.35)] flex flex-col"
+        style={{ animation: 'fadeInUp 0.3s ease-out forwards' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-slate-200 p-6 flex-shrink-0">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400">

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -20,6 +20,8 @@ class UserBase(BaseModel):
     # Настройки проекта
     show_local_time: bool = True
     show_moscow_time: bool = True
+    # День рождения
+    birthday: Optional[date] = None
 
 
 class UserCreate(UserBase):
@@ -33,13 +35,18 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     position: Optional[str] = None
     department: Optional[str] = None  # Legacy field
-    department_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None  # Legacy - for backward compatibility
     manager_id: Optional[UUID] = None
-    organization_id: Optional[UUID] = None
+    organization_id: Optional[UUID] = None  # Legacy - for backward compatibility
     avatar_url: Optional[str] = None
+    # Many-to-many relationships
+    department_ids: Optional[list[UUID]] = None  # All departments user belongs to
+    organization_ids: Optional[list[UUID]] = None  # All organizations user belongs to
     # Настройки проекта
     show_local_time: Optional[bool] = None
     show_moscow_time: Optional[bool] = None
+    # День рождения
+    birthday: Optional[date] = None
 
 
 class UserLogin(BaseModel):
@@ -52,6 +59,9 @@ class UserRead(UserBase):
     is_active: bool
     role: str
     created_at: datetime
+    # Many-to-many relationships
+    department_ids: list[UUID] = []  # All departments user belongs to
+    organization_ids: list[UUID] = []  # All organizations user belongs to
 
     model_config = ConfigDict(from_attributes=True)
 

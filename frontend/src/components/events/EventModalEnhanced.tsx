@@ -95,6 +95,38 @@ export function EventModalEnhanced({
   const [conflictsLoading, setConflictsLoading] = useState(false);
   const [conflictsError, setConflictsError] = useState<string | null>(null);
   const [showRecurrence, setShowRecurrence] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  
+  // Проверяем, есть ли несохраненные изменения
+  const hasUnsavedChanges = useCallback(() => {
+    // При создании проверяем, заполнена ли форма
+    if (!isEditing) {
+      return form.title.trim() !== "" || 
+             (form.description && form.description.trim() !== "") || 
+             (form.location && form.location.trim() !== "") ||
+             form.room_id !== null ||
+             (form.participant_ids && form.participant_ids.length > 0) ||
+             form.recurrence_enabled ||
+             pendingFiles.length > 0;
+    }
+    
+    // При редактировании всегда считаем, что есть изменения (для безопасности)
+    // Можно улучшить, сравнивая с исходными данными
+    return true;
+  }, [form, isEditing, pendingFiles.length]);
+  
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose]);
+  
+  const handleConfirmClose = useCallback(() => {
+    setShowCloseConfirm(false);
+    onClose();
+  }, [onClose]);
   
   const isReadOnly = !canManageEvents;
   const isSeriesParent = Boolean(recurrenceInfo?.isSeriesParent);
@@ -151,12 +183,8 @@ export function EventModalEnhanced({
       setConflictsError(null);
       return;
     }
-    const fromDate = form.all_day
-      ? new Date(`${form.starts_at}T00:00:00`)
-      : new Date(form.starts_at);
-    const toDate = form.all_day
-      ? new Date(`${form.ends_at}T23:59:59`)
-      : new Date(form.ends_at);
+    const fromDate = new Date(form.starts_at);
+    const toDate = new Date(form.ends_at);
 
     let cancelled = false;
     setConflictsLoading(true);
@@ -205,7 +233,6 @@ export function EventModalEnhanced({
     };
   }, [
     authFetch,
-    form.all_day,
     form.ends_at,
     form.participant_ids,
     form.room_id,
@@ -214,27 +241,69 @@ export function EventModalEnhanced({
   ]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-6xl max-h-[96vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
-        {/* Современный заголовок */}
-        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 shadow-lg shadow-lime-500/30">
-                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  {isEditing ? "Редактировать событие" : "Новое событие"}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">{calendarName || "Новый календарь"}</p>
-              </div>
+    <>
+      {/* Диалог подтверждения закрытия */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Вы уверены?</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              Все несохраненные изменения будут потеряны. Вы действительно хотите закрыть модальное окно?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCloseConfirm(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClose}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                Закрыть без сохранения
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
+          </div>
+        </div>
+      )}
+      
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        style={{ animation: 'fadeIn 0.2s ease-out forwards' }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            handleClose();
+          }
+        }}
+      >
+      <div 
+        className="w-full max-w-6xl max-h-[96vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl"
+        style={{ animation: 'fadeInUp 0.3s ease-out forwards' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Современный заголовок с кнопками */}
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 shadow-lg shadow-lime-500/30">
+                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    {isEditing ? "Редактировать событие" : "Новое событие"}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">{calendarName || "Новый календарь"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleClose}
               className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
               aria-label="Закрыть"
             >
@@ -242,12 +311,60 @@ export function EventModalEnhanced({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+            </div>
+            
+            {/* Кнопки действий - перемещены вверх */}
+            <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
+              {canManageEvents && onDeleteSeries && (
+                <button
+                  type="button"
+                  onClick={onDeleteSeries}
+                  disabled={isSubmitting}
+                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Удалить серию
+                </button>
+              )}
+              {canManageEvents && onDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={isSubmitting}
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Удалить
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Отмена
+              </button>
+              {canManageEvents && (
+                <button
+                  type="submit"
+                  form="event-form"
+                  disabled={isSubmitting}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-lime-500/30 transition hover:from-lime-600 hover:to-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting
+                    ? isEditing
+                      ? "Сохраняем…"
+                      : "Создаём…"
+                    : isEditing
+                      ? "Сохранить"
+                      : "Создать"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Контент */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(96vh - 200px)" }}>
-          <form onSubmit={onSubmit} className="p-6">
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(96vh - 280px)" }}>
+          <form id="event-form" onSubmit={onSubmit} className="p-6">
             {error && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 <div className="flex items-center gap-2">
@@ -294,7 +411,7 @@ export function EventModalEnhanced({
                       </span>
                       <input
                         required
-                        type={form.all_day ? "date" : "datetime-local"}
+                        type="datetime-local"
                         disabled={isReadOnly}
                         value={form.starts_at}
                         onChange={(e) =>
@@ -309,7 +426,7 @@ export function EventModalEnhanced({
                       </span>
                       <input
                         required
-                        type={form.all_day ? "date" : "datetime-local"}
+                        type="datetime-local"
                         disabled={isReadOnly}
                         value={form.ends_at}
                         onChange={(e) =>
@@ -319,19 +436,6 @@ export function EventModalEnhanced({
                       />
                     </label>
                   </div>
-
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      disabled={isReadOnly}
-                      checked={form.all_day}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, all_day: e.target.checked }))
-                      }
-                      className="h-4 w-4 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
-                    />
-                    <span className="text-sm text-slate-700">Весь день</span>
-                  </label>
 
                   <label className="block">
                     <span className="mb-2 block text-sm font-semibold text-slate-700">Описание</span>
@@ -385,7 +489,7 @@ export function EventModalEnhanced({
                   usersError={usersError}
                   authFetch={authFetch}
                   selectedCalendarId={selectedCalendarId}
-                  isAllDay={form.all_day}
+                  isAllDay={false}
                   onRefreshMembers={onRefreshMembers}
                   conflicts={conflicts}
                   conflictsLoading={conflictsLoading}
@@ -558,54 +662,10 @@ export function EventModalEnhanced({
               </div>
             </div>
 
-            {/* Кнопки действий */}
-            <div className="sticky bottom-0 mt-6 flex flex-wrap gap-3 border-t border-slate-200 bg-white pt-4">
-              {canManageEvents && onDeleteSeries && (
-                <button
-                  type="button"
-                  onClick={onDeleteSeries}
-                  disabled={isSubmitting}
-                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Удалить серию
-                </button>
-              )}
-              {canManageEvents && onDelete && (
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  disabled={isSubmitting}
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Удалить
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-              >
-                Отмена
-              </button>
-              {canManageEvents && (
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-lime-500/30 transition hover:from-lime-600 hover:to-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting
-                    ? isEditing
-                      ? "Сохраняем…"
-                      : "Создаём…"
-                    : isEditing
-                      ? "Сохранить"
-                      : "Создать"}
-                </button>
-              )}
-            </div>
           </form>
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -37,6 +37,8 @@ import { UserAvailabilityView } from "@/components/availability/UserAvailability
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { CalendarMembersManager } from "@/components/calendar/CalendarMembersManager";
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
+import { OrgStructure } from "@/components/organization/OrgStructure";
+import { BirthdayReminder } from "@/components/birthdays/BirthdayReminder";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -117,32 +119,25 @@ export default function Home() {
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [userOrganization, setUserOrganization] = useState<{logo_url: string | null; primary_color: string | null; secondary_color: string | null; name: string} | null>(null);
+  const [currentTime, setCurrentTime] = useState<{local: string; moscow: string}>({local: '', moscow: ''});
+  const [showCreateCalendarForm, setShowCreateCalendarForm] = useState(false);
+
+  // Обновление времени каждую секунду
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const localTime = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const moscowTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' })).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setCurrentTime({ local: localTime, moscow: moscowTime });
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
   const { accessToken, userEmail, logout, refreshAccessToken } = useAuth();
   const isAuthenticated = Boolean(accessToken);
   const router = useRouter();
   
-  // Добавляем CSS для анимации подпрыгивания один раз при загрузке
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    
-    const styleId = "event-bounce-animation";
-    if (document.getElementById(styleId)) return; // Уже добавлено
-    
-    const styleSheet = document.createElement("style");
-    styleSheet.id = styleId;
-    styleSheet.textContent = `
-      @keyframes bounce-alert {
-        0%, 100% { transform: translateY(0); }
-        25% { transform: translateY(-4px); }
-        50% { transform: translateY(0); }
-        75% { transform: translateY(-2px); }
-      }
-      .event-vibrating {
-        animation: bounce-alert 0.6s ease-in-out infinite;
-      }
-    `;
-    document.head.appendChild(styleSheet);
-  }, []);
   const [moveDialog, setMoveDialog] = useState<PendingMoveContext | null>(null);
   const [moveScope, setMoveScope] = useState<"single" | "series">("single");
   const [moveSubmitting, setMoveSubmitting] = useState(false);
@@ -351,6 +346,11 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         setOrganizations(data);
+        console.log("Загружено организаций:", data.length);
+      } else {
+        console.error("Ошибка загрузки организаций:", response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Детали ошибки:", errorData);
       }
     } catch (err) {
       console.error("Failed to load organizations:", err);
@@ -813,12 +813,8 @@ export default function Home() {
     if (event) {
       const start = parseUTC(event.starts_at);
       const end = parseUTC(event.ends_at);
-      const startsAtLocal = event.all_day
-        ? start.toISOString().split("T")[0]
-        : toLocalString(start);
-      const endsAtLocal = event.all_day
-        ? end.toISOString().split("T")[0]
-        : toLocalString(end);
+      const startsAtLocal = toLocalString(start);
+      const endsAtLocal = toLocalString(end);
       const recurrenceRule = event.recurrence_rule || null;
       const recurrenceUntil = recurrenceRule?.until
         ? new Date(recurrenceRule.until).toISOString().split("T")[0]
@@ -831,7 +827,6 @@ export default function Home() {
         room_id: event.room_id,
         starts_at: startsAtLocal,
         ends_at: endsAtLocal,
-        all_day: event.all_day,
         participant_ids: event.participants?.map((p) => p.user_id) || [],
         recurrence_enabled: Boolean(recurrenceRule),
         recurrence_frequency:
@@ -866,7 +861,6 @@ export default function Home() {
         room_id: null,
         starts_at: toLocalString(start),
         ends_at: toLocalString(end),
-        all_day: false,
         participant_ids: [],
         recurrence_enabled: false,
         recurrence_frequency: "weekly",
@@ -911,15 +905,9 @@ export default function Home() {
       let startsAtUTC: string;
       let endsAtUTC: string;
       
-      if (eventForm.all_day) {
-        // Для all_day создаём локальное время и конвертируем в UTC
-        startsAtUTC = new Date(eventForm.starts_at + "T00:00:00").toISOString();
-        endsAtUTC = new Date(eventForm.ends_at + "T23:59:59").toISOString();
-      } else {
-        // Для обычных событий используем простую функцию конвертации
-        startsAtUTC = toUTCString(eventForm.starts_at);
-        endsAtUTC = toUTCString(eventForm.ends_at);
-      }
+      // Конвертируем локальное время в UTC
+      startsAtUTC = toUTCString(eventForm.starts_at);
+      endsAtUTC = toUTCString(eventForm.ends_at);
 
       let recurrenceRulePayload: RecurrenceRule | undefined;
       if (eventForm.recurrence_enabled && !isEditingSeriesParent) {
@@ -949,7 +937,6 @@ export default function Home() {
         room_id: eventForm.room_id || null,
         starts_at: startsAtUTC,
         ends_at: endsAtUTC,
-        all_day: eventForm.all_day,
         participant_ids:
           eventForm.participant_ids.length > 0 ? eventForm.participant_ids : null,
       };
@@ -974,7 +961,6 @@ export default function Home() {
           location: (payload.location as string) || "",
           starts_at: payload.starts_at as string,
           ends_at: payload.ends_at as string,
-          all_day: (payload.all_day as boolean) || false,
           calendar_id: payload.calendar_id as string,
           room_id: (payload.room_id as string) || null,
           recurrence_rule: payload.recurrence_rule || null,
@@ -1010,7 +996,6 @@ export default function Home() {
                 location: (payload.location as string) || "",
                 starts_at: payload.starts_at as string,
                 ends_at: payload.ends_at as string,
-                all_day: (payload.all_day as boolean) || false,
                 room_id: (payload.room_id as string) || null,
                 recurrence_rule: recurrenceRule,
               };
@@ -1290,7 +1275,7 @@ export default function Home() {
     ],
   );
 
-  const viewModes: ViewMode[] = ["week", "month"];
+  const viewModes: ViewMode[] = ["week", "month", "org"];
 
   if (!isAuthenticated) {
   return (
@@ -1380,6 +1365,29 @@ export default function Home() {
 
             {/* Правая часть - Статистика и действия */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Часы времени */}
+              {currentUser?.show_local_time !== false && (
+                <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex flex-col">
+                    <span className="text-[0.65rem] font-medium text-blue-600/70 leading-tight">Локальное</span>
+                    <span className="text-xs font-bold text-blue-700 tabular-nums">{currentTime.local}</span>
+                  </div>
+                </div>
+              )}
+              {currentUser?.show_moscow_time !== false && (
+                <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
+                  <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex flex-col">
+                    <span className="text-[0.65rem] font-medium text-purple-600/70 leading-tight">Москва</span>
+                    <span className="text-xs font-bold text-purple-700 tabular-nums">{currentTime.moscow}</span>
+                  </div>
+                </div>
+              )}
               {/* Блоки статистики */}
               <div className="flex items-center gap-1">
                 <div className="group relative">
@@ -1546,61 +1554,109 @@ export default function Home() {
             />
           </section>
 
-            <form
-              onSubmit={handleSubmit}
-              className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0"
-            >
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                Создать календарь
-              </p>
-              <h2 className="mt-1 text-base font-semibold">
-                Новый календарь
-              </h2>
+          {/* Кнопка создания календаря */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
+            {!showCreateCalendarForm ? (
+              <button
+                type="button"
+                onClick={() => setShowCreateCalendarForm(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-lime-500 to-lime-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:from-lime-600 hover:to-lime-700 hover:shadow-md active:scale-95"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Создать календарь</span>
+              </button>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  handleSubmit(e);
+                  setShowCreateCalendarForm(false);
+                }}
+                className="space-y-3 animate-fadeIn"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                      Создать календарь
+                    </p>
+                    <h2 className="mt-1 text-base font-semibold">
+                      Новый календарь
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateCalendarForm(false);
+                      setForm(DEFAULT_FORM_STATE);
+                    }}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
-              <label className="mt-2 block text-xs font-medium text-slate-700">
-                Название
-                <input
-                  required
-                  name="name"
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      name: event.target.value,
-                    }))
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-lime-500"
-                  placeholder="Название календаря"
-                />
-              </label>
-
-              <label className="mt-2 block text-xs font-medium text-slate-700">
-                Цвет
-                <div className="mt-1 flex items-center gap-2">
+                <label className="block text-xs font-medium text-slate-700">
+                  Название
                   <input
-                    type="color"
-                    name="color"
-                    value={form.color}
+                    required
+                    name="name"
+                    value={form.name}
                     onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
-                        color: event.target.value,
+                        name: event.target.value,
                       }))
                     }
-                    className="h-8 w-8 cursor-pointer rounded-full border border-slate-200 bg-white p-0.5"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-lime-500"
+                    placeholder="Название календаря"
+                    autoFocus
                   />
-                  <span className="text-xs text-slate-500">{form.color}</span>
-                </div>
-              </label>
+                </label>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-3 w-full rounded-lg bg-lime-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-lime-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? "Создаём…" : "Создать"}
-              </button>
-            </form>
+                <label className="block text-xs font-medium text-slate-700">
+                  Цвет
+                  <div className="mt-1 flex items-center gap-2">
+                    <input
+                      type="color"
+                      name="color"
+                      value={form.color}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          color: event.target.value,
+                        }))
+                      }
+                      className="h-8 w-8 cursor-pointer rounded-full border border-slate-200 bg-white p-0.5"
+                    />
+                    <span className="text-xs text-slate-500">{form.color}</span>
+                  </div>
+                </label>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 rounded-lg bg-lime-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-lime-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmitting ? "Создаём…" : "Создать"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateCalendarForm(false);
+                      setForm(DEFAULT_FORM_STATE);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
               <div className="flex items-center justify-between gap-3">
@@ -1783,7 +1839,7 @@ export default function Home() {
                           : "border border-slate-200 text-slate-600"
                   }`}
                 >
-                  {mode === "week" ? "Неделя" : "Месяц"}
+                  {mode === "week" ? "Неделя" : mode === "month" ? "Месяц" : "Оргструктура"}
                 </button>
               ))}
                   <div className="flex gap-1">
@@ -1826,7 +1882,10 @@ export default function Home() {
             </div>
 
           {selectedCalendar && viewMode === "week" && (
-              <div className="rounded-2xl bg-slate-100/50 p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex-1 overflow-hidden min-h-0">
+              <div 
+                className="rounded-2xl bg-slate-100/50 p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex-1 overflow-hidden min-h-0 transition-opacity duration-300"
+                style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
+              >
             <WeekView
               days={weekDays}
               events={events}
@@ -1856,7 +1915,10 @@ export default function Home() {
           )}
 
           {selectedCalendar && viewMode === "month" && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-1 overflow-auto">
+              <div 
+                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-1 overflow-auto transition-opacity duration-300"
+                style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
+              >
             <MonthView
               days={monthGridDays}
               selectedDate={selectedDate}
@@ -1873,6 +1935,17 @@ export default function Home() {
               getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             />
               </div>
+          )}
+
+          {viewMode === "org" && (
+            <OrgStructure
+              authFetch={authFetch}
+              users={users}
+              organizations={organizations}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              onClose={() => setViewMode("week")}
+              onUsersUpdate={loadUsers}
+            />
           )}
         </section>
         </main>
@@ -2110,6 +2183,9 @@ export default function Home() {
           />
         )}
       </div>
+      
+      {/* Компонент дней рождения */}
+      <BirthdayReminder authFetch={authFetch} apiBaseUrl={API_BASE_URL.replace('/api/v1', '')} />
     </div>
   );
 }

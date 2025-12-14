@@ -2,27 +2,15 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { AuthenticatedFetch } from "@/types/common.types";
-import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
+import type { UserProfile } from "@/types/user.types";
+import type { DepartmentWithChildren } from "@/types/department.types";
+import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 
 interface Organization {
   id: string;
   name: string;
   slug: string;
   description?: string | null;
-}
-
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  phone: string | null;
-  position: string | null;
-  department: string | null;
-  organization_id: string | null;
-  avatar_url: string | null;
-  is_active: boolean;
-  role: string;
-  created_at: string;
 }
 
 interface ProfileSettingsProps {
@@ -40,18 +28,22 @@ export function ProfileSettings({
 }: ProfileSettingsProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [departments, setDepartments] = useState<DepartmentWithChildren[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
-    organization_id: "",
     phone: "",
     position: "",
-    department: "",
+    birthday: "",
+    organization_ids: [] as string[],
+    department_ids: [] as string[],
   });
+  const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -60,6 +52,7 @@ export function ProfileSettings({
     if (isOpen) {
       loadProfile();
       loadOrganizations();
+      loadDepartments();
     }
   }, [isOpen]);
 
@@ -74,25 +67,29 @@ export function ProfileSettings({
       }
       const data: UserProfile = await response.json();
       setProfile(data);
-      setFormData({
+      
+      const newFormData = {
         email: data.email,
         full_name: data.full_name || "",
-        organization_id: data.organization_id || "",
         phone: data.phone || "",
         position: data.position || "",
-        department: data.department || "",
-      });
-      // Устанавливаем превью аватара если есть
+        birthday: data.birthday || "",
+        organization_ids: data.organization_ids || [],
+        department_ids: data.department_ids || [],
+      };
+      
+      setFormData(newFormData);
+      setInitialFormData(newFormData);
+      
       if (data.avatar_url) {
         const avatarUrl = data.avatar_url.startsWith('http') 
           ? data.avatar_url 
           : `${API_BASE_URL.replace('/api/v1', '')}${data.avatar_url.startsWith('/') ? '' : '/'}${data.avatar_url}`;
-        console.log('Setting avatar preview URL:', avatarUrl, 'from:', data.avatar_url);
         setAvatarPreview(avatarUrl);
       } else {
         setAvatarPreview(null);
       }
-      setAvatarFile(null); // Сбрасываем выбранный файл при загрузке
+      setAvatarFile(null);
     } catch (err) {
       console.error("Profile load error:", err);
       setError(err instanceof Error ? err.message : "Ошибка загрузки профиля");
@@ -107,23 +104,58 @@ export function ProfileSettings({
       if (response.ok) {
         const data: Organization[] = await response.json();
         setOrganizations(data);
-      } else {
-        console.error("Failed to load organizations:", response.status, response.statusText);
       }
     } catch (err) {
       console.error("Failed to load organizations:", err);
     }
   };
 
+  const loadDepartments = async () => {
+    try {
+      const response = await authFetch(`${DEPARTMENTS_ENDPOINT}?_t=${Date.now()}`);
+      if (response.ok) {
+        const data: DepartmentWithChildren[] = await response.json();
+        setDepartments(data);
+      }
+    } catch (err) {
+      console.error("Failed to load departments:", err);
+    }
+  };
+
+  const flattenDepartments = (depts: DepartmentWithChildren[]): DepartmentWithChildren[] => {
+    const result: DepartmentWithChildren[] = [];
+    const walk = (nodes: DepartmentWithChildren[]) => {
+      nodes.forEach(node => {
+        result.push(node);
+        if (node.children) walk(node.children);
+      });
+    };
+    walk(depts);
+    return result;
+  };
+
+  const flatDepartments = flattenDepartments(departments);
+
+  const hasUnsavedChanges = () => {
+    if (!initialFormData) return false;
+    return JSON.stringify(formData) !== JSON.stringify(initialFormData);
+  };
+
+  const handleClose = () => {
+    if (hasUnsavedChanges()) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Проверка размера (5MB)
       if (file.size > 5 * 1024 * 1024) {
         setError("Размер файла не должен превышать 5 МБ");
         return;
       }
-      // Проверка типа
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
         setError("Разрешены только изображения (JPG, PNG, GIF, WebP)");
@@ -131,7 +163,6 @@ export function ProfileSettings({
       }
       setAvatarFile(file);
       setError(null);
-      // Создаем превью
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -146,7 +177,6 @@ export function ProfileSettings({
     setError(null);
 
     try {
-      // Сначала загружаем аватар если выбран новый
       if (avatarFile) {
         setUploadingAvatar(true);
         const formData = new FormData();
@@ -164,27 +194,23 @@ export function ProfileSettings({
         setUploadingAvatar(false);
       }
       
-      // Подготавливаем payload с правильными типами
-      // Backend ожидает UUID для organization_id или null, не пустую строку
       const payload: {
         email: string;
         full_name: string | null;
         phone: string | null;
         position: string | null;
-        department: string | null;
-        organization_id: string | null;
+        birthday: string | null;
+        organization_ids: string[];
+        department_ids: string[];
       } = {
         email: formData.email.trim(),
         full_name: formData.full_name.trim() || null,
         phone: formData.phone.trim() || null,
         position: formData.position.trim() || null,
-        department: formData.department.trim() || null,
-        organization_id: formData.organization_id && formData.organization_id.trim() 
-          ? formData.organization_id.trim() 
-          : null,
+        birthday: formData.birthday.trim() || null,
+        organization_ids: formData.organization_ids,
+        department_ids: formData.department_ids,
       };
-
-      console.log("Sending profile update:", payload);
 
       const response = await authFetch(`${USERS_ENDPOINT}me`, {
         method: "PUT",
@@ -194,8 +220,6 @@ export function ProfileSettings({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("Profile update error:", errorData);
-        // Если это ошибка валидации, показываем детали
         if (response.status === 422 && Array.isArray(errorData.detail)) {
           const validationErrors = errorData.detail.map((err: any) => 
             `${err.loc?.join('.')}: ${err.msg}`
@@ -219,213 +243,350 @@ export function ProfileSettings({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        {/* Заголовок */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Настройки профиля</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Управление личными данными и принадлежностью</p>
+    <>
+      {/* Диалог подтверждения закрытия */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Вы уверены?</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              Все несохраненные изменения будут потеряны. Вы действительно хотите закрыть модальное окно?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowCloseConfirm(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCloseConfirm(false);
+                  onClose();
+                }}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                Закрыть без сохранения
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
+      )}
 
-        {/* Контент */}
-        <div className="p-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-slate-400">Загрузка...</div>
-            </div>
-          ) : error && !profile ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-              {error}
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Аватар */}
-              <div className="space-y-4 border-b border-slate-200 pb-6">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Фотография профиля
-                </h3>
+      {/* Модальное окно */}
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        style={{ animation: 'fadeIn 0.2s ease-out forwards' }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            handleClose();
+          }
+        }}
+      >
+        <div 
+          className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl"
+          style={{ animation: 'fadeInUp 0.3s ease-out forwards' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Заголовок */}
+          <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+            <div className="px-6 py-5">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
-                  <div className="relative">
-                    {avatarPreview ? (
-                      <img
-                        src={avatarPreview}
-                        alt="Аватар"
-                        className="h-20 w-20 rounded-full object-cover border-2 border-slate-200"
-                      />
-                    ) : (
-                      <div className="h-20 w-20 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center border-2 border-slate-200">
-                        <svg className="w-10 h-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                    )}
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 shadow-lg shadow-indigo-500/30">
+                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
-                  <div className="flex-1">
-                    <label className="block">
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                        onChange={handleAvatarChange}
-                        className="hidden"
-                        disabled={uploadingAvatar}
-                      />
-                      <span className="inline-block rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                        {avatarFile ? "Изменить фото" : "Загрузить фото"}
-                      </span>
-                    </label>
-                    <p className="mt-1 text-xs text-slate-500">
-                      JPG, PNG, GIF или WebP, максимум 5 МБ
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Настройки профиля</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Управление личными данными и принадлежностью
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Основная информация */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Основная информация
-                </h3>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      ФИО
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      placeholder="Иванов Иван Иванович"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Телефон
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+7 (999) 123-45-67"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Должность
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.position}
-                      onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                      placeholder="Менеджер проектов"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-500/20"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Отдел
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      placeholder="Отдел разработки"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-500/20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Принадлежность к юридическому лицу */}
-              <div className="space-y-4 border-t border-slate-200 pt-6">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  Принадлежность к юридическому лицу
-                </h3>
-                <p className="text-sm text-slate-600">
-                  Выберите юридическое лицо из группы компаний, к которому вы принадлежите
-                </p>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Юридическое лицо
-                  </label>
-                  <select
-                    value={formData.organization_id}
-                    onChange={(e) => setFormData({ ...formData, organization_id: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-500/20"
-                  >
-                    <option value="">Не выбрано</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name}
-                      </option>
-                    ))}
-                  </select>
-                  {organizations.length === 0 && (
-                    <p className="mt-1.5 text-xs text-slate-500">
-                      Нет доступных юридических лиц. Обратитесь к администратору.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              {/* Кнопки */}
-              <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  onClick={handleClose}
+                  className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+                  aria-label="Закрыть"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Кнопки действий - перемещены вверх */}
+              <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   Отмена
                 </button>
                 <button
                   type="submit"
+                  form="profile-form"
                   disabled={saving || uploadingAvatar}
-                  className="rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:from-lime-600 hover:to-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-purple-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving || uploadingAvatar ? "Сохранение..." : "Сохранить"}
+                  {saving || uploadingAvatar ? "Сохранение…" : "Сохранить"}
                 </button>
               </div>
-            </form>
-          )}
+            </div>
+          </div>
+
+          {/* Контент */}
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(90vh - 280px)" }}>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                  <div className="text-sm text-slate-500">Загрузка...</div>
+                </div>
+              </div>
+            ) : error && !profile ? (
+              <div className="p-6">
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                  {error}
+                </div>
+              </div>
+            ) : (
+              <form id="profile-form" onSubmit={handleSubmit} className="p-6 space-y-6">
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {/* Фотография профиля */}
+                <div className="space-y-4 border-b border-slate-200 pb-6">
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Фотография профиля</h3>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      {avatarPreview ? (
+                        <img
+                          src={avatarPreview}
+                          alt="Аватар"
+                          className="h-24 w-24 rounded-2xl object-cover border-2 border-slate-200 shadow-lg"
+                        />
+                      ) : (
+                        <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center border-2 border-slate-200 shadow-lg">
+                          <svg className="w-12 h-12 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <label className="block">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleAvatarChange}
+                          className="hidden"
+                          disabled={uploadingAvatar}
+                        />
+                        <span className="inline-block rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                          {avatarFile ? "Изменить фото" : "Загрузить фото"}
+                        </span>
+                      </label>
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        JPG, PNG, GIF или WebP, максимум 5 МБ
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Основная информация */}
+                <div className="space-y-4 border-b border-slate-200 pb-6">
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Основная информация</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        ФИО
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        placeholder="Иванов Иван Иванович"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Телефон
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="+7 (999) 123-45-67"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Должность
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.position}
+                        onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                        placeholder="Менеджер проектов"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        День рождения
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.birthday}
+                        onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Принадлежность */}
+                <div className="space-y-4 border-b border-slate-200 pb-6">
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Принадлежность</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Организации
+                    </label>
+                    <div className="max-h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
+                      {organizations.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-4">Нет доступных организаций</p>
+                      ) : (
+                        organizations.map((org) => {
+                          const isChecked = formData.organization_ids.includes(org.id);
+                          return (
+                            <label 
+                              key={org.id} 
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      organization_ids: [...formData.organization_ids, org.id],
+                                    });
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      organization_ids: formData.organization_ids.filter(id => id !== org.id),
+                                    });
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
+                              />
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-lg">🏢</span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium text-slate-900 truncate">
+                                    {org.name}
+                                  </div>
+                                  {org.description && (
+                                    <div className="text-xs text-slate-500 truncate">{org.description}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Отделы
+                    </label>
+                    <div className="max-h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
+                      {flatDepartments.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-4">Нет доступных отделов</p>
+                      ) : (
+                        flatDepartments.map((dept) => {
+                          const isChecked = formData.department_ids.includes(dept.id);
+                          return (
+                            <label 
+                              key={dept.id} 
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      department_ids: [...formData.department_ids, dept.id],
+                                    });
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      department_ids: formData.department_ids.filter(id => id !== dept.id),
+                                    });
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
+                              />
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-lg">🏢</span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium text-slate-900 truncate">
+                                    {dept.name}
+                                  </div>
+                                  {dept.description && (
+                                    <div className="text-xs text-slate-500 truncate">{dept.description}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
-

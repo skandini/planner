@@ -121,8 +121,10 @@ export function UpcomingEvents({
             const isAccepted = status === "accepted";
             const isPending = status === "needs_action" || status === "pending" || !status;
             const start = parseUTC(event.starts_at);
+            const end = parseUTC(event.ends_at);
             const isToday = start.toDateString() === now.toDateString();
-            const isStartingSoon = isToday && start.getTime() - now.getTime() < 30 * 60 * 1000; // 30 минут
+            const isStartingSoon = isToday && start.getTime() - now.getTime() < 30 * 60 * 1000 && start > now; // 30 минут до начала
+            const isLive = start <= now && end >= now; // Событие идет прямо сейчас
 
             return (
               <button
@@ -130,7 +132,11 @@ export function UpcomingEvents({
                 type="button"
                 onClick={() => onEventClick(event)}
                 className={`w-full text-left transition hover:bg-slate-50 ${
-                  isStartingSoon ? "bg-amber-50" : ""
+                  isLive 
+                    ? "bg-gradient-to-r from-red-50 via-pink-50 to-red-50 border-l-4 border-red-500" 
+                    : isStartingSoon 
+                      ? "bg-amber-50" 
+                      : ""
                 }`}
               >
                 <div className="px-4 py-3">
@@ -231,13 +237,26 @@ export function UpcomingEvents({
                         </div>
                       )}
                     </div>
-                    {isStartingSoon && (
-                      <div className="flex-shrink-0">
-                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                          Скоро
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      {isLive && (
+                        <div className="relative">
+                          <span className="live-indicator inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-500 via-pink-500 to-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-red-500/50">
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 live-dot"></span>
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+                            </span>
+                            <span className="relative">Сейчас идет</span>
+                          </span>
+                        </div>
+                      )}
+                      {!isLive && isStartingSoon && (
+                        <div className="flex-shrink-0">
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            Скоро
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </button>

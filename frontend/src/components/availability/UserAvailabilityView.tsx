@@ -68,8 +68,20 @@ export function UserAvailabilityView({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur"
+      style={{ animation: 'fadeIn 0.2s ease-out forwards' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl"
+        style={{ animation: 'fadeInUp 0.3s ease-out forwards' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-xl font-semibold">
@@ -221,5 +233,6 @@ export function UserAvailabilityView({
     </div>
   );
 }
+
 
 

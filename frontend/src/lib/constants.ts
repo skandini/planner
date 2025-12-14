@@ -9,6 +9,7 @@ export const NOTIFICATION_ENDPOINT = `${API_BASE_URL}/notifications`;
 export const ROOM_ENDPOINT = `${API_BASE_URL}/rooms/`;
 export const USERS_ENDPOINT = `${API_BASE_URL}/users/`;
 export const ORGANIZATIONS_ENDPOINT = `${API_BASE_URL}/organizations`;
+export const DEPARTMENTS_ENDPOINT = `${API_BASE_URL}/departments/`;
 
 export const MINUTES_IN_DAY = 24 * 60;
 export const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -35,7 +36,6 @@ export const DEFAULT_EVENT_FORM: EventDraft = {
   room_id: null,
   starts_at: "",
   ends_at: "",
-  all_day: false,
   participant_ids: [],
   recurrence_enabled: false,
   recurrence_frequency: "weekly",

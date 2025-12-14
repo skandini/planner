@@ -7,11 +7,18 @@ export type UserProfile = {
   phone: string | null;
   position: string | null;
   department: string | null;
-  organization_id: string | null;
+  department_id: string | null;  // Legacy - for backward compatibility
+  manager_id: string | null;
+  organization_id: string | null;  // Legacy - for backward compatibility
   avatar_url: string | null;
   is_active: boolean;
   role: string;
   created_at: string;
+  // Many-to-many relationships
+  department_ids?: string[];  // All departments user belongs to
+  organization_ids?: string[];  // All organizations user belongs to
+  // День рождения
+  birthday?: string | null;  // Date in YYYY-MM-DD format
 };
 
 export type EventParticipant = {

@@ -56,7 +56,6 @@ export type EventDraft = {
   room_id: string | null;
   starts_at: string;
   ends_at: string;
-  all_day: boolean;
   participant_ids: string[];
   recurrence_enabled: boolean;
   recurrence_frequency: "daily" | "weekly" | "monthly";

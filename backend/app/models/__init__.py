@@ -1,5 +1,6 @@
 from .calendar import Calendar
 from .calendar_member import CalendarMember
+from .department import Department
 from .event import Event
 from .event_attachment import EventAttachment
 from .event_participant import EventParticipant
@@ -7,10 +8,13 @@ from .notification import Notification
 from .organization import Organization
 from .room import Room
 from .user import User
+from .user_department import UserDepartment
+from .user_organization import UserOrganization
 
 __all__ = [
     "Calendar",
     "CalendarMember",
+    "Department",
     "Event",
     "EventAttachment",
     "EventParticipant",
@@ -18,5 +22,7 @@ __all__ = [
     "Organization",
     "Room",
     "User",
+    "UserDepartment",
+    "UserOrganization",
 ]
 
