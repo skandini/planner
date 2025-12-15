@@ -32,6 +32,8 @@ class User(SQLModel, table=True):
     organization_id: Optional[UUID] = Field(
         default=None, foreign_key="organizations.id", nullable=True
     )
+    access_org_structure: bool = Field(default=True, nullable=False)
+    access_tickets: bool = Field(default=True, nullable=False)
     # Настройки проекта
     show_local_time: bool = Field(default=True)
     show_moscow_time: bool = Field(default=True)

@@ -11,6 +11,8 @@ export const USERS_ENDPOINT = `${API_BASE_URL}/users/`;
 export const ORGANIZATIONS_ENDPOINT = `${API_BASE_URL}/organizations`;
 export const DEPARTMENTS_ENDPOINT = `${API_BASE_URL}/departments/`;
 export const EVENT_COMMENTS_ENDPOINT = (eventId: string) => `${API_BASE_URL}/events/${eventId}/comments`;
+export const TICKETS_ENDPOINT = `${API_BASE_URL}/tickets/`;
+export const TICKET_COMMENTS_ENDPOINT = (ticketId: string) => `${API_BASE_URL}/tickets/${ticketId}/comments`;
 
 export const MINUTES_IN_DAY = 24 * 60;
 export const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];

@@ -31,6 +31,12 @@ from .notification import (
 )
 from .organization import OrganizationCreate, OrganizationRead
 from .room import RoomCreate, RoomRead, RoomUpdate
+from .ticket import TicketCreate, TicketRead, TicketUpdate
+from .ticket_comment import (
+    TicketCommentCreate,
+    TicketCommentRead,
+    TicketCommentUpdate,
+)
 from .user import (
     RefreshTokenRequest,
     TokenPair,
@@ -70,6 +76,12 @@ __all__ = [
     "RoomCreate",
     "RoomRead",
     "RoomUpdate",
+    "TicketCreate",
+    "TicketRead",
+    "TicketUpdate",
+    "TicketCommentCreate",
+    "TicketCommentRead",
+    "TicketCommentUpdate",
     "TokenPair",
     "RefreshTokenRequest",
     "UserBase",

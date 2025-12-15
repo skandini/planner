@@ -8,6 +8,26 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
 
+# Импортируем все модели, чтобы они попали в метаданные SQLModel
+from app.models import (  # noqa: F401
+    Calendar,
+    CalendarMember,
+    Department,
+    Event,
+    EventAttachment,
+    EventComment,
+    EventParticipant,
+    Notification,
+    Organization,
+    Room,
+    Ticket,
+    TicketAttachment,
+    TicketComment,
+    User,
+    UserDepartment,
+    UserOrganization,
+)
+
 
 def _build_engine():
     connect_args = {}
@@ -21,6 +41,17 @@ engine = _build_engine()
 
 def init_db() -> None:
     """Create database tables in environments without migrations."""
+    # Проверяем, существует ли уже таблица tickets (созданная через миграции)
+    # Если да, то не создаем таблицы через create_all
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+    
+    # Если таблицы тикетов уже существуют (созданы через миграции), пропускаем create_all
+    if "tickets" in existing_tables:
+        return
+    
+    # Иначе создаем все таблицы (для новых установок без миграций)
     SQLModel.metadata.create_all(bind=engine)
 
 

@@ -39,6 +39,8 @@ import { CalendarMembersManager } from "@/components/calendar/CalendarMembersMan
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
 import { OrgStructure } from "@/components/organization/OrgStructure";
 import { BirthdayReminder } from "@/components/birthdays/BirthdayReminder";
+import { TicketTracker } from "@/components/support/TicketTracker";
+import { AdminPanel } from "@/components/admin/AdminPanel";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -59,6 +61,7 @@ import {
   ROOM_ENDPOINT,
   USERS_ENDPOINT,
   ORGANIZATIONS_ENDPOINT,
+  DEPARTMENTS_ENDPOINT,
   ROLE_LABELS,
   WORKDAY_START_HOUR,
   WORKDAY_END_HOUR,
@@ -116,6 +119,7 @@ export default function Home() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<Array<{id: string; name: string; slug: string}>>([]);
+  const [departments, setDepartments] = useState<Array<{id: string; name: string}>>([]);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [userOrganization, setUserOrganization] = useState<{logo_url: string | null; primary_color: string | null; secondary_color: string | null; name: string} | null>(null);
@@ -357,6 +361,51 @@ export default function Home() {
     }
   }, [accessToken, authFetch]);
 
+  const loadDepartments = useCallback(async () => {
+    if (!accessToken) {
+      setDepartments([]);
+      return;
+    }
+    
+    // Загружаем отделы только если у пользователя есть доступ к оргструктуре
+    // или если это админ/ИТ (для проверки принадлежности к ИТ отделу)
+    if (currentUser && !currentUser.access_org_structure && currentUser.role !== "admin" && currentUser.role !== "it") {
+      setDepartments([]);
+      return;
+    }
+    
+    try {
+      const response = await authFetch(DEPARTMENTS_ENDPOINT, { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        // Функция для рекурсивного извлечения всех отделов из дерева
+        const flatten = (depts: any[]): Array<{id: string; name: string}> => {
+          const result: Array<{id: string; name: string}> = [];
+          depts.forEach((d) => {
+            result.push({ id: d.id, name: d.name });
+            if (d.children?.length) {
+              result.push(...flatten(d.children));
+            }
+          });
+          return result;
+        };
+        setDepartments(flatten(data));
+      } else if (response.status === 403) {
+        // 403 - нормальная ситуация, если у пользователя нет прав доступа
+        setDepartments([]);
+      } else {
+        console.error("Ошибка загрузки отделов:", response.status, response.statusText);
+      }
+    } catch (err) {
+      // Игнорируем ошибки загрузки отделов, если у пользователя нет прав
+      if (currentUser && !currentUser.access_org_structure) {
+        setDepartments([]);
+        return;
+      }
+      console.error("Failed to load departments:", err);
+    }
+  }, [accessToken, authFetch, currentUser]);
+
   const loadCalendars = useCallback(async () => {
     if (!accessToken) {
       setCalendars([]);
@@ -435,6 +484,19 @@ export default function Home() {
       loadOrganizations();
     }
   }, [isAuthenticated, loadUsers, loadCurrentUser, loadOrganizations]);
+
+  // Загружаем отделы только если у пользователя есть права доступа
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      // Загружаем отделы только если есть доступ к оргструктуре или это админ/ИТ
+      if (currentUser.access_org_structure || currentUser.role === "admin" || currentUser.role === "it") {
+        loadDepartments();
+      } else {
+        // Если нет прав, просто очищаем список отделов
+        setDepartments([]);
+      }
+    }
+  }, [isAuthenticated, currentUser, loadDepartments]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1275,7 +1337,51 @@ export default function Home() {
     ],
   );
 
-  const viewModes: ViewMode[] = ["week", "month", "org"];
+  // Проверка принадлежности к ИТ отделу
+  const isInITDepartment = useMemo(() => {
+    if (!currentUser || !departments.length) return false;
+    
+    const userDeptIds = currentUser.department_ids || (currentUser.department_id ? [currentUser.department_id] : []);
+    if (!userDeptIds.length) return false;
+    
+    // Проверяем, есть ли среди отделов пользователя отдел с названием, содержащим "ИТ" или "IT"
+    return userDeptIds.some(deptId => {
+      const dept = departments.find(d => d.id === deptId);
+      if (!dept || !dept.name) return false;
+      const deptNameLower = dept.name.toLowerCase();
+      return deptNameLower.includes("ит") || deptNameLower.includes("it");
+    });
+  }, [currentUser, departments]);
+
+  // Фильтруем режимы просмотра на основе прав доступа пользователя
+  const availableViewModes = useMemo(() => {
+    const allModes: ViewMode[] = ["week", "month"];
+    
+    // Добавляем "org" только если есть доступ к оргструктуре
+    if (currentUser?.access_org_structure) {
+      allModes.push("org");
+    }
+    
+    // Добавляем "support" только если есть доступ к тикетам
+    if (currentUser?.access_tickets) {
+      allModes.push("support");
+    }
+    
+    // Добавляем "admin" если пользователь админ, имеет роль "it" или находится в ИТ отделе
+    if (currentUser?.role === "admin" || currentUser?.role === "it" || isInITDepartment) {
+      allModes.push("admin");
+    }
+    
+    return allModes;
+  }, [currentUser, isInITDepartment]);
+
+  // Автоматически переключаем на доступный режим, если текущий недоступен
+  useEffect(() => {
+    if (isAuthenticated && currentUser && !availableViewModes.includes(viewMode)) {
+      // Переключаем на первый доступный режим (обычно "week")
+      setViewMode(availableViewModes[0] || "week");
+    }
+  }, [isAuthenticated, currentUser, availableViewModes, viewMode]);
 
   if (!isAuthenticated) {
   return (
@@ -1828,7 +1934,7 @@ export default function Home() {
                       + Событие
                 </button>
               )}
-              {viewModes.map((mode) => (
+              {availableViewModes.map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -1839,7 +1945,15 @@ export default function Home() {
                           : "border border-slate-200 text-slate-600"
                   }`}
                 >
-                  {mode === "week" ? "Неделя" : mode === "month" ? "Месяц" : "Оргструктура"}
+                  {mode === "week"
+                    ? "Неделя"
+                    : mode === "month"
+                    ? "Месяц"
+                    : mode === "org"
+                    ? "Оргструктура"
+                    : mode === "support"
+                    ? "Техподдержка"
+                    : "Админ"}
                 </button>
               ))}
                   <div className="flex gap-1">
@@ -1946,6 +2060,20 @@ export default function Home() {
               onClose={() => setViewMode("week")}
               onUsersUpdate={loadUsers}
             />
+          )}
+          {viewMode === "support" && (
+            <TicketTracker
+              authFetch={authFetch}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              users={users}
+              organizations={organizations}
+              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+              currentUserId={currentUser?.id}
+              onClose={() => setViewMode("week")}
+            />
+          )}
+          {viewMode === "admin" && (
+            <AdminPanel authFetch={authFetch} currentUser={currentUser || undefined} />
           )}
         </section>
         </main>

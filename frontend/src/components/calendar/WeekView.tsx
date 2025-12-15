@@ -201,6 +201,23 @@ export function WeekView({
     dragInfo.current = { event: eventRecord, offsetMinutes };
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", eventRecord.id);
+
+    // Кастомный drag-превью: создаём клон карточки и используем как drag image,
+    // чтобы не показывался текстовый ghost.
+    const preview = e.currentTarget.cloneNode(true) as HTMLElement;
+    preview.style.position = "absolute";
+    preview.style.top = "-1000px";
+    preview.style.left = "-1000px";
+    preview.style.width = `${bounds.width}px`;
+    preview.style.height = `${bounds.height}px`;
+    preview.style.opacity = "0.85";
+    preview.style.pointerEvents = "none";
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, e.clientX - bounds.left, offsetPx);
+    // Удаляем превью чуть позже, чтобы drag image успело примениться
+    setTimeout(() => {
+      document.body.removeChild(preview);
+    }, 0);
   };
 
   const handleDragEnd = () => {

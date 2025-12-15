@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, rooms, users, user_avatars
+from app.api.v1 import auth, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, rooms, ticket_attachments, ticket_comments, tickets, users, user_avatars
 
 
 api_router = APIRouter()
@@ -16,3 +16,7 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(user_avatars.router, prefix="/users", tags=["users"])
 api_router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
+api_router.include_router(tickets.router, prefix="/tickets", tags=["tickets"])
+api_router.include_router(ticket_comments.router, prefix="", tags=["ticket-comments"])
+api_router.include_router(ticket_attachments.router, prefix="", tags=["ticket-attachments"])
+api_router.include_router(ticket_attachments.router, prefix="", tags=["ticket-attachments"])

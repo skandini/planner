@@ -7,4 +7,5 @@ export * from "./notification.types";
 export * from "./department.types";
 export * from "./common.types";
 export * from "./comment.types";
+export * from "./ticket.types";
 

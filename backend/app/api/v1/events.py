@@ -304,17 +304,30 @@ def list_events(
         EventParticipant.user_id == current_user.id
     )
 
-    statement = select(Event).where(
-        or_(
-            Event.calendar_id.in_(personal_calendars_subquery),
-            Event.id.in_(participant_events_subquery)
+    statement = (
+        select(Event)
+        .where(
+            or_(
+                Event.calendar_id.in_(personal_calendars_subquery),
+                Event.id.in_(participant_events_subquery),
+            )
         )
     )
     if filter_expr is not None:
         statement = statement.where(filter_expr)
     statement = statement.order_by(Event.starts_at)
     events = session.exec(statement).all()
-    return [_serialize_event_with_participants(session, event) for event in events]
+
+    serialized: list[EventRead] = []
+    for event in events:
+        # Если календарь отсутствует (например, удален), пропускаем событие,
+        # иначе дальнейшие операции (перемещение/обновление) завершатся 404 "Calendar not found".
+        calendar = session.get(Calendar, event.calendar_id)
+        if not calendar:
+            continue
+        serialized.append(_serialize_event_with_participants(session, event))
+
+    return serialized
 
 
 @router.get("/{event_id}", response_model=EventRead, summary="Get event by id")

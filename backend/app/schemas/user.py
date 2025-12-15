@@ -17,6 +17,8 @@ class UserBase(BaseModel):
     manager_id: Optional[UUID] = None
     organization_id: Optional[UUID] = None
     avatar_url: Optional[str] = None
+    access_org_structure: bool = True
+    access_tickets: bool = True
     # Настройки проекта
     show_local_time: bool = True
     show_moscow_time: bool = True
@@ -26,6 +28,9 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
+    role: Optional[str] = None
+    department_ids: Optional[list[UUID]] = None
+    organization_ids: Optional[list[UUID]] = None
 
 
 class UserUpdate(BaseModel):
@@ -42,6 +47,11 @@ class UserUpdate(BaseModel):
     # Many-to-many relationships
     department_ids: Optional[list[UUID]] = None  # All departments user belongs to
     organization_ids: Optional[list[UUID]] = None  # All organizations user belongs to
+    role: Optional[str] = None
+    access_org_structure: Optional[bool] = None
+    access_tickets: Optional[bool] = None
+    # Password update (admin only)
+    password: Optional[str] = Field(default=None, min_length=8, max_length=128)
     # Настройки проекта
     show_local_time: Optional[bool] = None
     show_moscow_time: Optional[bool] = None

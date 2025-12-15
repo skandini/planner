@@ -50,6 +50,9 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"structure" | "employees">("structure");
 
   const loadDepartments = useCallback(async () => {
     setLoading(true);
@@ -449,13 +452,13 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             {/* Плавная вертикальная линия от родителя к карточке */}
             {!isRoot && (
               <svg 
-                className="absolute -top-6 left-1/2 -translate-x-1/2 pointer-events-none"
+                className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none"
                 width="4"
-                height="24"
+                height="32"
                 style={{ zIndex: 0 }}
               >
                 <path
-                  d="M 2 0 Q 2 8 2 12 T 2 24"
+                  d="M 2 0 Q 2 10 2 16 T 2 32"
                   stroke="rgb(148 163 184)"
                   strokeWidth="2.5"
                   fill="none"
@@ -728,62 +731,59 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             </div>
 
             {d.children && d.children.length > 0 && (
-              <div className="mt-4 flex flex-col items-center relative">
-                {/* Плавная вертикальная линия от карточки вниз */}
-                <svg 
-                  className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
-                  width="4"
-                  height="16"
-                  style={{ zIndex: 0 }}
-                >
-                  <path
-                    d="M 2 0 Q 2 6 2 8 T 2 16"
-                    stroke="rgb(148 163 184)"
-                    strokeWidth="2.5"
-                    fill="none"
-                    strokeLinecap="round"
-                    opacity="0.8"
-                  />
-                </svg>
-                
-                <div className="relative flex flex-row gap-6 mt-4">
-                  {/* Плавная горизонтальная линия, соединяющая детей */}
-                  {d.children.length > 1 && (
-                    <svg
-                      className="absolute top-0 left-0 right-0 pointer-events-none"
-                      height="4"
-                      style={{ zIndex: 0, top: '-8px' }}
-                    >
-                      <path
-                        d={`M ${d.children.length === 2 ? '20%' : '10%'} 2 Q 50% 2 90% 2`}
-                        stroke="rgb(148 163 184)"
-                        strokeWidth="2.5"
-                        fill="none"
-                        strokeLinecap="round"
-                        opacity="0.8"
-                      />
-                    </svg>
-                  )}
+              <div className="mt-10 flex flex-col items-center relative">
+                {/* Контейнер для дочерних отделов */}
+                <div className="relative flex flex-row gap-12 mt-10" style={{ position: 'relative', minHeight: '50px' }}>
+                  {/* SVG с плавными линиями от родителя к каждому ребенку - покрывает всю область */}
+                  <svg
+                    className="absolute pointer-events-none"
+                    style={{
+                      zIndex: 0,
+                      top: '-50px',
+                      left: '0',
+                      right: '0',
+                      width: '100%',
+                      height: '50px'
+                    }}
+                    viewBox="0 0 100 50"
+                    preserveAspectRatio="none"
+                  >
+                    {d.children.map((child, childIndex) => {
+                      // Родитель всегда в центре (50%)
+                      const parentX = 50;
+                      const parentY = 0;
+                      
+                      // Вычисляем позицию центра каждого ребенка
+                      // Каждый блок занимает равную долю ширины
+                      const totalChildren = d.children.length;
+                      const childWidth = 100 / totalChildren;
+                      const childX = (childIndex * childWidth) + (childWidth / 2);
+                      const childY = 50;
+                      
+                      // Плавная кривая Безье от родителя к ребенку
+                      // Используем две контрольные точки для более плавного изгиба
+                      const controlY1 = 15;
+                      const controlY2 = 35;
+                      const midX = (parentX + childX) / 2;
+                      const path = `M ${parentX} ${parentY} C ${parentX} ${controlY1}, ${midX} ${controlY2}, ${childX} ${childY}`;
+                      
+                      return (
+                        <path
+                          key={child.id}
+                          d={path}
+                          stroke="rgb(148 163 184)"
+                          strokeWidth="2.5"
+                          fill="none"
+                          strokeLinecap="round"
+                          opacity="0.8"
+                        />
+                      );
+                    })}
+                  </svg>
                   
                   {d.children.map((child, childIndex) => {
                     return (
                       <div key={child.id} className="relative flex flex-col items-center">
-                        {/* Плавная вертикальная линия от горизонтальной линии к дочернему отделу */}
-                        <svg
-                          className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none"
-                          width="4"
-                          height="32"
-                          style={{ zIndex: 0 }}
-                        >
-                          <path
-                            d="M 2 0 Q 2 10 2 16 T 2 32"
-                            stroke="rgb(148 163 184)"
-                            strokeWidth="2.5"
-                            fill="none"
-                            strokeLinecap="round"
-                            opacity="0.8"
-                          />
-                        </svg>
                         {renderTree([child], depth + 1)}
                       </div>
                     );
@@ -931,6 +931,30 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 px-4 border-b border-slate-200 bg-white flex-shrink-0">
+        <button
+          onClick={() => setActiveTab("structure")}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            activeTab === "structure"
+              ? "border-indigo-500 text-indigo-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Структура
+        </button>
+        <button
+          onClick={() => setActiveTab("employees")}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            activeTab === "employees"
+              ? "border-indigo-500 text-indigo-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Сотрудники ({users.length})
+        </button>
+      </div>
+
       {/* Canvas area */}
       <div 
         className="flex-1 overflow-hidden relative org-canvas"
@@ -938,7 +962,15 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+        style={{ 
+          cursor: isPanning ? 'grabbing' : 'grab',
+          backgroundImage: `
+            linear-gradient(to right, rgb(226 232 240) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(226 232 240) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          backgroundColor: 'rgb(248 250 252)'
+        }}
       >
         {error && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2 text-sm shadow-lg">
@@ -946,7 +978,178 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
           </div>
         )}
 
-        {loading ? (
+        {activeTab === "employees" ? (
+          <div className="absolute inset-0 overflow-y-auto p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900">Список сотрудников</h3>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Поиск по имени, email, должности..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {users
+                  .filter((user) => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      user.full_name?.toLowerCase().includes(query) ||
+                      user.email.toLowerCase().includes(query) ||
+                      user.position?.toLowerCase().includes(query)
+                    );
+                  })
+                  .map((user) => {
+                    const userDeptIds = user.department_ids || (user.department_id ? [user.department_id] : []);
+                    const userDepts = userDeptIds
+                      .map(deptId => {
+                        const flatten = (depts: DepartmentWithChildren[]): DepartmentWithChildren[] => {
+                          const result: DepartmentWithChildren[] = [];
+                          depts.forEach(d => {
+                            result.push(d);
+                            if (d.children) result.push(...flatten(d.children));
+                          });
+                          return result;
+                        };
+                        return flatten(departments).find(d => d.id === deptId);
+                      })
+                      .filter(Boolean);
+                    
+                    const userOrgIds = user.organization_ids || (user.organization_id ? [user.organization_id] : []);
+                    const userOrgs = userOrgIds
+                      .map(orgId => organizations.find(o => o.id === orgId))
+                      .filter(Boolean);
+                    
+                    return (
+                      <div
+                        key={user.id}
+                        className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition cursor-pointer"
+                        onClick={() => setSelectedUser(user)}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-white shadow flex-shrink-0">
+                            {user.avatar_url ? (
+                              <img
+                                src={apiBaseUrl && !user.avatar_url.startsWith('http') ? `${apiBaseUrl}${user.avatar_url}` : user.avatar_url}
+                                alt={user.full_name || user.email}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = "none";
+                                  const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                              />
+                            ) : null}
+                            <div className={`w-full h-full flex items-center justify-center text-slate-600 font-semibold ${user.avatar_url ? "hidden" : ""}`}>
+                              {(user.full_name || user.email).charAt(0).toUpperCase()}
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-sm font-semibold text-slate-900">
+                                {user.full_name || user.email}
+                              </h4>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                user.role === "admin" ? "bg-purple-100 text-purple-700" :
+                                user.role === "it" ? "bg-blue-100 text-blue-700" :
+                                "bg-slate-100 text-slate-700"
+                              }`}>
+                                {user.role === "admin" ? "Админ" :
+                                 user.role === "it" ? "ИТ" :
+                                 "Сотрудник"}
+                              </span>
+                            </div>
+                            
+                            {user.email && (
+                              <p className="text-xs text-slate-500 mb-1">{user.email}</p>
+                            )}
+                            
+                            {user.position && (
+                              <p className="text-xs text-slate-600 mb-2">{user.position}</p>
+                            )}
+                            
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500">Доступы:</span>
+                                <div className="flex items-center gap-1">
+                                  {user.access_org_structure && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
+                                      Оргструктура
+                                    </span>
+                                  )}
+                                  {user.access_tickets && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">
+                                      Тикеты
+                                    </span>
+                                  )}
+                                  {!user.access_org_structure && !user.access_tickets && (
+                                    <span className="text-xs text-slate-400">Нет доступов</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {userDepts.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">Отделы:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {userDepts.slice(0, 3).map(dept => (
+                                      <span key={dept.id} className="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">
+                                        {dept.name}
+                                      </span>
+                                    ))}
+                                    {userDepts.length > 3 && (
+                                      <span className="text-[10px] text-slate-500">+{userDepts.length - 3}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {userOrgs.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">Организации:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {userOrgs.slice(0, 2).map(org => (
+                                      <span key={org.id} className="px-2 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700">
+                                        {org.name}
+                                      </span>
+                                    ))}
+                                    {userOrgs.length > 2 && (
+                                      <span className="text-[10px] text-slate-500">+{userOrgs.length - 2}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+              
+              {users.filter((user) => {
+                if (!searchQuery.trim()) return true;
+                const query = searchQuery.toLowerCase();
+                return (
+                  user.full_name?.toLowerCase().includes(query) ||
+                  user.email.toLowerCase().includes(query) ||
+                  user.position?.toLowerCase().includes(query)
+                );
+              }).length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  {searchQuery ? "Сотрудники не найдены" : "Нет сотрудников"}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : loading ? (
           <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -958,14 +1161,31 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             <div className="text-sm text-slate-500">Нет отделов. Добавьте первый отдел.</div>
           </div>
         ) : (
-          <div
-            className="absolute inset-0 transition-transform duration-200 ease-out"
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transformOrigin: '0 0',
-            }}
-          >
-            <div className="p-8">
+          <>
+            {/* Сетчатый фон, который масштабируется вместе с контентом */}
+            <div
+              className="absolute inset-0 transition-transform duration-200 ease-out pointer-events-none"
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transformOrigin: '0 0',
+                backgroundImage: `
+                  linear-gradient(to right, rgb(226 232 240) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgb(226 232 240) 1px, transparent 1px)
+                `,
+                backgroundSize: `${40 * zoom}px ${40 * zoom}px`,
+                backgroundColor: 'rgb(248 250 252)',
+                zIndex: 0
+              }}
+            />
+            <div
+              className="absolute inset-0 transition-transform duration-200 ease-out"
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transformOrigin: '0 0',
+                zIndex: 1
+              }}
+            >
+              <div className="p-8">
               {/* Show matching users if search is active */}
               {searchQuery.trim() && matchingUsers.length > 0 && (
                 <div className="mb-8 transition-all duration-300">
@@ -1047,16 +1267,17 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
                   {renderTree(filteredDepartments)}
                 </div>
               )}
-            </div>
-            
-            {searchQuery.trim() && !hasSearchResults && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300">
-                <div className="text-sm text-slate-500 bg-white/90 px-4 py-2 rounded-lg shadow">
-                  Ничего не найдено по запросу "{searchQuery}"
+              
+              {searchQuery.trim() && !hasSearchResults && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300">
+                  <div className="text-sm text-slate-500 bg-white/90 px-4 py-2 rounded-lg shadow">
+                    Ничего не найдено по запросу "{searchQuery}"
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+            </div>
+          </>
         )}
       </div>
 

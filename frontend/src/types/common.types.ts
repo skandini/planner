@@ -1,6 +1,6 @@
 import type { EventRecord } from "./event.types";
 
-export type ViewMode = "week" | "month" | "org";
+export type ViewMode = "week" | "month" | "org" | "support" | "admin";
 
 export type RecurrenceRule = {
   frequency: "daily" | "weekly" | "monthly";

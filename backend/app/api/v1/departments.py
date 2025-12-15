@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlmodel import select
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, is_admin_or_it
 from app.db import SessionDep
 from app.models import Department, Organization, User
 from app.schemas import (
@@ -74,6 +74,13 @@ def list_departments(
     current_user: User = Depends(get_current_user),
 ) -> List[DepartmentReadWithChildren]:
     """Get all departments, optionally filtered by organization."""
+    # Проверка прав доступа к оргструктуре
+    if not current_user.access_org_structure:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to organizational structure denied",
+        )
+    
     # Принудительно обновляем сессию, чтобы увидеть все изменения
     session.expire_all()
     
@@ -110,6 +117,13 @@ def create_department(
     current_user: User = Depends(get_current_user),
 ) -> DepartmentRead:
     """Create a new department."""
+    # Проверка прав доступа - только админы и ИТ могут создавать отделы
+    if not is_admin_or_it(current_user, session):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins and IT department can create departments",
+        )
+    
     # Validate parent exists if provided
     if payload.parent_id:
         parent = session.get(Department, payload.parent_id)
@@ -156,6 +170,13 @@ def get_department(
     current_user: User = Depends(get_current_user),
 ) -> DepartmentReadWithChildren:
     """Get a department by id."""
+    # Проверка прав доступа к оргструктуре
+    if not current_user.access_org_structure:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to organizational structure denied",
+        )
+    
     department = session.get(Department, department_id)
     if not department:
         raise HTTPException(
@@ -183,6 +204,13 @@ def update_department(
     current_user: User = Depends(get_current_user),
 ) -> DepartmentRead:
     """Update a department."""
+    # Проверка прав доступа - только админы и ИТ могут изменять отделы
+    if not is_admin_or_it(current_user, session):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins and IT department can update departments",
+        )
+    
     department = session.get(Department, department_id)
     if not department:
         raise HTTPException(
@@ -236,6 +264,13 @@ def delete_department(
     current_user: User = Depends(get_current_user),
 ) -> Response:
     """Delete a department. Каскадно удаляет подотделы."""
+    # Проверка прав доступа - только админы и ИТ могут удалять отделы
+    if not is_admin_or_it(current_user, session):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins and IT department can delete departments",
+        )
+    
     department = session.get(Department, department_id)
     if not department:
         raise HTTPException(

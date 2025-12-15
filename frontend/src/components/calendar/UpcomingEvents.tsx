@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import { parseUTC, formatDate } from "@/lib/utils/dateUtils";
 
@@ -21,7 +21,13 @@ export function UpcomingEvents({
   apiBaseUrl = "http://localhost:8000",
   getUserOrganizationAbbreviation,
 }: UpcomingEventsProps) {
-  const now = new Date();
+  const [now, setNow] = useState<Date>(new Date());
+
+  // Обновляем «текущее время» каждые 30 секунд, чтобы гасить просроченные live-индикаторы
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   
   // Фильтруем события: только будущие и сегодняшние, которые еще не закончились
   const upcomingEvents = useMemo(() => {
