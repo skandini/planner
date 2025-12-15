@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { TimelineRowData } from "@/types/common.types";
 import type { EventRecord } from "@/types/event.types";
+import type { UserProfile } from "@/types/user.types";
 import { inputToDate, parseUTC } from "@/lib/utils/dateUtils";
 import { WORKDAY_START_HOUR, WORKDAY_END_HOUR, SLOT_DURATION_MINUTES } from "@/lib/constants";
 
@@ -15,6 +16,10 @@ interface EnhancedTimelineProps {
   errorMessage: string | null;
   conflictMap?: Map<string, Array<{ start: Date; end: Date }>>;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
+  users?: UserProfile[];
+  organizations?: Array<{ id: string; name: string; slug: string }>;
+  departments?: Array<{ id: string; name: string }>;
+  apiBaseUrl?: string;
 }
 
 export function EnhancedTimeline({
@@ -26,7 +31,13 @@ export function EnhancedTimeline({
   errorMessage,
   conflictMap,
   getUserOrganizationAbbreviation,
+  users = [],
+  organizations = [],
+  departments = [],
+  apiBaseUrl = "",
 }: EnhancedTimelineProps) {
+  const [hoveredUser, setHoveredUser] = useState<UserProfile | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const selectionRange = useMemo(() => {
     const start = inputToDate(selectedStart, { allDay: isAllDay });
     const end = inputToDate(selectedEnd, { allDay: isAllDay, endOfDay: true });
@@ -166,21 +177,48 @@ export function EnhancedTimeline({
               style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}
             >
               {/* Название ресурса */}
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-2.5">
+              <div 
+                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-3 transition-all hover:border-lime-300 hover:shadow-sm"
+                onMouseEnter={(e) => {
+                  if (row.type === "participant") {
+                    const userId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
+                    const userProfile = users.find(u => u.id === userId);
+                    if (userProfile) {
+                      setHoveredUser(userProfile);
+                      setHoverPos({ x: e.clientX, y: e.clientY });
+                    }
+                  }
+                }}
+                onMouseMove={(e) => {
+                  if (row.type === "participant" && hoveredUser) {
+                    setHoverPos({ x: e.clientX, y: e.clientY });
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (row.type === "participant") {
+                    setHoveredUser(null);
+                  }
+                }}
+              >
                 {row.avatarUrl ? (
                   <img
-                    src={row.avatarUrl.startsWith("http") ? row.avatarUrl : `${row.avatarUrl.startsWith("/") ? "" : "/"}${row.avatarUrl}`}
+                    src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
                     alt={row.label}
-                    className="h-8 w-8 rounded-lg object-cover border border-white shadow"
+                    className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
+                      const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                      if (fallback) {
+                        fallback.style.display = "flex";
+                      }
                     }}
                   />
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-700">
-                    {row.label[0].toUpperCase()}
-                  </div>
-                )}
+                ) : null}
+                <div 
+                  className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${row.type === "room" ? "from-blue-400 to-blue-600" : "from-lime-400 to-lime-600"} text-sm font-bold text-white shadow-md ${row.avatarUrl ? "hidden" : ""}`}
+                >
+                  {row.type === "room" ? "🏢" : row.label[0].toUpperCase()}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold text-slate-900 truncate">{row.label}</p>
@@ -189,7 +227,7 @@ export function EnhancedTimeline({
                         const rawId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
                         const orgAbbr = getUserOrganizationAbbreviation(rawId);
                         return orgAbbr ? (
-                          <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.65rem] font-semibold text-slate-700 flex-shrink-0">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-lime-100 text-lime-800 border border-lime-200 flex-shrink-0">
                             {orgAbbr}
                           </span>
                         ) : null;
@@ -244,19 +282,23 @@ export function EnhancedTimeline({
           {/* Строка "Все свободны" */}
           {resourceRows.length > 0 && (
             <div
-              className="grid items-center gap-2 rounded-lg border border-lime-200 bg-gradient-to-r from-lime-50 to-emerald-50 p-2"
+              key="all-free"
+              className="grid gap-2"
               style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}
             >
-              <div className="flex items-center gap-3 rounded-lg bg-white/80 px-3 py-2">
-                <svg className="h-5 w-5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="min-w-0 leading-tight">
-                  <p className="text-xs font-bold text-lime-800">Все свободны</p>
-                  <p className="text-[0.65rem] text-lime-700">Переговорка и участники доступны</p>
-                  {/* Аватары участников при полностью свободном слоте */}
+              {/* Название ресурса - аналогично переговоркам и участникам */}
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-lime-400 to-lime-600 text-white shadow-md">
+                  ✓
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-slate-900 truncate">Все свободны</p>
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">Переговорка и участники доступны</p>
+                  {/* Аватары участников */}
                   {resourceRows.filter((r) => r.type === "participant").length > 0 && (
-                    <div className="mt-1 flex -space-x-2">
+                    <div className="mt-1.5 flex -space-x-2">
                       {resourceRows
                         .filter((r) => r.type === "participant")
                         .slice(0, 6)
@@ -267,18 +309,23 @@ export function EnhancedTimeline({
                             <div key={row.id} className="relative">
                               {avatar ? (
                                 <img
-                                  src={avatar.startsWith("http") ? avatar : `${avatar.startsWith("/") ? "" : "/"}${avatar}`}
+                                  src={apiBaseUrl && !avatar.startsWith("http") ? `${apiBaseUrl}${avatar}` : avatar}
                                   alt={row.label}
-                                  className="h-7 w-7 rounded-full object-cover border-2 border-white shadow"
+                                  className="h-6 w-6 rounded-full object-cover border-2 border-white shadow"
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).style.display = "none";
+                                    const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                    if (fallback) {
+                                      fallback.style.display = "flex";
+                                    }
                                   }}
                                 />
-                              ) : (
-                                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center border-2 border-white shadow text-[0.7rem] font-semibold text-slate-700">
-                                  {initial}
-                                </div>
-                              )}
+                              ) : null}
+                              <div 
+                                className={`h-6 w-6 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center border-2 border-white shadow text-[0.65rem] font-semibold text-white ${avatar ? "hidden" : ""}`}
+                              >
+                                {initial}
+                              </div>
                             </div>
                           );
                         })}
@@ -286,6 +333,8 @@ export function EnhancedTimeline({
                   )}
                 </div>
               </div>
+
+              {/* Слоты времени */}
               {timeSlots.map((slot) => {
                 const { slotStart, slotEnd } = buildSlotTimes(slot.index);
                 const slotBusy = resourceRows.some((row) =>
@@ -306,9 +355,9 @@ export function EnhancedTimeline({
                     key={`combined-${slot.index}`}
                     className={`h-8 rounded-md transition-all ${
                       slotBusy
-                        ? "bg-gradient-to-r from-slate-200 to-slate-300 border border-slate-400"
+                        ? "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm"
                         : selected
-                          ? "bg-gradient-to-r from-lime-300 to-emerald-400 border-2 border-lime-500 shadow-lg"
+                          ? "bg-gradient-to-r from-lime-100 to-lime-200 border-2 border-lime-400 shadow-md"
                           : "bg-gradient-to-r from-lime-200 to-emerald-300 border border-lime-400"
                     }`}
                   />
@@ -324,6 +373,79 @@ export function EnhancedTimeline({
           {errorMessage}
         </div>
       )}
+
+      {/* Tooltip с информацией о пользователе (как в оргструктуре) */}
+      {hoveredUser && (() => {
+        // Get all departments user belongs to
+        const userDeptIds = hoveredUser.department_ids || (hoveredUser.department_id ? [hoveredUser.department_id] : []);
+        const userDepts = userDeptIds
+          .map(deptId => departments.find(d => d.id === deptId))
+          .filter(Boolean) as Array<{ id: string; name: string }>;
+        
+        // Get all organizations user belongs to
+        const userOrgIds = hoveredUser.organization_ids || (hoveredUser.organization_id ? [hoveredUser.organization_id] : []);
+        const userOrgs = userOrgIds
+          .map(orgId => organizations.find(o => o.id === orgId))
+          .filter(Boolean);
+        
+        return (
+          <div
+            className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-2xl px-4 py-3 w-72 pointer-events-none"
+            style={{ left: hoverPos.x + 12, top: hoverPos.y + 12 }}
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-white shadow flex-shrink-0">
+                {hoveredUser.avatar_url ? (
+                  <img
+                    src={apiBaseUrl && !hoveredUser.avatar_url.startsWith('http') ? `${apiBaseUrl}${hoveredUser.avatar_url}` : hoveredUser.avatar_url}
+                    alt={hoveredUser.full_name || hoveredUser.email}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600 font-semibold">
+                    {(hoveredUser.full_name || hoveredUser.email).charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-slate-900 truncate">{hoveredUser.full_name || hoveredUser.email}</div>
+                {hoveredUser.position && (
+                  <div className="text-xs text-slate-600 truncate mt-0.5">{hoveredUser.position}</div>
+                )}
+                {hoveredUser.email && (
+                  <div className="text-xs text-slate-500 truncate mt-0.5">{hoveredUser.email}</div>
+                )}
+                
+                {userDepts.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Отделы</div>
+                    <div className="flex flex-wrap gap-1">
+                      {userDepts.map(dept => (
+                        <span key={dept.id} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          {dept.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {userOrgs.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200">
+                    <div className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide mb-1">Организации</div>
+                    <div className="flex flex-wrap gap-1">
+                      {userOrgs.map(org => (
+                        <span key={org.id} className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          🏢 {org.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -190,27 +190,27 @@ export function EventAttachments({
   const totalFilesCount = attachments.length + pendingFiles.length;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">Вложения</h3>
-          <p className="mt-0.5 text-xs text-slate-500">
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-semibold text-slate-900">Вложения</h3>
+          <span className="text-xs text-slate-500">
             {totalFilesCount > 0
-              ? `${totalFilesCount} ${totalFilesCount === 1 ? "файл" : "файлов"} (${formatFileSize(totalSize)})`
+              ? `(${totalFilesCount} ${totalFilesCount === 1 ? "файл" : "файлов"})`
               : "Нет вложений"}
-          </p>
+          </span>
         </div>
         {canManage && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || remainingSize <= 0}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Добавить файл
+            Добавить
           </button>
         )}
       </div>
@@ -225,35 +225,34 @@ export function EventAttachments({
       />
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+        <div className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
           {error}
         </div>
       )}
 
       {uploading && (
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-          Загрузка файлов...
+        <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+          Загрузка...
         </div>
       )}
 
       {/* Временные файлы (до создания события) */}
       {pendingFiles.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-600">Файлы для загрузки:</p>
+        <div className="space-y-1">
           {pendingFiles.map((file, index) => (
             <div
               key={`pending-${index}`}
-              className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3"
+              className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 text-xl">
+              <div className="flex h-6 w-6 items-center justify-center rounded text-base">
                 {getFileIconFromFile(file)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">
+                <p className="text-xs font-medium text-slate-900 truncate">
                   {file.name}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   {formatFileSize(file.size)}
                 </p>
               </div>
@@ -261,10 +260,10 @@ export function EventAttachments({
                 <button
                   type="button"
                   onClick={() => handleDeletePendingFile(index)}
-                  className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
+                  className="rounded p-1 text-red-600 transition hover:bg-red-100"
                   title="Удалить"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
@@ -276,32 +275,31 @@ export function EventAttachments({
 
       {/* Загруженные файлы */}
       {attachments.length > 0 && (
-        <div className="space-y-2">
-          {pendingFiles.length > 0 && <p className="text-xs font-medium text-slate-600">Загруженные файлы:</p>}
+        <div className="space-y-1">
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
-              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 transition hover:bg-slate-50"
+              className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 transition hover:bg-slate-50"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 text-xl">
+              <div className="flex h-6 w-6 items-center justify-center rounded text-base">
                 {getFileIcon(attachment.content_type)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">
+                <p className="text-xs font-medium text-slate-900 truncate">
                   {attachment.original_filename}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   {formatFileSize(attachment.file_size)}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => handleDownload(attachment)}
-                  className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  className="rounded p-1 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                   title="Скачать"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                 </button>
@@ -309,10 +307,10 @@ export function EventAttachments({
                   <button
                     type="button"
                     onClick={() => handleDelete(attachment.id)}
-                    className="rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
+                    className="rounded p-1 text-red-600 transition hover:bg-red-100"
                     title="Удалить"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
@@ -324,17 +322,16 @@ export function EventAttachments({
       )}
 
       {canManage && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
-          <p>Максимум: {formatFileSize(MAX_TOTAL_SIZE)} на событие</p>
-          <p>Максимум: {formatFileSize(MAX_FILE_SIZE)} на файл</p>
+        <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-600">
+          <span>Макс: {formatFileSize(MAX_TOTAL_SIZE)}/событие, {formatFileSize(MAX_FILE_SIZE)}/файл</span>
           {remainingSize > 0 ? (
-            <p className="mt-1 font-medium text-slate-700">
-              Осталось: {formatFileSize(remainingSize)}
-            </p>
+            <span className="font-medium text-slate-700">
+              • Осталось: {formatFileSize(remainingSize)}
+            </span>
           ) : (
-            <p className="mt-1 font-medium text-red-600">
-              Достигнут лимит размера файлов
-            </p>
+            <span className="font-medium text-red-600">
+              • Лимит достигнут
+            </span>
           )}
         </div>
       )}

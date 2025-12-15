@@ -35,6 +35,8 @@ interface ResourcePanelProps {
   conflictsLoading: boolean;
   conflictsError: string | null;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
+  organizations?: Array<{ id: string; name: string; slug: string }>;
+  apiBaseUrl?: string;
 }
 
 export function ResourcePanel({
@@ -60,6 +62,8 @@ export function ResourcePanel({
   conflictsLoading,
   conflictsError,
   getUserOrganizationAbbreviation,
+  organizations = [],
+  apiBaseUrl = "",
 }: ResourcePanelProps) {
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
@@ -68,6 +72,35 @@ export function ResourcePanel({
     useState(false);
   const [participantAvailabilityError, setParticipantAvailabilityError] =
     useState<string | null>(null);
+  const [allDepartments, setAllDepartments] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Загружаем все отделы для tooltip
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const { DEPARTMENTS_ENDPOINT } = await import("@/lib/constants");
+        const response = await authFetch(DEPARTMENTS_ENDPOINT);
+        if (response.ok) {
+          const data = await response.json();
+          // Flatten departments tree
+          const flatten = (depts: any[]): Array<{ id: string; name: string }> => {
+            const result: Array<{ id: string; name: string }> = [];
+            depts.forEach(dept => {
+              result.push({ id: dept.id, name: dept.name });
+              if (dept.children && dept.children.length > 0) {
+                result.push(...flatten(dept.children));
+              }
+            });
+            return result;
+          };
+          setAllDepartments(flatten(data));
+        }
+      } catch (err) {
+        console.error("Failed to load departments:", err);
+      }
+    };
+    loadDepartments();
+  }, [authFetch]);
 
   const membershipMap = useMemo(() => {
     const map = new Map<string, CalendarMember>();
@@ -355,27 +388,37 @@ export function ResourcePanel({
   }, [conflicts]);
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-slate-900">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
-            Ресурсы
-          </p>
-          <h3 className="mt-1 text-lg font-semibold">
-            Переговорки и участники
-          </h3>
+    <div className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/30 p-6 text-slate-900 shadow-sm">
+      <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-lime-600 text-white shadow-md">
+            📅
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Ресурсы</h3>
+            <p className="text-xs text-slate-500">Переговорки и участники</p>
+          </div>
         </div>
         {form.room_id && (
-          <span className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600">
-            {selectedRoom?.name ?? "Переговорка"}
-          </span>
+          <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 border border-blue-200">
+            <span className="text-sm">🏢</span>
+            <span className="text-xs font-semibold text-blue-700">
+              {selectedRoom?.name ?? "Переговорка"}
+            </span>
+          </div>
         )}
       </div>
 
-      <div className="space-y-2 text-sm">
-        <p className="font-medium text-slate-700">Переговорка</p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md">
+            🏢
+          </div>
+          <p className="text-sm font-semibold text-slate-900">Переговорка</p>
+        </div>
         {roomsLoading ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+          <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 text-sm text-slate-500 flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500"></div>
             Загружаем переговорки…
           </div>
         ) : (
@@ -388,7 +431,7 @@ export function ResourcePanel({
                 room_id: e.target.value || null,
               }))
             }
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-lime-500"
+            className="w-full rounded-xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 hover:border-slate-300"
           >
             <option value="" className="bg-white text-slate-900">
               Без переговорки
@@ -422,7 +465,11 @@ export function ResourcePanel({
         isAllDay={isAllDay}
         errorMessage={participantAvailabilityError}
         conflictMap={conflictMap}
-      getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+        getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+        users={users}
+        organizations={organizations}
+        departments={allDepartments}
+        apiBaseUrl={apiBaseUrl}
       />
 
       <ConflictSummary

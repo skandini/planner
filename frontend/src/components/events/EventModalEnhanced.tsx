@@ -10,6 +10,7 @@ import { ParticipantStatusItem } from "@/components/participants/ParticipantStat
 import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventAttachments } from "@/components/events/EventAttachments";
+import { CommentsSection } from "@/components/events/CommentsSection";
 import { toUTCDateISO } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT, ROOM_ENDPOINT } from "@/lib/constants";
 
@@ -494,7 +495,9 @@ export function EventModalEnhanced({
                   conflicts={conflicts}
                   conflictsLoading={conflictsLoading}
                   conflictsError={conflictsError}
-                getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                  organizations={organizations}
+                  apiBaseUrl={apiBaseUrl}
                 />
               </div>
 
@@ -540,6 +543,20 @@ export function EventModalEnhanced({
                   onPendingFilesChange={setPendingFiles}
                 />
               </div>
+
+              {/* Комментарии */}
+              {editingEvent?.id && (
+                <CommentsSection
+                  eventId={editingEvent.id}
+                  authFetch={authFetch}
+                  currentUserId={editingEvent.participants?.find(p => p.email === currentUserEmail)?.user_id || undefined}
+                  currentUserEmail={currentUserEmail}
+                  users={users}
+                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                  organizations={organizations}
+                  apiBaseUrl={apiBaseUrl}
+                />
+              )}
 
               {/* Повторения */}
               <div className="rounded-lg border border-slate-200 bg-white">

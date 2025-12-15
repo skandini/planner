@@ -446,9 +446,23 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
               animation: `fadeInUp 0.5s ease-out ${index * 0.1}s forwards`
             }}
           >
-            {/* Вертикальная линия от родителя к карточке */}
+            {/* Плавная вертикальная линия от родителя к карточке */}
             {!isRoot && (
-              <div className="absolute -top-6 h-6 w-px bg-gradient-to-b from-slate-200 to-slate-300" />
+              <svg 
+                className="absolute -top-6 left-1/2 -translate-x-1/2 pointer-events-none"
+                width="4"
+                height="24"
+                style={{ zIndex: 0 }}
+              >
+                <path
+                  d="M 2 0 Q 2 8 2 12 T 2 24"
+                  stroke="rgb(148 163 184)"
+                  strokeWidth="2.5"
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.8"
+                />
+              </svg>
             )}
 
             <div
@@ -714,18 +728,66 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             </div>
 
             {d.children && d.children.length > 0 && (
-              <div className="mt-4 flex flex-col items-center">
-                {/* Вертикальная линия от карточки к горизонтальной линии детей */}
-                <div className="w-px h-4 bg-slate-200/70" />
-                <div className="relative flex flex-row gap-6">
-                  {/* Горизонтальная линия соединяет детей */}
-                  <div className="absolute left-0 right-0 top-5 h-px bg-slate-200/70" />
-                  {d.children.map((child) => (
-                    <div key={child.id} className="relative flex flex-col items-center">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-5 bg-slate-200/70" />
-                      {renderTree([child], depth + 1)}
-                    </div>
-                  ))}
+              <div className="mt-4 flex flex-col items-center relative">
+                {/* Плавная вертикальная линия от карточки вниз */}
+                <svg 
+                  className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
+                  width="4"
+                  height="16"
+                  style={{ zIndex: 0 }}
+                >
+                  <path
+                    d="M 2 0 Q 2 6 2 8 T 2 16"
+                    stroke="rgb(148 163 184)"
+                    strokeWidth="2.5"
+                    fill="none"
+                    strokeLinecap="round"
+                    opacity="0.8"
+                  />
+                </svg>
+                
+                <div className="relative flex flex-row gap-6 mt-4">
+                  {/* Плавная горизонтальная линия, соединяющая детей */}
+                  {d.children.length > 1 && (
+                    <svg
+                      className="absolute top-0 left-0 right-0 pointer-events-none"
+                      height="4"
+                      style={{ zIndex: 0, top: '-8px' }}
+                    >
+                      <path
+                        d={`M ${d.children.length === 2 ? '20%' : '10%'} 2 Q 50% 2 90% 2`}
+                        stroke="rgb(148 163 184)"
+                        strokeWidth="2.5"
+                        fill="none"
+                        strokeLinecap="round"
+                        opacity="0.8"
+                      />
+                    </svg>
+                  )}
+                  
+                  {d.children.map((child, childIndex) => {
+                    return (
+                      <div key={child.id} className="relative flex flex-col items-center">
+                        {/* Плавная вертикальная линия от горизонтальной линии к дочернему отделу */}
+                        <svg
+                          className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none"
+                          width="4"
+                          height="32"
+                          style={{ zIndex: 0 }}
+                        >
+                          <path
+                            d="M 2 0 Q 2 10 2 16 T 2 32"
+                            stroke="rgb(148 163 184)"
+                            strokeWidth="2.5"
+                            fill="none"
+                            strokeLinecap="round"
+                            opacity="0.8"
+                          />
+                        </svg>
+                        {renderTree([child], depth + 1)}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
