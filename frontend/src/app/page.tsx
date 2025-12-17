@@ -41,6 +41,7 @@ import { OrgStructure } from "@/components/organization/OrgStructure";
 import { BirthdayReminder } from "@/components/birthdays/BirthdayReminder";
 import { TicketTracker } from "@/components/support/TicketTracker";
 import { AdminPanel } from "@/components/admin/AdminPanel";
+import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -1415,6 +1416,8 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
+      {/* Админские уведомления - toast в правом верхнем углу */}
+      <AdminNotifications authFetch={authFetch} />
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
         <header 
           className="relative overflow-hidden rounded-xl border border-slate-200/50 backdrop-blur-sm px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex-shrink-0"
@@ -1562,7 +1565,87 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-3 lg:flex-row overflow-hidden min-h-0">
+        <main className="flex flex-1 flex-col gap-3 lg:flex-row overflow-hidden min-h-0 relative">
+          {/* Правая панель с иконками для переключения режимов */}
+          <div className="fixed right-4 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2">
+            {availableViewModes.map((mode) => {
+              const isActive = viewMode === mode;
+              const getIcon = () => {
+                switch (mode) {
+                  case "week":
+                    return (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-4 4h4M6 7h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                      </svg>
+                    );
+                  case "month":
+                    return (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    );
+                  case "org":
+                    return (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    );
+                  case "support":
+                    return (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    );
+                  case "admin":
+                    return (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    );
+                  default:
+                    return null;
+                }
+              };
+              
+              const getLabel = () => {
+                switch (mode) {
+                  case "week": return "Неделя";
+                  case "month": return "Месяц";
+                  case "org": return "Оргструктура";
+                  case "support": return "Техподдержка";
+                  case "admin": return "Админ";
+                  default: return mode;
+                }
+              };
+              
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                  className={`
+                    group relative
+                    w-12 h-12 rounded-xl
+                    flex items-center justify-center
+                    transition-all duration-200
+                    ${isActive 
+                      ? "bg-lime-500 text-white shadow-lg shadow-lime-500/50 scale-105" 
+                      : "bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-600 hover:bg-white hover:shadow-md hover:scale-105"
+                    }
+                  `}
+                  title={getLabel()}
+                >
+                  {getIcon()}
+                  {/* Tooltip */}
+                  <div className="absolute right-full mr-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    {getLabel()}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          
           <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[340px] lg:flex-shrink-0 overflow-y-auto">
             <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
             <div className="flex items-center gap-2">
@@ -1934,28 +2017,6 @@ export default function Home() {
                       + Событие
                 </button>
               )}
-              {availableViewModes.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setViewMode(mode)}
-                      className={`rounded-lg px-2.5 py-1.5 text-xs capitalize ${
-                    viewMode === mode
-                          ? "bg-lime-500 text-white"
-                          : "border border-slate-200 text-slate-600"
-                  }`}
-                >
-                  {mode === "week"
-                    ? "Неделя"
-                    : mode === "month"
-                    ? "Месяц"
-                    : mode === "org"
-                    ? "Оргструктура"
-                    : mode === "support"
-                    ? "Техподдержка"
-                    : "Админ"}
-                </button>
-              ))}
                   <div className="flex gap-1">
                 <button
                   type="button"
@@ -2073,7 +2134,11 @@ export default function Home() {
             />
           )}
           {viewMode === "admin" && (
-            <AdminPanel authFetch={authFetch} currentUser={currentUser || undefined} />
+            <AdminPanel 
+              authFetch={authFetch} 
+              currentUser={currentUser || undefined}
+              onClose={() => setViewMode("week")}
+            />
           )}
         </section>
         </main>

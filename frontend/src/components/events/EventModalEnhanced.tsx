@@ -138,6 +138,57 @@ export function EventModalEnhanced({
   const selectedDate = form.starts_at
     ? new Date(form.starts_at.split("T")[0])
     : new Date();
+  
+  // Дата для просмотра в таймлайне (может отличаться от selectedDate)
+  const [viewDate, setViewDate] = useState<Date>(() => {
+    if (form.starts_at) {
+      return new Date(form.starts_at.split("T")[0]);
+    }
+    return new Date();
+  });
+  
+  // Навигация по дням
+  const navigateDays = useCallback((days: number) => {
+    setViewDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() + days);
+      return newDate;
+    });
+  }, []);
+  
+  // Синхронизируем viewDate с selectedDate только при первой загрузке
+  const [initialDateSet, setInitialDateSet] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  
+  useEffect(() => {
+    if (form.starts_at && !initialDateSet) {
+      const newDate = new Date(form.starts_at.split("T")[0]);
+      setViewDate(newDate);
+      setInitialDateSet(true);
+    }
+  }, [form.starts_at, initialDateSet]);
+  
+  // Обновляем даты в форме при изменении viewDate (после навигации)
+  useEffect(() => {
+    if (isNavigating && form.starts_at && form.ends_at) {
+      const startTime = form.starts_at.split("T")[1];
+      const endTime = form.ends_at.split("T")[1];
+      const newStart = `${viewDate.toISOString().split("T")[0]}T${startTime}`;
+      const newEnd = `${viewDate.toISOString().split("T")[0]}T${endTime}`;
+      setForm((prev) => ({
+        ...prev,
+        starts_at: newStart,
+        ends_at: newEnd,
+      }));
+      setIsNavigating(false);
+    }
+  }, [viewDate, isNavigating, form.starts_at, form.ends_at, setForm]);
+  
+  // Обновленная навигация с флагом
+  const handleNavigateDays = useCallback((days: number) => {
+    setIsNavigating(true);
+    navigateDays(days);
+  }, [navigateDays]);
 
   const loadRoomAvailability = useCallback(
     async (roomId: string, date: Date) => {
@@ -473,13 +524,37 @@ export function EventModalEnhanced({
 
               {/* Таймлайн и переговорки */}
               <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
+                {/* Навигация по дням */}
+                <div className="mb-4 flex items-center justify-center">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDays(-1)}
+                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm"
+                      title="День назад"
+                    >
+                      ←
+                    </button>
+                    <div className="px-6 py-2 text-sm font-semibold text-slate-900 min-w-[180px] text-center bg-gradient-to-r from-slate-50 to-white rounded-lg border border-slate-200 shadow-sm">
+                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDays(1)}
+                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm"
+                      title="День вперед"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
                 <ResourcePanel
                   rooms={rooms}
                   roomsLoading={roomsLoading}
                   form={form}
                   setForm={setForm}
                   selectedRoom={selectedRoom || null}
-                  selectedDate={selectedDate}
+                  selectedDate={viewDate}
                   roomAvailability={roomAvailability}
                   loadingAvailability={loadingAvailability}
                   readOnly={isReadOnly}

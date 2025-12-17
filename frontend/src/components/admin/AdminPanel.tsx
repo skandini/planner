@@ -4,15 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { USERS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 import type { UserProfile } from "@/types/user.types";
+import { NotificationCreator } from "./NotificationCreator";
 
 type Role = "admin" | "it" | "employee";
 
 interface AdminPanelProps {
   authFetch: AuthenticatedFetch;
   currentUser?: UserProfile | null;
+  onClose?: () => void;
 }
 
-export function AdminPanel({ authFetch, currentUser }: AdminPanelProps) {
+export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,17 +235,38 @@ export function AdminPanel({ authFetch, currentUser }: AdminPanelProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Админ-панель</h1>
-          <p className="text-slate-600">
-            {bootstrapMode
-              ? "Создание первого администратора"
-              : "Создание учетных записей и выдача прав доступа"}
-          </p>
+    <div className="fixed inset-0 bg-slate-50 flex flex-col z-50 overflow-hidden" style={{ animation: 'fadeIn 0.3s ease-in-out forwards' }}>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-3 p-4 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+        <div className="flex items-center gap-3 flex-1">
+          <h2 className="text-lg font-bold">Админ-панель</h2>
         </div>
+        {(onClose || currentUser) && (
+          <button
+            onClick={() => onClose ? onClose() : window.history.back()}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Закрыть
+          </button>
+        )}
       </div>
+      
+      {/* Content with scroll */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-6 p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Админ-панель</h1>
+              <p className="text-slate-600">
+                {bootstrapMode
+                  ? "Создание первого администратора"
+                  : "Создание учетных записей и выдача прав доступа"}
+              </p>
+            </div>
+          </div>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -482,6 +505,17 @@ export function AdminPanel({ authFetch, currentUser }: AdminPanelProps) {
           </div>
         </div>
       )}
+
+          {/* Создание уведомлений */}
+          <NotificationCreator 
+            authFetch={authFetch} 
+            users={users}
+            onSuccess={() => {
+              // Уведомления обновятся автоматически
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

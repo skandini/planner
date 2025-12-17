@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { TimelineRowData } from "@/types/common.types";
 import type { EventRecord } from "@/types/event.types";
 import type { UserProfile } from "@/types/user.types";
@@ -20,6 +20,8 @@ interface EnhancedTimelineProps {
   organizations?: Array<{ id: string; name: string; slug: string }>;
   departments?: Array<{ id: string; name: string }>;
   apiBaseUrl?: string;
+  onTimeRangeSelect?: (start: Date, end: Date) => void;
+  onRemoveParticipant?: (participantId: string) => void;
 }
 
 export function EnhancedTimeline({
@@ -35,9 +37,15 @@ export function EnhancedTimeline({
   organizations = [],
   departments = [],
   apiBaseUrl = "",
+  onTimeRangeSelect,
+  onRemoveParticipant,
 }: EnhancedTimelineProps) {
   const [hoveredUser, setHoveredUser] = useState<UserProfile | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [selectionStart, setSelectionStart] = useState<number | null>(null);
+  const [currentSelectionSlot, setCurrentSelectionSlot] = useState<number | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const timelineRef = useRef<HTMLDivElement>(null);
   const selectionRange = useMemo(() => {
     const start = inputToDate(selectedStart, { allDay: isAllDay });
     const end = inputToDate(selectedEnd, { allDay: isAllDay, endOfDay: true });
@@ -101,7 +109,7 @@ export function EnhancedTimeline({
   const getSlotState = (
     row: TimelineRowData,
     slotIndex: number,
-  ): "free" | "busy" | "selected" | "conflict" => {
+  ): "free" | "busy" | "selected" | "conflict" | "selecting" => {
     const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
     const rowConflictSlots = conflictMap?.get(row.id) ?? [];
     
@@ -117,18 +125,161 @@ export function EnhancedTimeline({
       return eventStart < slotEnd && eventEnd > slotStart;
     });
 
-    // Проверяем выбранный интервал
+    // Проверяем выбранный интервал (уже установленное время события)
     const selected =
       selectionRange.start &&
       selectionRange.end &&
       selectionRange.start < slotEnd &&
       selectionRange.end > slotStart;
 
-    if (conflicting && !selected) return "conflict";
-    if (eventInSlot) return "busy";
+    // Проверяем активный выбор (drag selection) - равномерно для всех строк
+    const inSelection = isSelecting && selectionStart !== null && currentSelectionSlot !== null &&
+      ((slotIndex >= Math.min(selectionStart, currentSelectionSlot) && 
+        slotIndex <= Math.max(selectionStart, currentSelectionSlot)));
+
+    // Конфликты показываем всегда, если они есть (даже если время выбрано)
+    // Но приоритет у выбранного времени и активного выбора
+    if (inSelection && isSelecting) return "selecting";
     if (selected) return "selected";
+    if (conflicting) return "conflict";
+    if (eventInSlot) return "busy";
     return "free";
   };
+
+  // Проверяем, занят ли слот в любой из строк
+  const isSlotBusy = useCallback((slotIndex: number): boolean => {
+    if (slotIndex < 0 || slotIndex >= timeSlots.length) return true;
+    
+    const slot = timeSlots[slotIndex];
+    const slotStart = new Date(baseDate);
+    slotStart.setHours(slot.hour, slot.minute, 0, 0);
+    const slotEnd = new Date(slotStart);
+    slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_DURATION_MINUTES);
+    
+    // Проверяем занятость во всех строках
+    return rows.some((row) => {
+      // Проверяем события в этой строке
+      const eventInSlot = row.availability.find((event) => {
+        const eventStart = parseUTC(event.starts_at);
+        const eventEnd = parseUTC(event.ends_at);
+        return eventStart < slotEnd && eventEnd > slotStart;
+      });
+      return !!eventInSlot;
+    });
+  }, [rows, timeSlots, baseDate]);
+
+  // Обработчик клика на слот для начала выбора
+  const handleSlotMouseDown = useCallback((slotIndex: number, e: React.MouseEvent) => {
+    if (!onTimeRangeSelect) return;
+    
+    // Не позволяем начинать выбор с занятого слота
+    if (isSlotBusy(slotIndex)) {
+      return;
+    }
+    
+    e.preventDefault();
+    setSelectionStart(slotIndex);
+    setCurrentSelectionSlot(slotIndex);
+    setIsSelecting(true);
+  }, [onTimeRangeSelect, isSlotBusy]);
+
+  // Обработчик перемещения мыши при выборе
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isSelecting || selectionStart === null || !timelineRef.current) return;
+    
+    const timeSlotsContainer = timelineRef.current.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    if (!timeSlotsContainer) return;
+    
+    const slotsRect = timeSlotsContainer.getBoundingClientRect();
+    const relativeX = e.clientX - slotsRect.left;
+    const slotWidth = slotsRect.width / timeSlots.length;
+    let targetSlot = Math.floor(relativeX / slotWidth);
+    
+    // Ограничиваем границами
+    if (targetSlot < 0) targetSlot = 0;
+    if (targetSlot >= timeSlots.length) targetSlot = timeSlots.length - 1;
+    
+    // Определяем направление выбора
+    const direction = targetSlot > selectionStart ? 1 : -1;
+    let finalSlot = targetSlot;
+    
+    // Проверяем все слоты от начального до целевого и останавливаемся на первом занятом
+    if (direction > 0) {
+      // Выбор вправо
+      for (let i = selectionStart; i <= targetSlot; i++) {
+        if (isSlotBusy(i)) {
+          // Останавливаемся перед занятым слотом
+          finalSlot = Math.max(selectionStart, i - 1);
+          break;
+        }
+      }
+    } else {
+      // Выбор влево
+      for (let i = selectionStart; i >= targetSlot; i--) {
+        if (isSlotBusy(i)) {
+          // Останавливаемся перед занятым слотом
+          finalSlot = Math.min(selectionStart, i + 1);
+          break;
+        }
+      }
+    }
+    
+    // Убеждаемся, что финальный слот не занят
+    if (!isSlotBusy(finalSlot)) {
+      setCurrentSelectionSlot(finalSlot);
+    } else {
+      // Если финальный слот занят, оставляем выбор на начальном слоте
+      setCurrentSelectionSlot(selectionStart);
+    }
+  }, [isSelecting, selectionStart, timeSlots.length, isSlotBusy]);
+
+  // Обработчик окончания выбора
+  const handleMouseUp = useCallback(() => {
+    if (!isSelecting || selectionStart === null || !onTimeRangeSelect) {
+      setIsSelecting(false);
+      setSelectionStart(null);
+      setCurrentSelectionSlot(null);
+      return;
+    }
+
+    // Если пользователь просто кликнул (не перетаскивал), выбираем один слот
+    const endSlot = currentSelectionSlot !== null ? currentSelectionSlot : selectionStart;
+    
+    if (endSlot >= 0 && endSlot < timeSlots.length) {
+      const startSlot = Math.min(selectionStart, endSlot);
+      const finalEndSlot = Math.max(selectionStart, endSlot);
+      
+      // Если выбран один слот, делаем событие длительностью в один слот
+      const { slotStart } = buildSlotTimes(startSlot);
+      const { slotEnd } = buildSlotTimes(finalEndSlot);
+      
+      // Проверяем, что не выходим за границы дня
+      const dayStart = new Date(baseDate);
+      dayStart.setHours(8, 0, 0, 0);
+      const dayEnd = new Date(baseDate);
+      dayEnd.setHours(20, 0, 0, 0);
+      
+      if (slotStart >= dayStart && slotEnd <= dayEnd) {
+        onTimeRangeSelect(slotStart, slotEnd);
+      }
+    }
+    
+    setIsSelecting(false);
+    setSelectionStart(null);
+    setCurrentSelectionSlot(null);
+  }, [isSelecting, selectionStart, currentSelectionSlot, onTimeRangeSelect, timeSlots, baseDate]);
+
+  // Подписываемся на события мыши
+  useEffect(() => {
+    if (isSelecting) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isSelecting, handleMouseMove, handleMouseUp]);
 
   return (
     <div className="space-y-4">
@@ -150,11 +301,15 @@ export function EnhancedTimeline({
           <div className="h-3 w-3 rounded bg-gradient-to-r from-slate-100 to-slate-200" />
           <span className="text-xs font-medium text-slate-700">Свободно</span>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded bg-gradient-to-r from-blue-100 to-blue-200 border border-blue-400" />
+          <span className="text-xs font-medium text-slate-700">Выберите время мышкой</span>
+        </div>
       </div>
 
       {/* Таймлайн */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-4">
-        <div className="space-y-3">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-4" ref={timelineRef}>
+        <div className="space-y-3 relative">
           {/* Заголовок времени */}
           <div className="grid gap-2" style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}>
             <div />
@@ -169,16 +324,21 @@ export function EnhancedTimeline({
             )}
           </div>
 
+
           {/* Строки ресурсов */}
           {rows.map((row) => (
             <div
               key={row.id}
-              className="grid gap-2"
+              className="grid gap-2 relative"
               style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}
             >
               {/* Название ресурса */}
               <div 
-                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-3 transition-all hover:border-lime-300 hover:shadow-sm"
+                className={`flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
+                  row.hasConflict
+                    ? "border-2 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 shadow-md"
+                    : "border border-slate-200 bg-gradient-to-r from-slate-50 to-white hover:border-lime-300 hover:shadow-sm"
+                }`}
                 onMouseEnter={(e) => {
                   if (row.type === "participant") {
                     const userId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
@@ -221,8 +381,15 @@ export function EnhancedTimeline({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{row.label}</p>
-                    {row.type === "participant" && getUserOrganizationAbbreviation && (
+                    <p className={`text-sm font-semibold truncate ${row.hasConflict ? "text-amber-900" : "text-slate-900"}`}>
+                      {row.label}
+                    </p>
+                    {row.hasConflict && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-200 text-amber-900 border border-amber-400 flex-shrink-0 animate-pulse">
+                        Конфликт
+                      </span>
+                    )}
+                    {row.type === "participant" && getUserOrganizationAbbreviation && !row.hasConflict && (
                       (() => {
                         const rawId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
                         const orgAbbr = getUserOrganizationAbbreviation(rawId);
@@ -235,9 +402,25 @@ export function EnhancedTimeline({
                     )}
                   </div>
                   {row.meta && (
-                    <p className="text-xs text-slate-500 truncate">{row.meta}</p>
+                    <p className={`text-xs truncate ${row.hasConflict ? "text-amber-700" : "text-slate-500"}`}>{row.meta}</p>
                   )}
                 </div>
+                {row.hasConflict && row.type === "participant" && onRemoveParticipant && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const userId = row.id.startsWith("participant-") ? row.id.replace("participant-", "") : row.id;
+                      onRemoveParticipant(userId);
+                    }}
+                    className="ml-2 flex items-center justify-center w-6 h-6 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-900 transition-colors"
+                    title="Удалить участника с конфликтом"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* Слоты времени */}
@@ -253,15 +436,23 @@ export function EnhancedTimeline({
                 return (
                   <div
                     key={`${row.id}-${slot.index}`}
-                    className={`h-8 rounded-md transition-all ${
+                    className={`h-8 rounded-md transition-all cursor-pointer ${
                       state === "conflict"
-                        ? "bg-gradient-to-r from-amber-200 to-amber-300 border border-amber-400 shadow-sm"
+                        ? "conflict-blink border border-amber-500 shadow-sm"
                         : state === "busy"
-                          ? "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm"
+                          ? "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm cursor-not-allowed"
                           : state === "selected"
                             ? "bg-gradient-to-r from-lime-100 to-lime-200 border-2 border-lime-400 shadow-md"
-                            : "bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200"
+                            : state === "selecting"
+                              ? "bg-gradient-to-r from-blue-200 to-blue-300 border-2 border-blue-500 shadow-md"
+                              : "bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 hover:from-slate-100 hover:to-slate-200"
                     }`}
+                    onMouseDown={(e) => {
+                      // Проверяем занятость во всех строках, а не только в текущей
+                      if (!isSlotBusy(slot.index) && onTimeRangeSelect) {
+                        handleSlotMouseDown(slot.index, e);
+                      }
+                    }}
                     title={
                       eventInSlot
                         ? `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
@@ -271,7 +462,9 @@ export function EnhancedTimeline({
                               hour: "2-digit",
                               minute: "2-digit",
                             })})`
-                        : undefined
+                        : state === "busy"
+                          ? "Занято"
+                          : "Кликните и перетащите для выбора времени"
                     }
                   />
                 );

@@ -17,6 +17,7 @@ export type TimelineRowData = {
   availability: EventRecord[];
   loading: boolean;
   type: "room" | "participant";
+  hasConflict?: boolean;
 };
 
 export type PendingMoveContext = {

@@ -116,3 +116,20 @@ body {
 .live-dot {
   animation: liveDot 1.5s ease-in-out infinite;
 }
+
+@keyframes conflictBlink {
+  0%, 100% {
+    background: linear-gradient(to right, rgb(251 191 36), rgb(217 119 6));
+    border-color: rgb(217 119 6);
+    opacity: 1;
+  }
+  50% {
+    background: linear-gradient(to right, rgb(254 240 138), rgb(251 191 36));
+    border-color: rgb(251 191 36);
+    opacity: 0.7;
+  }
+}
+
+.conflict-blink {
+  animation: conflictBlink 1.5s ease-in-out infinite;
+}

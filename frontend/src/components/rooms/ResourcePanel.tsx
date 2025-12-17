@@ -321,9 +321,23 @@ export function ResourcePanel({
     selectedParticipantProfiles,
   ]);
 
+  // Определяем участников с конфликтами
+  const participantsWithConflicts = useMemo(() => {
+    const participantIds = new Set<string>();
+    conflicts.forEach((conflict) => {
+      if (conflict.type === "participant" && conflict.resource_id) {
+        participantIds.add(conflict.resource_id);
+      }
+    });
+    return participantIds;
+  }, [conflicts]);
+
   const timelineRows = useMemo(() => {
     const rows: TimelineRowData[] = [];
     if (selectedRoom) {
+      const roomHasConflict = conflicts.some(
+        (c) => c.type === "room" && c.resource_id === selectedRoom.id
+      );
       rows.push({
         id: `room-${selectedRoom.id}`,
         label: selectedRoom.name,
@@ -332,10 +346,12 @@ export function ResourcePanel({
         availability: roomAvailability,
         loading: loadingAvailability,
         type: "room",
+        hasConflict: roomHasConflict,
       });
     }
     selectedParticipantProfiles.forEach((participant) => {
       const profile = users.find((u) => u.id === participant.user_id);
+      const hasConflict = participantsWithConflicts.has(participant.user_id);
       rows.push({
         id: `participant-${participant.user_id}`,
         label: participant.label,
@@ -344,6 +360,7 @@ export function ResourcePanel({
         availability: participantAvailability[participant.user_id] ?? [],
         loading: participantAvailabilityLoading,
         type: "participant",
+        hasConflict: hasConflict,
       });
     });
     if (rows.length === 0) {
@@ -365,6 +382,8 @@ export function ResourcePanel({
     selectedParticipantProfiles,
     selectedRoom,
     membershipMap,
+    conflicts,
+    participantsWithConflicts,
   ]);
 
   const conflictMap = useMemo(() => {
@@ -388,76 +407,56 @@ export function ResourcePanel({
   }, [conflicts]);
 
   return (
-    <div className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/30 p-6 text-slate-900 shadow-sm">
-      <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-lime-600 text-white shadow-md">
-            📅
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">Ресурсы</h3>
-            <p className="text-xs text-slate-500">Переговорки и участники</p>
-          </div>
-        </div>
-        {form.room_id && (
-          <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 border border-blue-200">
-            <span className="text-sm">🏢</span>
-            <span className="text-xs font-semibold text-blue-700">
-              {selectedRoom?.name ?? "Переговорка"}
-            </span>
-          </div>
+    <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-900">Ресурсы</h3>
+        {form.room_id && selectedRoom && (
+          <span className="text-xs text-slate-600">🏢 {selectedRoom.name}</span>
         )}
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md">
-            🏢
-          </div>
-          <p className="text-sm font-semibold text-slate-900">Переговорка</p>
+      {roomsLoading ? (
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500"></div>
+          Загрузка...
         </div>
-        {roomsLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 text-sm text-slate-500 flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500"></div>
-            Загружаем переговорки…
-          </div>
-        ) : (
-          <select
-            value={form.room_id || ""}
-            disabled={readOnly}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                room_id: e.target.value || null,
-              }))
-            }
-            className="w-full rounded-xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 hover:border-slate-300"
-          >
-            <option value="" className="bg-white text-slate-900">
-              Без переговорки
+      ) : (
+        <select
+          value={form.room_id || ""}
+          disabled={readOnly}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              room_id: e.target.value || null,
+            }))
+          }
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-all focus:border-lime-500 focus:ring-1 focus:ring-lime-500/20 hover:border-slate-300"
+        >
+          <option value="" className="bg-white text-slate-900">
+            Без переговорки
+          </option>
+          {rooms.length === 0 ? (
+            <option disabled className="bg-white text-slate-400">
+              Нет доступных переговорок
             </option>
-            {rooms.length === 0 ? (
-              <option disabled className="bg-white text-slate-400">
-                Нет доступных переговорок
+          ) : (
+            rooms.map((room) => (
+              <option
+                key={room.id}
+                value={room.id}
+                className="bg-white text-slate-900"
+              >
+                {room.name}
+                {room.capacity > 1 ? ` (до ${room.capacity} чел.)` : ""}
+                {room.location ? ` — ${room.location}` : ""}
               </option>
-            ) : (
-              rooms.map((room) => (
-                <option
-                  key={room.id}
-                  value={room.id}
-                  className="bg-white text-slate-900"
-                >
-                  {room.name}
-                  {room.capacity > 1 ? ` (до ${room.capacity} чел.)` : ""}
-                  {room.location ? ` — ${room.location}` : ""}
-                </option>
-              ))
-            )}
-          </select>
-        )}
-      </div>
+            ))
+          )}
+        </select>
+      )}
 
       <EnhancedTimeline
+        key={`timeline-${form.participant_ids.join(',')}-${conflicts.length}`}
         rows={timelineRows}
         referenceDate={selectedDate}
         selectedStart={form.starts_at}
@@ -470,6 +469,28 @@ export function ResourcePanel({
         organizations={organizations}
         departments={allDepartments}
         apiBaseUrl={apiBaseUrl}
+        onRemoveParticipant={(participantId) => {
+          setForm((prev) => ({
+            ...prev,
+            participant_ids: prev.participant_ids.filter((id) => id !== participantId),
+          }));
+        }}
+        onTimeRangeSelect={(start, end) => {
+          // Форматируем даты для формы
+          const formatDateTime = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+          };
+          setForm((prev) => ({
+            ...prev,
+            starts_at: formatDateTime(start),
+            ends_at: formatDateTime(end),
+          }));
+        }}
       />
 
       <ConflictSummary

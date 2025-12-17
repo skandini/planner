@@ -449,24 +449,6 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
               animation: `fadeInUp 0.5s ease-out ${index * 0.1}s forwards`
             }}
           >
-            {/* Плавная вертикальная линия от родителя к карточке */}
-            {!isRoot && (
-              <svg 
-                className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none"
-                width="4"
-                height="32"
-                style={{ zIndex: 0 }}
-              >
-                <path
-                  d="M 2 0 Q 2 10 2 16 T 2 32"
-                  stroke="rgb(148 163 184)"
-                  strokeWidth="2.5"
-                  fill="none"
-                  strokeLinecap="round"
-                  opacity="0.8"
-                />
-              </svg>
-            )}
 
             <div
               className={`dept-card group w-[320px] max-w-[320px] rounded-3xl border border-slate-200/70 bg-white/90 backdrop-blur shadow-xl px-4 py-4 transition hover:-translate-y-[4px] hover:shadow-2xl ${
@@ -734,53 +716,6 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
               <div className="mt-10 flex flex-col items-center relative">
                 {/* Контейнер для дочерних отделов */}
                 <div className="relative flex flex-row gap-12 mt-10" style={{ position: 'relative', minHeight: '50px' }}>
-                  {/* SVG с плавными линиями от родителя к каждому ребенку - покрывает всю область */}
-                  <svg
-                    className="absolute pointer-events-none"
-                    style={{
-                      zIndex: 0,
-                      top: '-50px',
-                      left: '0',
-                      right: '0',
-                      width: '100%',
-                      height: '50px'
-                    }}
-                    viewBox="0 0 100 50"
-                    preserveAspectRatio="none"
-                  >
-                    {d.children.map((child, childIndex) => {
-                      // Родитель всегда в центре (50%)
-                      const parentX = 50;
-                      const parentY = 0;
-                      
-                      // Вычисляем позицию центра каждого ребенка
-                      // Каждый блок занимает равную долю ширины
-                      const totalChildren = d.children.length;
-                      const childWidth = 100 / totalChildren;
-                      const childX = (childIndex * childWidth) + (childWidth / 2);
-                      const childY = 50;
-                      
-                      // Плавная кривая Безье от родителя к ребенку
-                      // Используем две контрольные точки для более плавного изгиба
-                      const controlY1 = 15;
-                      const controlY2 = 35;
-                      const midX = (parentX + childX) / 2;
-                      const path = `M ${parentX} ${parentY} C ${parentX} ${controlY1}, ${midX} ${controlY2}, ${childX} ${childY}`;
-                      
-                      return (
-                        <path
-                          key={child.id}
-                          d={path}
-                          stroke="rgb(148 163 184)"
-                          strokeWidth="2.5"
-                          fill="none"
-                          strokeLinecap="round"
-                          opacity="0.8"
-                        />
-                      );
-                    })}
-                  </svg>
-                  
                   {d.children.map((child, childIndex) => {
                     return (
                       <div key={child.id} className="relative flex flex-col items-center">

@@ -123,23 +123,36 @@ export function TicketTracker({
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-gradient-to-br from-slate-50 to-white">
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Техподдержка</h1>
-            <p className="text-sm text-slate-500 mt-1">Система управления обращениями</p>
-          </div>
+    <div className="fixed inset-0 bg-slate-50 flex flex-col z-50 overflow-hidden" style={{ animation: 'fadeIn 0.3s ease-in-out forwards' }}>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-3 p-4 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+        <div className="flex items-center gap-3 flex-1">
+          <h2 className="text-lg font-bold">Техподдержка</h2>
+        </div>
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsCreating(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-semibold"
           >
             + Создать тикет
           </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Закрыть
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
+      {/* Content with scroll */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-slate-500">Загрузка...</div>
@@ -196,6 +209,7 @@ export function TicketTracker({
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {/* Модальное окно детального просмотра тикета */}
@@ -219,7 +233,7 @@ export function TicketTracker({
 
       {/* Модальное окно создания тикета */}
       {isCreating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-modal-enter">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 animate-modal-enter">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-modal-enter">
             <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50">
               <h2 className="text-xl font-bold text-slate-900">Создать тикет</h2>
