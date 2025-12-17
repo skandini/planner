@@ -10,6 +10,8 @@ from app.core.config import settings
 
 # Импортируем все модели, чтобы они попали в метаданные SQLModel
 from app.models import (  # noqa: F401
+    AdminNotification,
+    AdminNotificationDismissal,
     Calendar,
     CalendarMember,
     Department,

@@ -1,3 +1,4 @@
+from .admin_notification import AdminNotification, AdminNotificationDismissal
 from .calendar import Calendar
 from .calendar_member import CalendarMember
 from .department import Department
@@ -16,6 +17,8 @@ from .user_department import UserDepartment
 from .user_organization import UserOrganization
 
 __all__ = [
+    "AdminNotification",
+    "AdminNotificationDismissal",
     "Calendar",
     "CalendarMember",
     "Department",

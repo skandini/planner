@@ -14,30 +14,66 @@ from app.db import init_db
 def create_application() -> FastAPI:
     app = FastAPI(title=settings.PROJECT_NAME, version="0.1.0")
 
-    # CORS middleware должен быть первым
+    # CORS middleware - максимально простой и надежный
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
+        allow_origins=["*"],  # Разрешаем все origins для упрощения
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        allow_methods=["*"],  # Разрешаем все методы
+        allow_headers=["*"],  # Разрешаем все заголовки
         expose_headers=["*"],
-        max_age=3600,
     )
+    
+    # Middleware для логирования всех запросов
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        print(f"\n[REQUEST] {request.method} {request.url.path}")
+        print(f"[REQUEST] Origin: {request.headers.get('origin')}")
+        print(f"[REQUEST] Authorization: {'Present' if request.headers.get('authorization') else 'Missing'}")
+        try:
+            response = await call_next(request)
+            print(f"[RESPONSE] {response.status_code} for {request.method} {request.url.path}")
+            cors_headers = {k: v for k, v in response.headers.items() if 'access-control' in k.lower()}
+            if cors_headers:
+                print(f"[RESPONSE] CORS headers present: {list(cors_headers.keys())}")
+            else:
+                print(f"[RESPONSE] WARNING: No CORS headers in response!")
+            return response
+        except Exception as e:
+            print(f"[ERROR] Exception in middleware: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
-    # Exception handlers - CORS middleware автоматически добавит заголовки
+    # Helper function to add CORS headers - всегда добавляем для всех origins
+    def get_cors_headers(request: Request) -> dict:
+        """Get CORS headers for the request origin."""
+        origin = request.headers.get("origin")
+        headers = {
+            "Access-Control-Allow-Origin": origin if origin else "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+        return headers
+
+    # Exception handlers - всегда добавляем CORS заголовки
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        headers = get_cors_headers(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        headers = get_cors_headers(request)
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": exc.errors()},
+            headers=headers,
         )
 
     @app.exception_handler(Exception)
@@ -45,13 +81,7 @@ def create_application() -> FastAPI:
         import traceback
         print(f"[ERROR] Unhandled exception: {str(exc)}")
         print(traceback.format_exc())
-        # CORS заголовки будут добавлены автоматически CORSMiddleware
-        # Но для надежности добавляем их явно
-        origin = request.headers.get("origin")
-        headers = {}
-        if origin and origin in settings.BACKEND_CORS_ORIGINS:
-            headers["Access-Control-Allow-Origin"] = origin
-            headers["Access-Control-Allow-Credentials"] = "true"
+        headers = get_cors_headers(request)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": f"Internal server error: {str(exc)}"},

@@ -317,16 +317,68 @@ def list_events(
         statement = statement.where(filter_expr)
     statement = statement.order_by(Event.starts_at)
     events = session.exec(statement).all()
+    
+    print(f"[DEBUG] Found {len(events)} events for user {current_user.id}")
+
+    # Предзагружаем календари для всех событий одним запросом
+    calendar_ids = {event.calendar_id for event in events}
+    calendars = {}
+    if calendar_ids:
+        calendars = {
+            cal.id: cal
+            for cal in session.exec(select(Calendar).where(Calendar.id.in_(calendar_ids))).all()
+        }
+
+    # Предзагружаем участников для всех событий одним запросом
+    event_ids = [event.id for event in events]
+    participants_map = {}
+    if event_ids:
+        participants = session.exec(
+            select(EventParticipant, User)
+            .join(User, EventParticipant.user_id == User.id)
+            .where(EventParticipant.event_id.in_(event_ids))
+        ).all()
+        for p, u in participants:
+            if p.event_id not in participants_map:
+                participants_map[p.event_id] = []
+            participants_map[p.event_id].append(
+                EventParticipantRead(
+                    user_id=p.user_id,
+                    email=u.email,
+                    full_name=u.full_name,
+                    response_status=p.response_status
+                )
+            )
+
+    # Предзагружаем вложения для всех событий одним запросом
+    attachments_map = {}
+    if event_ids:
+        from app.models import EventAttachment
+        attachments = session.exec(
+            select(EventAttachment).where(EventAttachment.event_id.in_(event_ids))
+        ).all()
+        for att in attachments:
+            if att.event_id not in attachments_map:
+                attachments_map[att.event_id] = []
+            attachments_map[att.event_id].append(EventAttachmentRead.model_validate(att))
 
     serialized: list[EventRead] = []
     for event in events:
-        # Если календарь отсутствует (например, удален), пропускаем событие,
-        # иначе дальнейшие операции (перемещение/обновление) завершатся 404 "Calendar not found".
-        calendar = session.get(Calendar, event.calendar_id)
-        if not calendar:
+        # Если календарь отсутствует (например, удален), пропускаем событие
+        if event.calendar_id not in calendars:
             continue
-        serialized.append(_serialize_event_with_participants(session, event))
+        
+        # Используем предзагруженные данные
+        participants = participants_map.get(event.id, [])
+        attachments = attachments_map.get(event.id, [])
+        
+        serialized.append(
+            EventRead.model_validate(event).model_copy(
+                update={"participants": participants, "attachments": attachments}
+            )
+        )
 
+    print(f"[DEBUG] Returning {len(serialized)} serialized events")
     return serialized
 
 
