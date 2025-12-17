@@ -45,6 +45,8 @@ export function EnhancedTimeline({
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [currentSelectionSlot, setCurrentSelectionSlot] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [hasMoved, setHasMoved] = useState(false);
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const selectionRange = useMemo(() => {
     const start = inputToDate(selectedStart, { allDay: isAllDay });
@@ -109,7 +111,7 @@ export function EnhancedTimeline({
   const getSlotState = (
     row: TimelineRowData,
     slotIndex: number,
-  ): "free" | "busy" | "selected" | "conflict" | "selecting" => {
+  ): "free" | "busy" | "selected" | "conflict" | "selecting" | "unavailable" => {
     const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
     const rowConflictSlots = conflictMap?.get(row.id) ?? [];
     
@@ -118,12 +120,15 @@ export function EnhancedTimeline({
       (conflict) => conflict.start < slotEnd && conflict.end > slotStart,
     );
 
-    // Проверяем занятость
+    // Проверяем занятость (включая недоступность по расписанию)
     const eventInSlot = row.availability.find((event) => {
       const eventStart = parseUTC(event.starts_at);
       const eventEnd = parseUTC(event.ends_at);
       return eventStart < slotEnd && eventEnd > slotStart;
     });
+    
+    // Проверяем, является ли событие недоступностью по расписанию
+    const isUnavailable = eventInSlot && eventInSlot.status === "unavailable";
 
     // Проверяем выбранный интервал (уже установленное время события)
     const selected =
@@ -142,11 +147,12 @@ export function EnhancedTimeline({
     if (inSelection && isSelecting) return "selecting";
     if (selected) return "selected";
     if (conflicting) return "conflict";
+    if (isUnavailable) return "unavailable";
     if (eventInSlot) return "busy";
     return "free";
   };
 
-  // Проверяем, занят ли слот в любой из строк
+  // Проверяем, занят ли слот в любой из строк (включая недоступность по расписанию)
   const isSlotBusy = useCallback((slotIndex: number): boolean => {
     if (slotIndex < 0 || slotIndex >= timeSlots.length) return true;
     
@@ -156,14 +162,15 @@ export function EnhancedTimeline({
     const slotEnd = new Date(slotStart);
     slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_DURATION_MINUTES);
     
-    // Проверяем занятость во всех строках
+    // Проверяем занятость и недоступность во всех строках
     return rows.some((row) => {
-      // Проверяем события в этой строке
+      // Проверяем события в этой строке (включая недоступность по расписанию)
       const eventInSlot = row.availability.find((event) => {
         const eventStart = parseUTC(event.starts_at);
         const eventEnd = parseUTC(event.ends_at);
         return eventStart < slotEnd && eventEnd > slotStart;
       });
+      // Если есть любое событие (занятость или недоступность) - слот занят
       return !!eventInSlot;
     });
   }, [rows, timeSlots, baseDate]);
@@ -178,22 +185,63 @@ export function EnhancedTimeline({
     }
     
     e.preventDefault();
+    e.stopPropagation();
+    setHasMoved(false);
     setSelectionStart(slotIndex);
     setCurrentSelectionSlot(slotIndex);
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
     setIsSelecting(true);
   }, [onTimeRangeSelect, isSlotBusy]);
 
   // Обработчик перемещения мыши при выборе
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isSelecting || selectionStart === null || !timelineRef.current) return;
+    if (!isSelecting || selectionStart === null || !timelineRef.current || !mouseDownPos) return;
     
+    // Проверяем минимальное расстояние перемещения (10px) перед тем, как считать это перетаскиванием
+    const moveDistance = Math.abs(e.clientX - mouseDownPos.x) + Math.abs(e.clientY - mouseDownPos.y);
+    if (moveDistance < 10) {
+      // Минимальное движение - еще не считаем это перетаскиванием
+      // Оставляем выбор на начальном слоте
+      setCurrentSelectionSlot(selectionStart);
+      return;
+    }
+    
+    setHasMoved(true);
+    
+    // Находим контейнер со слотами времени - ищем первый элемент с grid-template-columns
     const timeSlotsContainer = timelineRef.current.querySelector('[style*="grid-template-columns"]') as HTMLElement;
     if (!timeSlotsContainer) return;
     
     const slotsRect = timeSlotsContainer.getBoundingClientRect();
+    
+    // Вычисляем относительную позицию мыши внутри контейнера
     const relativeX = e.clientX - slotsRect.left;
-    const slotWidth = slotsRect.width / timeSlots.length;
-    let targetSlot = Math.floor(relativeX / slotWidth);
+    
+    // Получаем стили для определения ширины первой колонки
+    const computedStyle = window.getComputedStyle(timeSlotsContainer);
+    const gridTemplateColumns = computedStyle.gridTemplateColumns;
+    
+    // Парсим grid-template-columns чтобы получить ширину первой колонки
+    // Формат: "200px repeat(96, minmax(8px, 1fr))" или "200px 1fr 1fr ..."
+    let firstColumnWidth = 200; // Значение по умолчанию
+    if (gridTemplateColumns) {
+      const parts = gridTemplateColumns.split(' ');
+      if (parts.length > 0) {
+        const firstCol = parts[0];
+        const match = firstCol.match(/(\d+)px/);
+        if (match) {
+          firstColumnWidth = parseInt(match[1], 10);
+        }
+      }
+    }
+    
+    // Вычисляем ширину области со слотами (без первой колонки)
+    const slotsAreaWidth = slotsRect.width - firstColumnWidth;
+    const slotWidth = slotsAreaWidth / timeSlots.length;
+    
+    // Вычисляем индекс слота, учитывая смещение первой колонки
+    const slotAreaX = relativeX - firstColumnWidth;
+    let targetSlot = Math.floor(slotAreaX / slotWidth);
     
     // Ограничиваем границами
     if (targetSlot < 0) targetSlot = 0;
@@ -231,7 +279,7 @@ export function EnhancedTimeline({
       // Если финальный слот занят, оставляем выбор на начальном слоте
       setCurrentSelectionSlot(selectionStart);
     }
-  }, [isSelecting, selectionStart, timeSlots.length, isSlotBusy]);
+  }, [isSelecting, selectionStart, timeSlots.length, isSlotBusy, mouseDownPos]);
 
   // Обработчик окончания выбора
   const handleMouseUp = useCallback(() => {
@@ -239,35 +287,55 @@ export function EnhancedTimeline({
       setIsSelecting(false);
       setSelectionStart(null);
       setCurrentSelectionSlot(null);
+      setHasMoved(false);
+      setMouseDownPos(null);
       return;
     }
 
-    // Если пользователь просто кликнул (не перетаскивал), выбираем один слот
     const endSlot = currentSelectionSlot !== null ? currentSelectionSlot : selectionStart;
     
     if (endSlot >= 0 && endSlot < timeSlots.length) {
       const startSlot = Math.min(selectionStart, endSlot);
       const finalEndSlot = Math.max(selectionStart, endSlot);
       
-      // Если выбран один слот, делаем событие длительностью в один слот
-      const { slotStart } = buildSlotTimes(startSlot);
-      const { slotEnd } = buildSlotTimes(finalEndSlot);
-      
-      // Проверяем, что не выходим за границы дня
-      const dayStart = new Date(baseDate);
-      dayStart.setHours(8, 0, 0, 0);
-      const dayEnd = new Date(baseDate);
-      dayEnd.setHours(20, 0, 0, 0);
-      
-      if (slotStart >= dayStart && slotEnd <= dayEnd) {
-        onTimeRangeSelect(slotStart, slotEnd);
+      // Если пользователь просто кликнул (не перетаскивал), выбираем только один слот
+      // Если перетаскивал, выбираем диапазон
+      if (!hasMoved) {
+        // Просто клик - выбираем только один слот
+        const { slotStart, slotEnd } = buildSlotTimes(startSlot);
+        
+        // Проверяем, что не выходим за границы дня
+        const dayStart = new Date(baseDate);
+        dayStart.setHours(8, 0, 0, 0);
+        const dayEnd = new Date(baseDate);
+        dayEnd.setHours(20, 0, 0, 0);
+        
+        if (slotStart >= dayStart && slotEnd <= dayEnd) {
+          onTimeRangeSelect(slotStart, slotEnd);
+        }
+      } else {
+        // Перетаскивание - выбираем диапазон
+        const { slotStart } = buildSlotTimes(startSlot);
+        const { slotEnd } = buildSlotTimes(finalEndSlot);
+        
+        // Проверяем, что не выходим за границы дня
+        const dayStart = new Date(baseDate);
+        dayStart.setHours(8, 0, 0, 0);
+        const dayEnd = new Date(baseDate);
+        dayEnd.setHours(20, 0, 0, 0);
+        
+        if (slotStart >= dayStart && slotEnd <= dayEnd) {
+          onTimeRangeSelect(slotStart, slotEnd);
+        }
       }
     }
     
     setIsSelecting(false);
     setSelectionStart(null);
     setCurrentSelectionSlot(null);
-  }, [isSelecting, selectionStart, currentSelectionSlot, onTimeRangeSelect, timeSlots, baseDate]);
+    setHasMoved(false);
+    setMouseDownPos(null);
+  }, [isSelecting, selectionStart, currentSelectionSlot, hasMoved, onTimeRangeSelect, timeSlots, baseDate]);
 
   // Подписываемся на события мыши
   useEffect(() => {
@@ -290,6 +358,10 @@ export function EnhancedTimeline({
           <span className="text-xs font-medium text-slate-700">Занято</span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded bg-slate-200 border-2 border-slate-400" />
+          <span className="text-xs font-medium text-slate-600 font-semibold">Недоступен по расписанию</span>
+        </div>
+        <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded border-2 border-lime-400 bg-lime-50" />
           <span className="text-xs font-medium text-slate-700">Выбранное время</span>
         </div>
@@ -308,8 +380,8 @@ export function EnhancedTimeline({
       </div>
 
       {/* Таймлайн */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-4" ref={timelineRef}>
-        <div className="space-y-3 relative">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-4" ref={timelineRef} style={{ maxHeight: "600px" }}>
+        <div className="space-y-3 relative" style={{ minWidth: `${200 + timeSlots.length * 8}px` }}>
           {/* Заголовок времени */}
           <div className="grid gap-2" style={{ gridTemplateColumns: `200px repeat(${timeSlots.length}, minmax(8px, 1fr))` }}>
             <div />
@@ -326,7 +398,7 @@ export function EnhancedTimeline({
 
 
           {/* Строки ресурсов */}
-          {rows.map((row) => (
+          {resourceRows.map((row) => (
             <div
               key={row.id}
               className="grid gap-2 relative"
@@ -433,37 +505,55 @@ export function EnhancedTimeline({
                   return eventStart < slotEnd && eventEnd > slotStart;
                 });
 
+                // Определяем классы для разных состояний
+                let slotClassName = "h-8 rounded-md transition-all cursor-pointer ";
+                if (state === "conflict") {
+                  slotClassName += "conflict-blink border border-amber-500 shadow-sm";
+                } else if (state === "unavailable") {
+                  slotClassName += "bg-slate-200 border-2 border-slate-400 cursor-not-allowed";
+                } else if (state === "busy") {
+                  slotClassName += "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm cursor-not-allowed";
+                } else if (state === "selected") {
+                  slotClassName += "bg-gradient-to-r from-lime-100 to-lime-200 border-2 border-lime-400 shadow-md";
+                } else if (state === "selecting") {
+                  slotClassName += "bg-gradient-to-r from-blue-200 to-blue-300 border-2 border-blue-500 shadow-md";
+                } else {
+                  slotClassName += "bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 hover:from-slate-100 hover:to-slate-200";
+                }
+
                 return (
                   <div
                     key={`${row.id}-${slot.index}`}
-                    className={`h-8 rounded-md transition-all cursor-pointer ${
-                      state === "conflict"
-                        ? "conflict-blink border border-amber-500 shadow-sm"
-                        : state === "busy"
-                          ? "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm cursor-not-allowed"
-                          : state === "selected"
-                            ? "bg-gradient-to-r from-lime-100 to-lime-200 border-2 border-lime-400 shadow-md"
-                            : state === "selecting"
-                              ? "bg-gradient-to-r from-blue-200 to-blue-300 border-2 border-blue-500 shadow-md"
-                              : "bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 hover:from-slate-100 hover:to-slate-200"
-                    }`}
+                    className={slotClassName}
                     onMouseDown={(e) => {
-                      // Проверяем занятость во всех строках, а не только в текущей
+                      // Проверяем занятость и недоступность во всех строках
+                      if (state === "unavailable" || state === "busy") {
+                        e.preventDefault();
+                        return;
+                      }
                       if (!isSlotBusy(slot.index) && onTimeRangeSelect) {
                         handleSlotMouseDown(slot.index, e);
                       }
                     }}
                     title={
                       eventInSlot
-                        ? `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
+                        ? eventInSlot.status === "unavailable"
+                          ? `Недоступен по расписанию (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })})`
-                        : state === "busy"
-                          ? "Занято"
+                          : `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })})`
+                        : state === "busy" || state === "unavailable"
+                          ? state === "unavailable" ? "Недоступен по расписанию" : "Занято"
                           : "Кликните и перетащите для выбора времени"
                     }
                   />

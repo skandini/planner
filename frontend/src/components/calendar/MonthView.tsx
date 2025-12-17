@@ -175,6 +175,9 @@ export function MonthView({
               </div>
               <div className="mt-3 space-y-1 relative">
                 {dayEvents.slice(0, 3).map((event) => {
+                  // Проверяем, является ли событие расписанием доступности
+                  const isUnavailable = event.status === "unavailable";
+                  
                   // Проверяем статус текущего пользователя для события
                   const userParticipant = currentUserEmail && event.participants
                     ? event.participants.find((p) => p.email === currentUserEmail)
@@ -189,22 +192,34 @@ export function MonthView({
                       key={event.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEventClick(event);
+                        // Не открываем модальное окно для событий расписания доступности
+                        if (!isUnavailable) {
+                          onEventClick(event);
+                        }
                       }}
-                      onMouseEnter={(e) => handleEventMouseEnter(event, e.currentTarget)}
+                      onMouseEnter={(e) => {
+                        // Не показываем всплывающее окно для событий расписания доступности
+                        if (!isUnavailable) {
+                          handleEventMouseEnter(event, e.currentTarget);
+                        }
+                      }}
                       onMouseLeave={handleEventMouseLeave}
-                      className={`flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-[0.65rem] transition ${
-                        needsAction
-                          ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm"
-                          : "bg-slate-100 hover:bg-slate-200"
+                      className={`flex items-center gap-2 rounded-xl px-2 py-1 text-[0.65rem] transition ${
+                        isUnavailable
+                          ? "bg-slate-100 border border-slate-300 cursor-default"
+                          : needsAction
+                            ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm cursor-pointer"
+                            : "bg-slate-100 hover:bg-slate-200 cursor-pointer"
                       }`}
                     >
                       <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ background: accent }}
+                        className={`h-2 w-2 rounded-full ${isUnavailable ? "" : ""}`}
+                        style={{ 
+                          background: isUnavailable ? "#94a3b8" : accent 
+                        }}
                       />
-                      <span className="truncate text-slate-700">
-                        {event.title}
+                      <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : "text-slate-700"}`}>
+                        {isUnavailable ? "Недоступен" : event.title}
                       </span>
                     </div>
                   );

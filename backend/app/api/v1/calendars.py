@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import List
-from uuid import UUID
+from uuid import UUID, uuid5, NAMESPACE_URL
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select as sql_select
@@ -10,7 +10,7 @@ from sqlmodel import and_, or_, select
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, CalendarMember, Event, EventParticipant, Room, User
+from app.models import Calendar, CalendarMember, Event, EventParticipant, Room, User, UserAvailabilitySchedule
 from app.schemas import (
     CalendarCreate,
     CalendarMemberCreate,
@@ -328,6 +328,189 @@ def delete_calendar_member(
     session.commit()
 
 
+def _generate_unavailability_events(
+    user_id: UUID,
+    schedule: dict,
+    timezone: str,
+    from_date: datetime,
+    to_date: datetime,
+) -> List[EventRead]:
+    """Generate virtual events for unavailable time slots based on user's availability schedule."""
+    from datetime import timedelta, time as dt_time, timezone as dt_timezone
+    
+    if not schedule:
+        return []
+    
+    # Normalize datetime objects - remove timezone info for comparison
+    if from_date.tzinfo:
+        from_date = from_date.replace(tzinfo=None)
+    if to_date.tzinfo:
+        to_date = to_date.replace(tzinfo=None)
+    
+    # Ensure schedule is a dict
+    if not isinstance(schedule, dict):
+        return []
+    
+    # For simplicity, work with UTC and assume schedule times are in user's timezone
+    # In production, you might want to use pytz or zoneinfo for proper timezone handling
+    tz_offset = 0  # Default to UTC
+    if timezone == "Europe/Moscow":
+        tz_offset = 3  # UTC+3
+    elif timezone == "Europe/Kiev":
+        tz_offset = 2  # UTC+2
+    elif timezone == "Asia/Almaty":
+        tz_offset = 6  # UTC+6
+    
+    # Day names mapping
+    day_names = {
+        0: "monday",
+        1: "tuesday",
+        2: "wednesday",
+        3: "thursday",
+        4: "friday",
+        5: "saturday",
+        6: "sunday",
+    }
+    
+    # Helper function to generate unique UUID for virtual events based on datetime
+    def generate_unavailability_id(starts_at: datetime, ends_at: datetime, user_id: UUID) -> UUID:
+        """Generate a deterministic UUID for a virtual unavailability event."""
+        unique_string = f"unavailable-{user_id}-{starts_at.isoformat()}-{ends_at.isoformat()}"
+        return uuid5(NAMESPACE_URL, unique_string)
+    
+    unavailability_events = []
+    try:
+        current_date = from_date.date()
+        end_date = to_date.date()
+    except (AttributeError, ValueError):
+        return []
+    
+    # Iterate through each day in the range
+    while current_date <= end_date:
+        weekday = current_date.weekday()
+        day_name = day_names[weekday]
+        
+        # Get availability slots for this day
+        day_slots = schedule.get(day_name, [])
+        
+        if not day_slots:
+            # If no slots defined, user is unavailable all day
+            # Create datetime in UTC (assuming schedule times are already in UTC or we adjust)
+            day_start_utc = datetime.combine(current_date, dt_time(0, 0)) - timedelta(hours=tz_offset)
+            day_end_utc = datetime.combine(current_date, dt_time(23, 59, 59)) - timedelta(hours=tz_offset)
+            
+            if day_start_utc < to_date and day_end_utc > from_date:
+                now = datetime.utcnow()
+                unavailability_events.append(EventRead(
+                    id=generate_unavailability_id(day_start_utc, day_end_utc, user_id),
+                    calendar_id=UUID("00000000-0000-0000-0000-000000000000"),
+                    title="Недоступен по расписанию",
+                    description="Пользователь недоступен в это время согласно настройкам доступности",
+                    starts_at=day_start_utc,
+                    ends_at=day_end_utc,
+                    all_day=False,
+                    status="unavailable",
+                    timezone=timezone,
+                    created_at=now,
+                    updated_at=now,
+                ))
+        else:
+            # User has availability slots - find gaps between slots and before/after
+            # Sort slots by start time
+            sorted_slots = sorted(day_slots, key=lambda x: x.get("start", "00:00"))
+            
+            # Check time before first slot
+            if sorted_slots:
+                first_slot_start = sorted_slots[0].get("start", "00:00")
+                hour, minute = map(int, first_slot_start.split(":"))
+                if hour > 0 or minute > 0:
+                    day_start_utc = datetime.combine(current_date, dt_time(0, 0)) - timedelta(hours=tz_offset)
+                    first_slot_utc = datetime.combine(current_date, dt_time(hour, minute)) - timedelta(hours=tz_offset)
+                    
+                    if day_start_utc < to_date and first_slot_utc > from_date:
+                        now = datetime.utcnow()
+                        unavailability_events.append(EventRead(
+                            id=generate_unavailability_id(day_start_utc, first_slot_utc, user_id),
+                            calendar_id=UUID("00000000-0000-0000-0000-000000000000"),
+                            title="Недоступен по расписанию",
+                            description="Пользователь недоступен в это время согласно настройкам доступности",
+                            starts_at=day_start_utc,
+                            ends_at=first_slot_utc,
+                            all_day=False,
+                            status="unavailable",
+                            timezone=timezone,
+                            created_at=now,
+                            updated_at=now,
+                        ))
+                
+                # Check gaps between slots
+                for i in range(len(sorted_slots) - 1):
+                    try:
+                        current_slot_end = sorted_slots[i].get("end", "23:59")
+                        next_slot_start = sorted_slots[i + 1].get("start", "23:59")
+                        
+                        if not isinstance(current_slot_end, str) or not isinstance(next_slot_start, str):
+                            continue
+                        
+                        end_hour, end_minute = map(int, current_slot_end.split(":"))
+                        start_hour, start_minute = map(int, next_slot_start.split(":"))
+                        
+                        gap_end_utc = datetime.combine(current_date, dt_time(end_hour, end_minute)) - timedelta(hours=tz_offset)
+                        gap_start_utc = datetime.combine(current_date, dt_time(start_hour, start_minute)) - timedelta(hours=tz_offset)
+                        
+                        if gap_end_utc < gap_start_utc and gap_end_utc < to_date and gap_start_utc > from_date:
+                            now = datetime.utcnow()
+                            unavailability_events.append(EventRead(
+                                id=generate_unavailability_id(gap_end_utc, gap_start_utc, user_id),
+                                calendar_id=UUID("00000000-0000-0000-0000-000000000000"),
+                                title="Недоступен по расписанию",
+                                description="Пользователь недоступен в это время согласно настройкам доступности",
+                                starts_at=gap_end_utc,
+                                ends_at=gap_start_utc,
+                                all_day=False,
+                                status="unavailable",
+                                timezone=timezone,
+                                created_at=now,
+                                updated_at=now,
+                            ))
+                    except (ValueError, TypeError, AttributeError):
+                        continue
+                
+                # Check time after last slot
+                try:
+                    last_slot_end = sorted_slots[-1].get("end", "23:59")
+                    if isinstance(last_slot_end, str):
+                        end_hour, end_minute = map(int, last_slot_end.split(":"))
+                        if end_hour < 23 or end_minute < 59:
+                            last_slot_utc = datetime.combine(current_date, dt_time(end_hour, end_minute)) - timedelta(hours=tz_offset)
+                            day_end_utc = datetime.combine(current_date, dt_time(23, 59, 59)) - timedelta(hours=tz_offset)
+                            
+                            if last_slot_utc < to_date and day_end_utc > from_date:
+                                now = datetime.utcnow()
+                                unavailability_events.append(EventRead(
+                                    id=generate_unavailability_id(last_slot_utc, day_end_utc, user_id),
+                                    calendar_id=UUID("00000000-0000-0000-0000-000000000000"),
+                                    title="Недоступен по расписанию",
+                                    description="Пользователь недоступен в это время согласно настройкам доступности",
+                                    starts_at=last_slot_utc,
+                                    ends_at=day_end_utc,
+                                    all_day=False,
+                                    status="unavailable",
+                                    timezone=timezone,
+                                    created_at=now,
+                                    updated_at=now,
+                                ))
+                except (ValueError, TypeError, AttributeError):
+                    pass
+        
+        try:
+            current_date = (datetime.combine(current_date, dt_time(0, 0)) + timedelta(days=1)).date()
+        except (ValueError, TypeError):
+            break
+    
+    return unavailability_events
+
+
 @router.get(
     "/{calendar_id}/members/{user_id}/availability",
     response_model=List[EventRead],
@@ -391,8 +574,27 @@ def get_user_availability(
 
         # Сериализуем события с участниками
         from app.api.v1.events import _serialize_event_with_participants
-
-        return [_serialize_event_with_participants(session, event) for event in events]
+        real_events = [_serialize_event_with_participants(session, event) for event in events]
+        
+        # Get user's availability schedule
+        schedule_stmt = select(UserAvailabilitySchedule).where(
+            UserAvailabilitySchedule.user_id == user_id
+        )
+        availability_schedule = session.exec(schedule_stmt).first()
+        
+        # Generate unavailability events based on schedule
+        if availability_schedule and availability_schedule.schedule:
+            unavailability_events = _generate_unavailability_events(
+                user_id=user_id,
+                schedule=availability_schedule.schedule,
+                timezone=availability_schedule.timezone,
+                from_date=from_date,
+                to_date=to_date,
+            )
+            # Combine real events with unavailability events
+            return real_events + unavailability_events
+        
+        return real_events
     except Exception as e:
         # Логируем ошибку для отладки
         import traceback

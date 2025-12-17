@@ -536,6 +536,9 @@ export function WeekView({
                      userParticipant.response_status === "pending" ||
                      !userParticipant.response_status);
 
+                  // Проверяем, является ли событие расписанием доступности
+                  const isUnavailable = event.status === "unavailable";
+                  
                   return (
                     <div
                       key={event.id}
@@ -549,38 +552,54 @@ export function WeekView({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCardClick(event);
+                        // Не открываем модальное окно для событий расписания доступности
+                        if (!isUnavailable) {
+                          handleCardClick(event);
+                        }
                       }}
                       onMouseEnter={(e) => {
-                        const hasContent = (event.participants && event.participants.length > 0) ||
-                                         (event.description && event.description.trim().length > 0) ||
-                                         event.room_id;
-                        if (hasContent) {
-                          handleEventMouseEnter(event, e.currentTarget);
+                        // Не показываем всплывающее окно для событий расписания доступности
+                        if (!isUnavailable) {
+                          const hasContent = (event.participants && event.participants.length > 0) ||
+                                           (event.description && event.description.trim().length > 0) ||
+                                           event.room_id;
+                          if (hasContent) {
+                            handleEventMouseEnter(event, e.currentTarget);
+                          }
                         }
                       }}
                       onMouseLeave={handleEventMouseLeave}
-                      draggable={Boolean(onEventMove) && !event.all_day}
-                      onDragStart={(dragEvent) => handleDragStart(dragEvent, event)}
+                      draggable={Boolean(onEventMove) && !event.all_day && !isUnavailable}
+                      onDragStart={(dragEvent) => {
+                        if (!isUnavailable) {
+                          handleDragStart(dragEvent, event);
+                        }
+                      }}
                       onDragEnd={handleDragEnd}
-                      className={`absolute left-0.5 right-0.5 cursor-pointer rounded-lg border p-1.5 text-xs text-slate-900 shadow-md transition hover:shadow-lg z-10 ${
-                        isStartingSoon 
-                          ? "event-vibrating border-lime-500 border-2" 
-                          : needsAction
-                            ? "border-2 border-slate-300 bg-white"
-                            : "border-slate-200"
+                      className={`absolute left-0.5 right-0.5 rounded-lg border p-1.5 text-xs shadow-md transition z-10 ${
+                        isUnavailable
+                          ? "cursor-default border-slate-300 bg-slate-100"
+                          : isStartingSoon 
+                            ? "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg" 
+                            : needsAction
+                              ? "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
+                              : "border-slate-200 cursor-pointer hover:shadow-lg"
                       }`}
                       style={{
                         top: `${topPx}px`,
                         height: `${heightPx}px`,
-                        background: isStartingSoon 
-                          ? `${accent}40` 
-                          : needsAction
-                            ? "white"
-                            : `${accent}20`,
+                        background: isUnavailable
+                          ? "rgba(148, 163, 184, 0.3)"
+                          : isStartingSoon 
+                            ? `${accent}40` 
+                            : needsAction
+                              ? "white"
+                              : `${accent}20`,
                       }}
                     >
-                      <p className="text-xs font-semibold leading-tight truncate">{event.title}</p>
+                      <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : "text-slate-900"}`}>
+                        {isUnavailable ? "Недоступен" : event.title}
+                      </p>
                       {!isShortEvent && (
                         <>
                           <p className="text-[0.65rem] text-slate-600 leading-tight">

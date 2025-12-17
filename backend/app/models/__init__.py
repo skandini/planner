@@ -13,6 +13,7 @@ from .ticket import Ticket
 from .ticket_attachment import TicketAttachment
 from .ticket_comment import TicketComment
 from .user import User
+from .user_availability_schedule import UserAvailabilitySchedule
 from .user_department import UserDepartment
 from .user_organization import UserOrganization
 
@@ -33,6 +34,7 @@ __all__ = [
     "TicketAttachment",
     "TicketComment",
     "User",
+    "UserAvailabilitySchedule",
     "UserDepartment",
     "UserOrganization",
 ]

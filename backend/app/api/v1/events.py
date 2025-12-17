@@ -10,7 +10,7 @@ from sqlmodel import and_, delete, or_, select
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, Event, EventAttachment, EventParticipant, User
+from app.models import Calendar, Event, EventAttachment, EventParticipant, User, UserAvailabilitySchedule
 from app.schemas import (
     EventCreate,
     EventRead,
@@ -162,6 +162,167 @@ def _serialize_event_with_participants(
     )
 
 
+def _check_availability_schedule(
+    session: SessionDep,
+    user_id: UUID,
+    starts_at: datetime,
+    ends_at: datetime,
+) -> tuple[bool, str]:
+    """Check if user is available according to their schedule.
+    
+    Event must be completely covered by availability slots.
+    """
+    from datetime import time as dt_time
+    
+    # Normalize datetime objects - remove timezone info for comparison
+    if starts_at.tzinfo:
+        starts_at = starts_at.replace(tzinfo=None)
+    if ends_at.tzinfo:
+        ends_at = ends_at.replace(tzinfo=None)
+    
+    schedule_stmt = select(UserAvailabilitySchedule).where(
+        UserAvailabilitySchedule.user_id == user_id
+    )
+    availability_schedule = session.exec(schedule_stmt).first()
+    
+    if not availability_schedule or not availability_schedule.schedule:
+        # No schedule defined - user is always available
+        return True, ""
+    
+    schedule = availability_schedule.schedule
+    
+    # Ensure schedule is a dict
+    if not isinstance(schedule, dict):
+        # Invalid schedule format - treat as always available
+        return True, ""
+    
+    # Check if schedule is completely empty (no slots for any day)
+    # If schedule is empty, user is always available
+    has_any_slots = False
+    for day_name in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
+        day_slots = schedule.get(day_name, [])
+        if isinstance(day_slots, list) and day_slots:
+            has_any_slots = True
+            break
+    
+    # If no slots defined for any day, user is always available
+    if not has_any_slots:
+        return True, ""
+    
+    # Day names mapping
+    day_names = {
+        0: "monday",
+        1: "tuesday",
+        2: "wednesday",
+        3: "thursday",
+        4: "friday",
+        5: "saturday",
+        6: "sunday",
+    }
+    
+    # Check each day that the event spans
+    current_date = starts_at.date()
+    end_date = ends_at.date()
+    
+    while current_date <= end_date:
+        weekday = current_date.weekday()
+        day_name = day_names[weekday]
+        
+        # Get availability slots for this day
+        day_slots = schedule.get(day_name, [])
+        
+        # Ensure day_slots is a list
+        if not isinstance(day_slots, list):
+            day_slots = []
+        
+        if not day_slots:
+            # No slots defined for this day - user is unavailable this day
+            return False, "Пользователь недоступен в этот день согласно расписанию"
+        
+        # For this day, get the part of event that falls on this day
+        day_start_time = datetime.combine(current_date, dt_time(0, 0))
+        day_end_time = datetime.combine(current_date, dt_time(23, 59, 59))
+        
+        event_start_for_day = max(starts_at, day_start_time)
+        event_end_for_day = min(ends_at, day_end_time)
+        
+        if event_start_for_day < event_end_for_day:
+            # Build list of availability slots for this day
+            availability_slots = []
+            for slot in day_slots:
+                # Ensure slot is a dict
+                if not isinstance(slot, dict):
+                    continue
+                    
+                slot_start_str = slot.get("start", "00:00")
+                slot_end_str = slot.get("end", "23:59")
+                
+                # Ensure strings are valid
+                if not isinstance(slot_start_str, str) or not isinstance(slot_end_str, str):
+                    continue
+                
+                try:
+                    slot_start_parts = slot_start_str.split(":")
+                    slot_end_parts = slot_end_str.split(":")
+                    
+                    if len(slot_start_parts) != 2 or len(slot_end_parts) != 2:
+                        continue
+                    
+                    slot_start_hour, slot_start_minute = map(int, slot_start_parts)
+                    slot_end_hour, slot_end_minute = map(int, slot_end_parts)
+                    
+                    # Validate time values
+                    if not (0 <= slot_start_hour <= 23 and 0 <= slot_start_minute <= 59):
+                        continue
+                    if not (0 <= slot_end_hour <= 23 and 0 <= slot_end_minute <= 59):
+                        continue
+                    
+                except (ValueError, AttributeError, TypeError):
+                    continue
+                
+                try:
+                    slot_start = datetime.combine(current_date, dt_time(slot_start_hour, slot_start_minute))
+                    slot_end = datetime.combine(current_date, dt_time(slot_end_hour, slot_end_minute))
+                    
+                    # Ensure slot_end is after slot_start
+                    if slot_end <= slot_start:
+                        continue
+                    
+                    availability_slots.append((slot_start, slot_end))
+                except (ValueError, TypeError):
+                    continue
+            
+            # Sort slots by start time
+            availability_slots.sort(key=lambda x: x[0])
+            
+            # Check if event time is completely covered by availability slots
+            # We need to find slots that together cover the entire event time
+            remaining_start = event_start_for_day
+            remaining_end = event_end_for_day
+            
+            for slot_start, slot_end in availability_slots:
+                # If this slot covers part of remaining time
+                if slot_start <= remaining_start < slot_end:
+                    # This slot covers from remaining_start to min(slot_end, remaining_end)
+                    remaining_start = min(slot_end, remaining_end)
+                    if remaining_start >= remaining_end:
+                        # Fully covered
+                        break
+            
+            # If there's still uncovered time, user is unavailable
+            if remaining_start < remaining_end:
+                return False, "Пользователь недоступен в это время согласно расписанию"
+        
+        # Move to next day
+        try:
+            current_date = (datetime.combine(current_date, dt_time(0, 0)) + timedelta(days=1)).date()
+        except (ValueError, TypeError):
+            # Invalid date - break the loop
+            break
+    
+    return True, ""
+
+
 def _ensure_no_conflicts(
     session: SessionDep,
     *,
@@ -191,6 +352,22 @@ def _ensure_no_conflicts(
             )
 
     if participant_ids:
+        # Сначала проверяем расписание доступности для каждого участника
+        for user_id in participant_ids:
+            is_available, error_message = _check_availability_schedule(
+                session,
+                user_id=user_id,
+                starts_at=starts_at,
+                ends_at=ends_at,
+            )
+            if not is_available:
+                user = session.get(User, user_id)
+                user_name = user.full_name if user and user.full_name else (user.email if user else "Пользователь")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"{user_name} недоступен в это время согласно расписанию доступности.",
+                )
+        
         # Проверяем конфликты участников во ВСЕХ календарях
         # Учитываем:
         # 1. События, где участник является участником (через EventParticipant)

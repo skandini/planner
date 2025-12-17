@@ -899,11 +899,6 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
         onMouseUp={handleMouseUp}
         style={{ 
           cursor: isPanning ? 'grabbing' : 'grab',
-          backgroundImage: `
-            linear-gradient(to right, rgb(226 232 240) 1px, transparent 1px),
-            linear-gradient(to bottom, rgb(226 232 240) 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
           backgroundColor: 'rgb(248 250 252)'
         }}
       >
@@ -1097,21 +1092,6 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
           </div>
         ) : (
           <>
-            {/* Сетчатый фон, который масштабируется вместе с контентом */}
-            <div
-              className="absolute inset-0 transition-transform duration-200 ease-out pointer-events-none"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: '0 0',
-                backgroundImage: `
-                  linear-gradient(to right, rgb(226 232 240) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgb(226 232 240) 1px, transparent 1px)
-                `,
-                backgroundSize: `${40 * zoom}px ${40 * zoom}px`,
-                backgroundColor: 'rgb(248 250 252)',
-                zIndex: 0
-              }}
-            />
             <div
               className="absolute inset-0 transition-transform duration-200 ease-out"
               style={{

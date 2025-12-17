@@ -152,6 +152,9 @@ export default function Home() {
   const [userAvailability, setUserAvailability] = useState<EventRecord[]>([]);
   const [userAvailabilityLoading, setUserAvailabilityLoading] = useState(false);
   const [userAvailabilityError, setUserAvailabilityError] = useState<string | null>(null);
+  const [showMyAvailability, setShowMyAvailability] = useState(false);
+  const [myAvailabilitySchedule, setMyAvailabilitySchedule] = useState<EventRecord[]>([]);
+  const [myAvailabilityLoading, setMyAvailabilityLoading] = useState(false);
   const [addToCalendarError, setAddToCalendarError] = useState<string | null>(null);
   const [addToCalendarLoading, setAddToCalendarLoading] = useState(false);
 
@@ -197,19 +200,15 @@ export default function Home() {
         try {
           const url = typeof input === "string" ? input : input.toString();
           
-          // Добавляем таймаут для запроса
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
-          
+          // Используем signal из init, если он передан, иначе делаем обычный запрос без таймаута
+          // Таймаут применяется только к конкретным запросам, которые могут быть долгими
           const response = await fetch(input, { 
             ...init, 
             headers,
             mode: "cors",
             credentials: "omit",
-            signal: controller.signal,
           });
           
-          clearTimeout(timeoutId);
           return response;
         } catch (error) {
           // Обработка сетевых ошибок (CORS, сеть недоступна и т.д.)
@@ -243,10 +242,10 @@ export default function Home() {
             throw new Error(`Ошибка сети: ${error.message}`);
           }
           
-          // Обработка ошибки таймаута
+          // Обработка ошибки отмены запроса (может быть из-за таймаута браузера или явной отмены)
           if (error instanceof Error && error.name === "AbortError") {
-            console.error(`[API Error] Request timeout for: ${url}`);
-            throw new Error(`Превышено время ожидания ответа от сервера. URL: ${url}`);
+            console.error(`[API Error] Request aborted for: ${url}`);
+            throw new Error(`Запрос был прерван. URL: ${url}`);
           }
           
           if (error instanceof Error) {
@@ -599,7 +598,11 @@ export default function Home() {
       // Backend уже правильно фильтрует события
       url.searchParams.set("from", rangeStart.toISOString());
       url.searchParams.set("to", rangeEnd.toISOString());
-      const response = await authFetch(url.toString(), { cache: "no-store" });
+      
+      const response = await authFetch(url.toString(), { 
+        cache: "no-store",
+      });
+      
       if (!response.ok) {
         throw new Error("Не удалось получить события");
       }
@@ -802,6 +805,85 @@ export default function Home() {
       setUserAvailabilityError(null);
     }
   }, [selectedUserForView, loadUserAvailability]);
+
+  // Загружаем расписание доступности текущего пользователя для отображения в календаре
+  const loadMyAvailabilitySchedule = useCallback(async () => {
+    if (!selectedCalendarId || !currentUser?.id || !showMyAvailability) {
+      setMyAvailabilitySchedule([]);
+      return;
+    }
+    
+    setMyAvailabilityLoading(true);
+    try {
+      // Определяем диапазон в зависимости от режима просмотра
+      let rangeStart: Date;
+      let rangeEnd: Date;
+      
+      if (viewMode === "month") {
+        // Для месяца - весь месяц
+        rangeStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        rangeStart.setHours(0, 0, 0, 0);
+        rangeEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+        rangeEnd.setHours(23, 59, 59, 999);
+      } else {
+        // Для недели - неделя
+        rangeStart = new Date(weekStart);
+        rangeStart.setHours(0, 0, 0, 0);
+        rangeEnd = new Date(weekStart);
+        rangeEnd.setDate(rangeEnd.getDate() + 6);
+        rangeEnd.setHours(23, 59, 59, 999);
+      }
+      
+      const fromStr = rangeStart.toISOString();
+      const toStr = rangeEnd.toISOString();
+      const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${currentUser.id}/availability?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
+      
+      const response = await authFetch(url, { 
+        cache: "no-store",
+      });
+      
+      if (response.ok) {
+        const data: EventRecord[] = await response.json();
+        // Фильтруем только события с status="unavailable" (расписание доступности)
+        const unavailableEvents = data.filter(event => event.status === "unavailable");
+        setMyAvailabilitySchedule(unavailableEvents);
+      } else {
+        const errorText = await response.text().catch(() => "");
+        console.error("Failed to load availability schedule:", response.status, errorText);
+        setMyAvailabilitySchedule([]);
+      }
+    } catch (err) {
+      console.error("Failed to load my availability schedule:", err);
+      setMyAvailabilitySchedule([]);
+    } finally {
+      setMyAvailabilityLoading(false);
+    }
+  }, [selectedCalendarId, currentUser?.id, showMyAvailability, selectedDate, viewMode, weekStart, authFetch]);
+
+  // Debounce для загрузки расписания доступности, чтобы не делать запросы слишком часто
+  const debouncedLoadMyAvailabilityScheduleRef = useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    // Очищаем предыдущий таймаут
+    if (debouncedLoadMyAvailabilityScheduleRef.current) {
+      clearTimeout(debouncedLoadMyAvailabilityScheduleRef.current);
+    }
+    
+    if (showMyAvailability && selectedCalendarId && currentUser?.id) {
+      // Debounce загрузку на 500ms
+      debouncedLoadMyAvailabilityScheduleRef.current = setTimeout(() => {
+        loadMyAvailabilitySchedule();
+      }, 500);
+    } else {
+      setMyAvailabilitySchedule([]);
+    }
+    
+    return () => {
+      if (debouncedLoadMyAvailabilityScheduleRef.current) {
+        clearTimeout(debouncedLoadMyAvailabilityScheduleRef.current);
+      }
+    };
+  }, [showMyAvailability, selectedCalendarId, currentUser?.id, selectedDate, viewMode, weekStart, loadMyAvailabilitySchedule]);
 
   const ensureMembership = useCallback(
     async (userId: string) => {
@@ -1996,6 +2078,20 @@ export default function Home() {
         </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Переключатель показа расписания доступности */}
+                  {selectedCalendar && (viewMode === "month" || viewMode === "week") && (
+                    <label className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition">
+                      <input
+                        type="checkbox"
+                        checked={showMyAvailability}
+                        onChange={(e) => setShowMyAvailability(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
+                      />
+                      <span className="text-xs font-medium text-slate-700 whitespace-nowrap">
+                        Показать мою доступность
+                      </span>
+                    </label>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsNotificationCenterOpen(true)}
@@ -2063,10 +2159,16 @@ export default function Home() {
               >
             <WeekView
               days={weekDays}
-              events={events}
-              loading={eventsLoading}
+              events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
+              loading={eventsLoading || myAvailabilityLoading}
               accent={selectedCalendar.color}
-              onEventClick={(event) => openEventModal(undefined, event)}
+              onEventClick={(event) => {
+                // Не открываем модальное окно для событий расписания доступности
+                if (event.status === "unavailable") {
+                  return;
+                }
+                openEventModal(undefined, event);
+              }}
               rooms={rooms}
               onEventMove={canManageEvents ? handleEventMove : undefined}
               onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date) => {
@@ -2101,10 +2203,16 @@ export default function Home() {
                 setSelectedDate(date);
                 setViewMode("week");
               }}
-              events={events}
-              loading={eventsLoading}
+              events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
+              loading={eventsLoading || myAvailabilityLoading}
               accent={selectedCalendar.color}
-              onEventClick={(event) => openEventModal(undefined, event)}
+              onEventClick={(event) => {
+                // Не открываем модальное окно для событий расписания доступности
+                if (event.status === "unavailable") {
+                  return;
+                }
+                openEventModal(undefined, event);
+              }}
               rooms={rooms}
               currentUserEmail={userEmail || undefined}
               getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
