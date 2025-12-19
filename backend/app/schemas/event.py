@@ -75,6 +75,8 @@ class EventRead(EventBase):
     participants: List[EventParticipantRead] = []
     recurrence_parent_id: Optional[UUID] = None
     attachments: Optional[List["EventAttachmentRead"]] = None
+    department_color: Optional[str] = None  # Color from the first participant's department
+    room_online_meeting_url: Optional[str] = None  # Online meeting URL from the room
 
     model_config = ConfigDict(from_attributes=True)
 

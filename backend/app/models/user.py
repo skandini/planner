@@ -34,6 +34,7 @@ class User(SQLModel, table=True):
     )
     access_org_structure: bool = Field(default=True, nullable=False)
     access_tickets: bool = Field(default=True, nullable=False)
+    access_availability_slots: bool = Field(default=False, nullable=False)
     # Настройки проекта
     show_local_time: bool = Field(default=True)
     show_moscow_time: bool = Field(default=True)

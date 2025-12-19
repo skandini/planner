@@ -30,6 +30,8 @@ export type EventRecord = {
   recurrence_rule?: RecurrenceRule | null;
   recurrence_parent_id?: string | null;
   attachments?: EventAttachment[];
+  department_color?: string | null;
+  room_online_meeting_url?: string | null;
 };
 
 export type ConflictEvent = {

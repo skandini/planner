@@ -20,6 +20,7 @@ class Room(SQLModel, table=True):
     equipment: Optional[str] = Field(
         default=None, max_length=1000
     )  # JSON string or comma-separated
+    online_meeting_url: Optional[str] = Field(default=None, max_length=500)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

@@ -13,6 +13,7 @@ class DepartmentBase(BaseModel):
     organization_id: Optional[UUID] = None
     parent_id: Optional[UUID] = None
     manager_id: Optional[UUID] = None
+    color: Optional[str] = None
 
 
 class DepartmentCreate(DepartmentBase):
@@ -25,6 +26,7 @@ class DepartmentUpdate(BaseModel):
     organization_id: Optional[UUID] = None
     parent_id: Optional[UUID] = None
     manager_id: Optional[UUID] = None
+    color: Optional[str] = None
 
 
 class DepartmentRead(DepartmentBase):

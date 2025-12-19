@@ -49,11 +49,23 @@ def list_calendars(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> List[CalendarReadWithRole]:
-    # Упрощенная логика: показываем только личные календари пользователя
-    # Каждый пользователь видит только свой личный календарь
+    # Показываем календари пользователя, фильтруя по его организации
+    # Если у пользователя есть organization_id, показываем только календари этой организации
+    # Если organization_id нет, показываем все календари пользователя
+    conditions = [Calendar.owner_id == current_user.id]
+    
+    if current_user.organization_id:
+        # Фильтруем по организации пользователя
+        conditions.append(
+            or_(
+                Calendar.organization_id == current_user.organization_id,
+                Calendar.organization_id.is_(None)  # Также показываем календари без организации
+            )
+        )
+    
     statement = (
         select(Calendar)
-        .where(Calendar.owner_id == current_user.id)
+        .where(and_(*conditions))
         .order_by(Calendar.created_at.desc())
     )
     calendars = session.exec(statement).all()
@@ -77,7 +89,11 @@ def create_calendar(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> CalendarReadWithRole:
-    calendar = Calendar(**payload.model_dump(), owner_id=current_user.id)
+    # При создании календаря автоматически устанавливаем organization_id пользователя
+    calendar_data = payload.model_dump()
+    if current_user.organization_id:
+        calendar_data["organization_id"] = current_user.organization_id
+    calendar = Calendar(**calendar_data, owner_id=current_user.id)
     session.add(calendar)
     session.commit()
     session.refresh(calendar)
@@ -373,9 +389,10 @@ def _generate_unavailability_events(
     }
     
     # Helper function to generate unique UUID for virtual events based on datetime
-    def generate_unavailability_id(starts_at: datetime, ends_at: datetime, user_id: UUID) -> UUID:
-        """Generate a deterministic UUID for a virtual unavailability event."""
-        unique_string = f"unavailable-{user_id}-{starts_at.isoformat()}-{ends_at.isoformat()}"
+    def generate_unavailability_id(starts_at: datetime, ends_at: datetime, user_id: UUID, is_available: bool = False) -> UUID:
+        """Generate a deterministic UUID for a virtual availability/unavailability event."""
+        prefix = "available" if is_available else "unavailable"
+        unique_string = f"{prefix}-{user_id}-{starts_at.isoformat()}-{ends_at.isoformat()}"
         return uuid5(NAMESPACE_URL, unique_string)
     
     unavailability_events = []
@@ -418,6 +435,45 @@ def _generate_unavailability_events(
             # User has availability slots - find gaps between slots and before/after
             # Sort slots by start time
             sorted_slots = sorted(day_slots, key=lambda x: x.get("start", "00:00"))
+            
+            # Also create availability events for the slots themselves (with labels)
+            for slot in sorted_slots:
+                try:
+                    slot_start = slot.get("start", "00:00")
+                    slot_end = slot.get("end", "23:59")
+                    slot_label = slot.get("label")  # Get label if exists
+                    
+                    if not isinstance(slot_start, str) or not isinstance(slot_end, str):
+                        continue
+                    
+                    start_hour, start_minute = map(int, slot_start.split(":"))
+                    end_hour, end_minute = map(int, slot_end.split(":"))
+                    
+                    slot_start_utc = datetime.combine(current_date, dt_time(start_hour, start_minute)) - timedelta(hours=tz_offset)
+                    slot_end_utc = datetime.combine(current_date, dt_time(end_hour, end_minute)) - timedelta(hours=tz_offset)
+                    
+                    if slot_start_utc < to_date and slot_end_utc > from_date:
+                        now = datetime.utcnow()
+                        # Create availability event (not unavailability) with label
+                        # Если есть label, используем его как title, иначе "Доступен"
+                        title = slot_label if slot_label and slot_label.strip() else "Доступен"
+                        # description всегда содержит label, если он есть
+                        description = slot_label if slot_label and slot_label.strip() else "Пользователь доступен в это время"
+                        unavailability_events.append(EventRead(
+                            id=generate_unavailability_id(slot_start_utc, slot_end_utc, user_id, is_available=True),
+                            calendar_id=UUID("00000000-0000-0000-0000-000000000000"),
+                            title=title,
+                            description=description,
+                            starts_at=slot_start_utc,
+                            ends_at=slot_end_utc,
+                            all_day=False,
+                            status="available",  # Mark as available (not unavailable)
+                            timezone=timezone,
+                            created_at=now,
+                            updated_at=now,
+                        ))
+                except (ValueError, TypeError, AttributeError):
+                    continue
             
             # Check time before first slot
             if sorted_slots:

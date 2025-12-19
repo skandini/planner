@@ -19,6 +19,7 @@ class UserBase(BaseModel):
     avatar_url: Optional[str] = None
     access_org_structure: bool = True
     access_tickets: bool = True
+    access_availability_slots: bool = False
     # Настройки проекта
     show_local_time: bool = True
     show_moscow_time: bool = True
@@ -50,6 +51,7 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     access_org_structure: Optional[bool] = None
     access_tickets: Optional[bool] = None
+    access_availability_slots: Optional[bool] = None
     # Password update (admin only)
     password: Optional[str] = Field(default=None, min_length=8, max_length=128)
     # Настройки проекта

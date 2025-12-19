@@ -7,6 +7,7 @@ import { USERS_ENDPOINT } from "@/lib/constants";
 interface TimeSlot {
   start: string;
   end: string;
+  label?: string;
 }
 
 interface AvailabilitySchedule {
@@ -116,7 +117,7 @@ export function AvailabilityScheduleSettings({
   const addTimeSlot = (day: keyof AvailabilitySchedule) => {
     setSchedule((prev) => ({
       ...prev,
-      [day]: [...prev[day], { start: "09:00", end: "18:00" }],
+      [day]: [...prev[day], { start: "09:00", end: "18:00", label: "" }],
     }));
   };
 
@@ -130,7 +131,7 @@ export function AvailabilityScheduleSettings({
   const updateTimeSlot = (
     day: keyof AvailabilitySchedule,
     index: number,
-    field: "start" | "end",
+    field: "start" | "end" | "label",
     value: string
   ) => {
     setSchedule((prev) => ({
@@ -221,38 +222,57 @@ export function AvailabilityScheduleSettings({
                 {schedule[day.key].map((slot, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 bg-white rounded-lg border border-slate-200 p-3"
+                    className="bg-white rounded-lg border border-slate-200 p-3 space-y-2"
                   >
-                    <div className="flex items-center gap-2 flex-1">
-                      <label className="text-xs text-slate-600">С</label>
-                      <input
-                        type="time"
-                        value={slot.start}
-                        onChange={(e) =>
-                          updateTimeSlot(day.key, index, "start", e.target.value)
-                        }
-                        className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
-                      />
-                      <label className="text-xs text-slate-600">До</label>
-                      <input
-                        type="time"
-                        value={slot.end}
-                        onChange={(e) =>
-                          updateTimeSlot(day.key, index, "end", e.target.value)
-                        }
-                        className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <label className="text-xs text-slate-600">С</label>
+                        <input
+                          type="time"
+                          value={slot.start}
+                          onChange={(e) =>
+                            updateTimeSlot(day.key, index, "start", e.target.value)
+                          }
+                          className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
+                        />
+                        <label className="text-xs text-slate-600">До</label>
+                        <input
+                          type="time"
+                          value={slot.end}
+                          onChange={(e) =>
+                            updateTimeSlot(day.key, index, "end", e.target.value)
+                          }
+                          className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeTimeSlot(day.key, index)}
+                        className="text-red-600 hover:text-red-700 transition p-1"
+                        title="Удалить интервал"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeTimeSlot(day.key, index)}
-                      className="text-red-600 hover:text-red-700 transition p-1"
-                      title="Удалить интервал"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">
+                        Описание доступности (видно коллегам)
+                      </label>
+                      <input
+                        type="text"
+                        value={slot.label || ""}
+                        onChange={(e) =>
+                          updateTimeSlot(day.key, index, "label", e.target.value)
+                        }
+                        placeholder="Например: Доступен по задачам отдела продаж"
+                        className="w-full rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Это описание будет видно коллегам при создании встречи
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>

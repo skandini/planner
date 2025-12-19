@@ -13,6 +13,7 @@ class RoomBase(BaseModel):
     capacity: int = Field(default=1, ge=1)
     location: Optional[str] = Field(default=None, max_length=255)
     equipment: Optional[str] = Field(default=None, max_length=1000)
+    online_meeting_url: Optional[str] = Field(default=None, max_length=500)
     is_active: bool = Field(default=True)
     organization_id: Optional[UUID] = None
 
@@ -27,6 +28,7 @@ class RoomUpdate(BaseModel):
     capacity: Optional[int] = Field(default=None, ge=1)
     location: Optional[str] = Field(default=None, max_length=255)
     equipment: Optional[str] = Field(default=None, max_length=1000)
+    online_meeting_url: Optional[str] = Field(default=None, max_length=500)
     is_active: Optional[bool] = None
     organization_id: Optional[UUID] = None
 

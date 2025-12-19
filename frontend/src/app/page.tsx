@@ -42,6 +42,7 @@ import { BirthdayReminder } from "@/components/birthdays/BirthdayReminder";
 import { TicketTracker } from "@/components/support/TicketTracker";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
+import { AvailabilitySlotsManager } from "@/components/availability/AvailabilitySlotsManager";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -106,6 +107,7 @@ export default function Home() {
   const [isEventSubmitting, setIsEventSubmitting] = useState(false);
   const [eventFormError, setEventFormError] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
   const [editingRecurrenceInfo, setEditingRecurrenceInfo] = useState<{
     isSeriesParent: boolean;
     isSeriesChild: boolean;
@@ -1180,6 +1182,27 @@ export default function Home() {
 
       const createdEvent: EventRecord = await response.json();
       
+      // Если это бронирование слота, автоматически бронируем слот
+      if (bookingSlotId && !editingEventId) {
+        try {
+          const { AVAILABILITY_SLOTS_ENDPOINT } = await import("@/lib/constants");
+          await authFetch(`${AVAILABILITY_SLOTS_ENDPOINT}${bookingSlotId}/book`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              calendar_id: selectedCalendarId,
+              title: payload.title as string,
+              description: (payload.description as string) || undefined,
+              participant_ids: (payload.participant_ids as string[]) || [],
+            }),
+          });
+          setBookingSlotId(null);
+        } catch (err) {
+          console.error("Failed to book slot:", err);
+          // Не прерываем создание события, если бронирование слота не удалось
+        }
+      }
+      
       // Заменяем оптимистичное событие на реальное
       if (optimisticEvent) {
         setEvents((prev) =>
@@ -1440,6 +1463,11 @@ export default function Home() {
   const availableViewModes = useMemo(() => {
     const allModes: ViewMode[] = ["week", "month"];
     
+    // Добавляем "availability-slots" только если есть доступ
+    if (currentUser?.access_availability_slots) {
+      allModes.push("availability-slots");
+    }
+    
     // Добавляем "org" только если есть доступ к оргструктуре
     if (currentUser?.access_org_structure) {
       allModes.push("org");
@@ -1685,6 +1713,13 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     );
+                  case "availability-slots":
+                    return (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h6m-6 4h6m-2 4h2" />
+                      </svg>
+                    );
                   default:
                     return null;
                 }
@@ -1697,6 +1732,7 @@ export default function Home() {
                   case "org": return "Оргструктура";
                   case "support": return "Техподдержка";
                   case "admin": return "Админ";
+                  case "availability-slots": return "Предложения слотов";
                   default: return mode;
                 }
               };
@@ -1728,38 +1764,57 @@ export default function Home() {
             })}
           </div>
           
-          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[340px] lg:flex-shrink-0 overflow-y-auto">
-            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-lime-500" />
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                Календари
-              </p>
-            </div>
-            <h2 className="mt-1 text-lg font-semibold">
-              {loading ? "Загружаем…" : "Календари"}
-            </h2>
+          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[300px] lg:flex-shrink-0 overflow-y-auto">
+            {/* Компактный блок календарей */}
+            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-lime-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    {loading ? "Загружаем…" : `Календари (${calendars.length})`}
+                  </h2>
+                </div>
+                {currentUser?.organization_id && userOrganization && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100">
+                    {userOrganization.logo_url && (
+                      <img 
+                        src={userOrganization.logo_url.startsWith('http') ? userOrganization.logo_url : `${API_BASE_URL.replace('/api/v1', '')}${userOrganization.logo_url}`}
+                        alt={userOrganization.name}
+                        className="w-4 h-4 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span className="text-[0.65rem] font-semibold text-slate-700 truncate max-w-[100px]">
+                      {userOrganization.name}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-            {error && (
-              <p className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
-                {error}
-              </p>
-            )}
+              {error && (
+                <p className="mb-3 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                  {error}
+                </p>
+              )}
 
-            {!loading && !error && calendars.length === 0 && (
-              <p className="mt-3 text-xs text-slate-400">
-                Календарей пока нет
-              </p>
-            )}
+              {!loading && !error && calendars.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-4">
+                  Календарей пока нет
+                </p>
+              )}
 
-            <ul className="mt-3 space-y-1.5 max-h-[calc(100vh-400px)] overflow-y-auto">
+              <ul className="space-y-1.5 max-h-[calc(100vh-500px)] overflow-y-auto">
               {calendars.map((calendar) => (
                 <li
                   key={calendar.id}
-                  className={`rounded-lg border p-2 transition ${
+                  className={`rounded-lg border p-2.5 transition-all cursor-pointer ${
                     selectedCalendarId === calendar.id
-                      ? "border-lime-500 bg-lime-50"
-                      : "border-slate-200 bg-slate-50 hover:bg-white"
+                      ? "border-lime-500 bg-lime-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
                   }`}
                   role="button"
                   tabIndex={0}
@@ -1771,13 +1826,13 @@ export default function Home() {
                   }}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span
-                        className="h-4 w-4 rounded-full border border-slate-200 flex-shrink-0"
-                      style={{ background: calendar.color }}
-                      aria-label="calendar color"
-                    />
-                      <p className="text-sm font-semibold text-slate-900 truncate">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                        style={{ background: calendar.color }}
+                        aria-label="calendar color"
+                      />
+                      <p className="text-xs font-semibold text-slate-900 truncate">
                         {calendar.name}
                       </p>
                     </div>
@@ -1785,7 +1840,7 @@ export default function Home() {
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           type="button"
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600 transition hover:bg-slate-50"
+                          className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[0.6rem] font-semibold text-slate-600 transition hover:bg-slate-50 hover:border-slate-300"
                           onClick={(event) => {
                             event.stopPropagation();
                             setSelectedCalendarId(calendar.id);
@@ -1797,7 +1852,7 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-red-200 bg-white px-2 py-0.5 text-[0.65rem] font-semibold text-red-600 transition hover:bg-red-50"
+                          className="rounded-md border border-red-200 bg-white px-1.5 py-0.5 text-[0.6rem] font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-300"
                           onClick={(event) => {
                             event.stopPropagation();
                             handleDeleteCalendar(calendar.id);
@@ -1814,8 +1869,71 @@ export default function Home() {
             </ul>
           </section>
 
+          {/* Статистика */}
+          <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <h2 className="text-sm font-bold text-slate-900">Статистика</h2>
+            </div>
+            <div className="space-y-2">
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const todayEventsCount = events.filter(e => {
+                  const eventDate = new Date(e.starts_at);
+                  return eventDate >= today && eventDate < tomorrow;
+                }).length;
+                
+                const weekStart = new Date(today);
+                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 7);
+                const weekEventsCount = events.filter(e => {
+                  const eventDate = new Date(e.starts_at);
+                  return eventDate >= weekStart && eventDate < weekEnd;
+                }).length;
+                
+                return (
+                  <>
+                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-lime-500"></div>
+                        <span className="text-xs font-medium text-slate-700">Сегодня</span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-900">{todayEventsCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                        <span className="text-xs font-medium text-slate-700">На неделе</span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-900">{weekEventsCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span className="text-xs font-medium text-slate-700">Всего событий</span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-900">{events.length}</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </section>
+
           {/* Блок с ближайшими событиями */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
+          <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h2 className="text-sm font-bold text-slate-900">Ближайшие события</h2>
+            </div>
             <UpcomingEvents
               events={events}
               currentUserEmail={userEmail || undefined}
@@ -1825,20 +1943,9 @@ export default function Home() {
             />
           </section>
 
-          {/* Кнопка создания календаря */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
-            {!showCreateCalendarForm ? (
-              <button
-                type="button"
-                onClick={() => setShowCreateCalendarForm(true)}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-lime-500 to-lime-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:from-lime-600 hover:to-lime-700 hover:shadow-md active:scale-95"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Создать календарь</span>
-              </button>
-            ) : (
+          {/* Скрытая форма создания календаря (для сохранения функциональности) */}
+          {showCreateCalendarForm && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
               <form
                 onSubmit={(e) => {
                   handleSubmit(e);
@@ -1926,42 +2033,40 @@ export default function Home() {
                   </button>
                 </div>
               </form>
-            )}
-          </section>
+            </section>
+          )}
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
-              <div className="flex items-center justify-between gap-3">
-            <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                    Поиск
-                  </p>
-                  <h2 className="mt-1 text-base font-semibold">Найти пользователя</h2>
-                </div>
+            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <h2 className="text-sm font-bold text-slate-900">Поиск пользователя</h2>
               </div>
 
-              <div className="mt-3">
+              <div>
                 <input
                   type="text"
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
                   placeholder="Имя или email..."
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-lime-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500/20"
                 />
               </div>
 
               {userSearchQuery.trim() && (
-                <div className="mt-3 max-h-[300px] overflow-y-auto space-y-1.5">
+                <div className="mt-3 max-h-[250px] overflow-y-auto space-y-1.5">
                   {usersLoading ? (
-                    <p className="text-xs text-slate-500">Загружаем...</p>
+                    <p className="text-xs text-slate-500 text-center py-2">Загружаем...</p>
                   ) : filteredUsers.length === 0 ? (
-                    <p className="text-xs text-slate-500">Пользователи не найдены</p>
+                    <p className="text-xs text-slate-500 text-center py-2">Пользователи не найдены</p>
                   ) : (
                     filteredUsers.map((user) => {
                       const isMember = members.some((m) => m.user_id === user.id);
                       return (
                         <div
                           key={user.id}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 hover:bg-white transition cursor-pointer"
+                          className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50 hover:border-slate-300 transition cursor-pointer"
                           onClick={() => setSelectedUserForView(user.id)}
                         >
                           <div className="min-w-0 flex-1">
@@ -1973,7 +2078,7 @@ export default function Home() {
                             </p>
                           </div>
                           {isMember && (
-                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[0.65rem] text-slate-500 flex-shrink-0">
+                            <span className="rounded-full border border-lime-200 bg-lime-50 px-1.5 py-0.5 text-[0.6rem] font-semibold text-lime-700 flex-shrink-0">
                               В календаре
                             </span>
                           )}
@@ -1983,49 +2088,48 @@ export default function Home() {
                   )}
                 </div>
               )}
-            </div>
+            </section>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                    Участники
-                  </p>
-                  <h2 className="mt-1 text-base font-semibold">Доступ к календарю</h2>
-                </div>
+            {/* Участники календаря */}
+            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h2 className="text-sm font-bold text-slate-900">Участники</h2>
                 {selectedRole && selectedCalendar && (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
+                  <span className="ml-auto rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-purple-700">
                     {ROLE_LABELS[selectedRole]}
                   </span>
                 )}
               </div>
 
               {!selectedCalendar && (
-                <p className="mt-3 text-xs text-slate-400">
-                  Выберите календарь, чтобы увидеть участников.
+                <p className="text-xs text-slate-400 text-center py-3">
+                  Выберите календарь
                 </p>
               )}
 
               {selectedCalendar && membersError && (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
                   {membersError}
                 </p>
               )}
 
               {selectedCalendar && membersLoading && (
-                <p className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
+                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 text-xs text-slate-500 text-center">
                   Загружаем…
                 </p>
               )}
 
               {selectedCalendar && !membersLoading && members.length === 0 && !membersError && (
-                <p className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
-                  Пока никто не присоединён.
+                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 text-xs text-slate-500 text-center">
+                  Пока никто не присоединён
                 </p>
               )}
 
               {selectedCalendar && !membersLoading && members.length > 0 && (
-                <ul className="mt-3 space-y-1.5 max-h-[200px] overflow-y-auto">
+                <ul className="space-y-1.5 max-h-[200px] overflow-y-auto">
                   {members.map((member) => {
                     const roleKey = ["owner", "editor", "viewer"].includes(
                       member.role,
@@ -2036,7 +2140,7 @@ export default function Home() {
                     return (
                       <li
                         key={`${member.calendar_id}-${member.user_id}`}
-                        className="rounded-lg border border-slate-200 bg-slate-50 p-2"
+                        className="rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50 transition"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
@@ -2045,7 +2149,7 @@ export default function Home() {
                             </p>
                             <p className="text-[0.65rem] text-slate-500 truncate">{member.email}</p>
                           </div>
-                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 flex-shrink-0">
+                          <span className="rounded-full border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-purple-700 flex-shrink-0">
                             {role}
                           </span>
                         </div>
@@ -2054,7 +2158,7 @@ export default function Home() {
                   })}
                 </ul>
               )}
-            </div>
+            </section>
           </aside>
 
           <section className="order-1 flex flex-1 flex-col gap-3 lg:order-2 lg:min-w-0 overflow-hidden">
@@ -2248,6 +2352,56 @@ export default function Home() {
               onClose={() => setViewMode("week")}
             />
           )}
+          {viewMode === "availability-slots" && (
+            <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+              <AvailabilitySlotsManager
+                authFetch={authFetch}
+                currentUserId={currentUser?.id}
+                selectedCalendarId={selectedCalendarId}
+                onSlotBooked={() => {
+                  loadEvents();
+                }}
+                onClose={() => setViewMode("week")}
+                onOpenEventModal={(slot) => {
+                  const startDate = new Date(slot.starts_at);
+                  const endDate = new Date(slot.ends_at);
+                  setBookingSlotId(slot.id);
+                  
+                  // Добавляем участников: текущий пользователь и владелец слота
+                  const participantIds: string[] = [];
+                  if (currentUser?.id) {
+                    participantIds.push(currentUser.id);
+                  }
+                  if (slot.user_id && slot.user_id !== currentUser?.id) {
+                    participantIds.push(slot.user_id);
+                  }
+                  
+                  // Устанавливаем форму с правильным временем и участниками
+                  setEventForm({
+                    title: slot.process_name,
+                    description: slot.description || "",
+                    location: "",
+                    room_id: null,
+                    starts_at: toLocalString(startDate),
+                    ends_at: toLocalString(endDate),
+                    participant_ids: participantIds,
+                    recurrence_enabled: false,
+                    recurrence_frequency: "weekly",
+                    recurrence_interval: 1,
+                    recurrence_count: undefined,
+                    recurrence_until: "",
+                  });
+                  
+                  setEditingEventId(null);
+                  setEditingRecurrenceInfo(null);
+                  setIsEventModalOpen(true);
+                  setEventFormError(null);
+                  loadRooms(); // Перезагружаем переговорки для проверки доступности
+                }}
+                hasAccessToStatistics={currentUser?.access_availability_slots === true}
+              />
+            </div>
+          )}
         </section>
         </main>
 
@@ -2266,12 +2420,13 @@ export default function Home() {
                 : undefined
             }
             onClose={() => {
-              setIsEventModalOpen(false);
-              setEventForm(DEFAULT_EVENT_FORM);
-              setEditingEventId(null);
-              setEventFormError(null);
-              setEditingRecurrenceInfo(null);
-              setPendingFiles([]);
+      setIsEventModalOpen(false);
+      setEventForm(DEFAULT_EVENT_FORM);
+      setEditingEventId(null);
+      setEventFormError(null);
+      setEditingRecurrenceInfo(null);
+      setPendingFiles([]);
+      setBookingSlotId(null);
             }}
             onPendingFilesReady={setPendingFiles}
             isSubmitting={isEventSubmitting}

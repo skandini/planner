@@ -24,6 +24,7 @@ class Department(SQLModel, table=True):
     manager_id: Optional[UUID] = Field(
         default=None, foreign_key="users.id", nullable=True, index=True
     )
+    color: Optional[str] = Field(default=None, max_length=7, description="Hex color code for department (e.g., #FF5733)")
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

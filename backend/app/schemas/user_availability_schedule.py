@@ -11,6 +11,7 @@ class TimeSlot(BaseModel):
     """Time slot for availability."""
     start: str = Field(..., description="Start time in HH:MM format")
     end: str = Field(..., description="End time in HH:MM format")
+    label: Optional[str] = Field(default=None, max_length=255, description="Optional label/description for this time slot")
 
 
 class AvailabilitySchedule(BaseModel):

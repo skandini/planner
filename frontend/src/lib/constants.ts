@@ -14,6 +14,8 @@ export const EVENT_COMMENTS_ENDPOINT = (eventId: string) => `${API_BASE_URL}/eve
 export const TICKETS_ENDPOINT = `${API_BASE_URL}/tickets/`;
 export const TICKET_COMMENTS_ENDPOINT = (ticketId: string) => `${API_BASE_URL}/tickets/${ticketId}/comments`;
 export const ADMIN_NOTIFICATIONS_ENDPOINT = `${API_BASE_URL}/admin-notifications/`;
+export const STATISTICS_ENDPOINT = `${API_BASE_URL}/statistics/`;
+export const AVAILABILITY_SLOTS_ENDPOINT = `${API_BASE_URL}/availability-slots/`;
 
 export const MINUTES_IN_DAY = 24 * 60;
 export const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];

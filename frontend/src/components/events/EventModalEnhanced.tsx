@@ -365,6 +365,23 @@ export function EventModalEnhanced({
             </button>
             </div>
             
+            {/* Кнопка для перехода по ссылке на онлайн встречу */}
+            {editingEvent?.room_online_meeting_url && (
+              <div className="mb-4">
+                <a
+                  href={editingEvent.room_online_meeting_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-600 hover:to-indigo-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Присоединиться к онлайн встрече
+                </a>
+              </div>
+            )}
+            
             {/* Кнопки действий - перемещены вверх */}
             <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
               {canManageEvents && onDeleteSeries && (

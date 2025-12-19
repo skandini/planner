@@ -111,7 +111,7 @@ export function EnhancedTimeline({
   const getSlotState = (
     row: TimelineRowData,
     slotIndex: number,
-  ): "free" | "busy" | "selected" | "conflict" | "selecting" | "unavailable" => {
+  ): "free" | "busy" | "selected" | "conflict" | "selecting" | "unavailable" | "available" => {
     const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
     const rowConflictSlots = conflictMap?.get(row.id) ?? [];
     
@@ -129,6 +129,8 @@ export function EnhancedTimeline({
     
     // Проверяем, является ли событие недоступностью по расписанию
     const isUnavailable = eventInSlot && eventInSlot.status === "unavailable";
+    // Проверяем, является ли событие доступностью по расписанию (с описанием)
+    const isAvailable = eventInSlot && eventInSlot.status === "available";
 
     // Проверяем выбранный интервал (уже установленное время события)
     const selected =
@@ -148,6 +150,7 @@ export function EnhancedTimeline({
     if (selected) return "selected";
     if (conflicting) return "conflict";
     if (isUnavailable) return "unavailable";
+    if (isAvailable) return "available";
     if (eventInSlot) return "busy";
     return "free";
   };
@@ -162,16 +165,17 @@ export function EnhancedTimeline({
     const slotEnd = new Date(slotStart);
     slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_DURATION_MINUTES);
     
-    // Проверяем занятость и недоступность во всех строках
+    // Проверяем занятость и недоступность во всех строках (но не доступность)
     return rows.some((row) => {
-      // Проверяем события в этой строке (включая недоступность по расписанию)
+      // Проверяем события в этой строке (включая недоступность по расписанию, но не доступность)
       const eventInSlot = row.availability.find((event) => {
         const eventStart = parseUTC(event.starts_at);
         const eventEnd = parseUTC(event.ends_at);
         return eventStart < slotEnd && eventEnd > slotStart;
       });
-      // Если есть любое событие (занятость или недоступность) - слот занят
-      return !!eventInSlot;
+      // Если есть событие и это не доступность - слот занят
+      // Доступные слоты можно выбирать
+      return eventInSlot && eventInSlot.status !== "available";
     });
   }, [rows, timeSlots, baseDate]);
 
@@ -366,6 +370,10 @@ export function EnhancedTimeline({
           <span className="text-xs font-medium text-slate-700">Выбранное время</span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded bg-gradient-to-r from-green-100 to-green-200 border-2 border-green-400" />
+          <span className="text-xs font-medium text-slate-600 font-semibold">Доступен (с описанием)</span>
+        </div>
+        <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded bg-gradient-to-r from-amber-300 to-amber-400 shadow-sm" />
           <span className="text-xs font-medium text-slate-700">Конфликт</span>
         </div>
@@ -511,6 +519,8 @@ export function EnhancedTimeline({
                   slotClassName += "conflict-blink border border-amber-500 shadow-sm";
                 } else if (state === "unavailable") {
                   slotClassName += "bg-slate-200 border-2 border-slate-400 cursor-not-allowed";
+                } else if (state === "available") {
+                  slotClassName += "bg-gradient-to-r from-green-100 to-green-200 border-2 border-green-400 shadow-sm";
                 } else if (state === "busy") {
                   slotClassName += "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm cursor-not-allowed";
                 } else if (state === "selected") {
@@ -531,6 +541,7 @@ export function EnhancedTimeline({
                         e.preventDefault();
                         return;
                       }
+                      // Доступные слоты можно выбирать
                       if (!isSlotBusy(slot.index) && onTimeRangeSelect) {
                         handleSlotMouseDown(slot.index, e);
                       }
@@ -545,16 +556,26 @@ export function EnhancedTimeline({
                               hour: "2-digit",
                               minute: "2-digit",
                             })})`
-                          : `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })})`
+                          : eventInSlot.status === "available"
+                            ? `${eventInSlot.title || "Доступен"}${eventInSlot.description ? `: ${eventInSlot.description}` : ""} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })})`
+                            : `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })})`
                         : state === "busy" || state === "unavailable"
                           ? state === "unavailable" ? "Недоступен по расписанию" : "Занято"
-                          : "Кликните и перетащите для выбора времени"
+                          : state === "available"
+                            ? "Доступен"
+                            : "Кликните и перетащите для выбора времени"
                     }
                   />
                 );

@@ -5,6 +5,8 @@ import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { USERS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 import type { UserProfile } from "@/types/user.types";
 import { NotificationCreator } from "./NotificationCreator";
+import { RoomManagement } from "./RoomManagement";
+import { Statistics } from "../statistics/Statistics";
 
 type Role = "admin" | "it" | "employee";
 
@@ -28,6 +30,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
   });
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
   const [bootstrapMode, setBootstrapMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<"users" | "rooms" | "statistics">("users");
   const [form, setForm] = useState({
     email: "",
     full_name: "",
@@ -36,6 +39,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
     department_id: "",
     access_org_structure: true,
     access_tickets: true,
+    access_availability_slots: false,
   });
 
   const flattenedDepartments = useMemo(() => departments, [departments]);
@@ -103,6 +107,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
         department_id: form.department_id || null,
         access_org_structure: form.access_org_structure,
         access_tickets: form.access_tickets,
+        access_availability_slots: form.access_availability_slots,
       };
       const url = bootstrapMode
         ? `${API_BASE_URL}/users/bootstrap-admin`
@@ -127,6 +132,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
         department_id: "",
         access_org_structure: true,
         access_tickets: true,
+        access_availability_slots: false,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка создания пользователя");
@@ -143,6 +149,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       if (changes.role) payload.role = changes.role;
       if (typeof changes.access_org_structure === "boolean") payload.access_org_structure = changes.access_org_structure;
       if (typeof changes.access_tickets === "boolean") payload.access_tickets = changes.access_tickets;
+      if (typeof changes.access_availability_slots === "boolean") payload.access_availability_slots = changes.access_availability_slots;
       if (changes.department_id !== undefined) payload.department_id = changes.department_id;
 
       const res = await authFetch(`${USERS_ENDPOINT}${user.id}`, {
@@ -257,6 +264,42 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       {/* Content with scroll */}
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-6 p-6">
+          {/* Вкладки */}
+          <div className="flex gap-2 border-b border-slate-200">
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === "users"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Пользователи
+            </button>
+            <button
+              onClick={() => setActiveTab("rooms")}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === "rooms"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Переговорки
+            </button>
+            <button
+              onClick={() => setActiveTab("statistics")}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === "statistics"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Статистика
+            </button>
+          </div>
+
+          {activeTab === "users" && (
+            <>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Админ-панель</h1>
@@ -332,6 +375,14 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                 onChange={(e) => setForm({ ...form, access_tickets: e.target.checked })}
               />
               Доступ к тикетам
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.access_availability_slots}
+                onChange={(e) => setForm({ ...form, access_availability_slots: e.target.checked })}
+              />
+              Доступ к предложениям слотов
             </label>
           </div>
         </div>
@@ -413,6 +464,15 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                           onChange={(e) => handleUpdate(u, { access_tickets: e.target.checked })}
                         />
                         Тикеты
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={u.access_availability_slots === true}
+                          disabled={savingId === u.id}
+                          onChange={(e) => handleUpdate(u, { access_availability_slots: e.target.checked })}
+                        />
+                        Предложения слотов
                       </label>
                     </div>
                   </td>
@@ -514,6 +574,16 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
               // Уведомления обновятся автоматически
             }}
           />
+            </>
+          )}
+
+          {activeTab === "rooms" && (
+            <RoomManagement authFetch={authFetch} />
+          )}
+
+          {activeTab === "statistics" && (
+            <Statistics authFetch={authFetch} />
+          )}
         </div>
       </div>
     </div>

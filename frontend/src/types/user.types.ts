@@ -16,6 +16,7 @@ export type UserProfile = {
   created_at: string;
   access_org_structure?: boolean;
   access_tickets?: boolean;
+  access_availability_slots?: boolean;
   // Many-to-many relationships
   department_ids?: string[];  // All departments user belongs to
   organization_ids?: string[];  // All organizations user belongs to

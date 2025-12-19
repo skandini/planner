@@ -157,8 +157,44 @@ def _serialize_event_with_participants(
 ) -> EventRead:
     participants = _load_event_participants(session, event.id)
     attachments = _load_event_attachments(session, event.id)
+    
+    # Get department color from the first participant (or calendar owner)
+    department_color = None
+    if participants:
+        from app.models import Department
+        first_participant = participants[0]
+        # Get user's department
+        user = session.get(User, first_participant.user_id)
+        if user and user.department_id:
+            dept = session.get(Department, user.department_id)
+            if dept and dept.color:
+                department_color = dept.color
+    else:
+        # If no participants, check calendar owner's department
+        calendar = session.get(Calendar, event.calendar_id)
+        if calendar and calendar.owner_id:
+            from app.models import Department
+            owner = session.get(User, calendar.owner_id)
+            if owner and owner.department_id:
+                dept = session.get(Department, owner.department_id)
+                if dept and dept.color:
+                    department_color = dept.color
+    
+    # Get room online meeting URL if room is assigned
+    room_online_meeting_url = None
+    if event.room_id:
+        from app.models import Room
+        room = session.get(Room, event.room_id)
+        if room and room.online_meeting_url:
+            room_online_meeting_url = room.online_meeting_url
+    
     return EventRead.model_validate(event).model_copy(
-        update={"participants": participants, "attachments": attachments}
+        update={
+            "participants": participants,
+            "attachments": attachments,
+            "department_color": department_color,
+            "room_online_meeting_url": room_online_meeting_url,
+        }
     )
 
 
@@ -539,6 +575,42 @@ def list_events(
                 attachments_map[att.event_id] = []
             attachments_map[att.event_id].append(EventAttachmentRead.model_validate(att))
 
+    # Предзагружаем комнаты для всех событий одним запросом
+    from app.models import Room
+    room_ids = {event.room_id for event in events if event.room_id}
+    rooms_map = {}
+    if room_ids:
+        rooms = session.exec(select(Room).where(Room.id.in_(room_ids))).all()
+        rooms_map = {r.id: r for r in rooms}
+
+    # Предзагружаем департаменты для участников и владельцев календарей
+    from app.models import Department
+    user_ids = set()
+    for participants_list in participants_map.values():
+        for p in participants_list:
+            user_ids.add(p.user_id)
+    for calendar in calendars.values():
+        if calendar.owner_id:
+            user_ids.add(calendar.owner_id)
+    
+    departments_map = {}
+    if user_ids:
+        users_with_depts = session.exec(
+            select(User).where(User.id.in_(user_ids), User.department_id.isnot(None))
+        ).all()
+        dept_ids = {u.department_id for u in users_with_depts if u.department_id}
+        if dept_ids:
+            depts = session.exec(select(Department).where(Department.id.in_(dept_ids))).all()
+            departments_map = {d.id: d for d in depts}
+        
+        # Создаем маппинг user_id -> department_color
+        user_dept_colors = {}
+        for u in users_with_depts:
+            if u.department_id and u.department_id in departments_map:
+                dept = departments_map[u.department_id]
+                if dept.color:
+                    user_dept_colors[u.id] = dept.color
+
     serialized: list[EventRead] = []
     for event in events:
         # Если календарь отсутствует (например, удален), пропускаем событие
@@ -549,9 +621,32 @@ def list_events(
         participants = participants_map.get(event.id, [])
         attachments = attachments_map.get(event.id, [])
         
+        # Get department color from the first participant (or calendar owner)
+        department_color = None
+        if participants:
+            first_participant = participants[0]
+            department_color = user_dept_colors.get(first_participant.user_id)
+        else:
+            # If no participants, check calendar owner's department
+            calendar = calendars.get(event.calendar_id)
+            if calendar and calendar.owner_id:
+                department_color = user_dept_colors.get(calendar.owner_id)
+        
+        # Get room online meeting URL if room is assigned
+        room_online_meeting_url = None
+        if event.room_id and event.room_id in rooms_map:
+            room = rooms_map[event.room_id]
+            if room.online_meeting_url:
+                room_online_meeting_url = room.online_meeting_url
+        
         serialized.append(
             EventRead.model_validate(event).model_copy(
-                update={"participants": participants, "attachments": attachments}
+                update={
+                    "participants": participants,
+                    "attachments": attachments,
+                    "department_color": department_color,
+                    "room_online_meeting_url": room_online_meeting_url,
+                }
             )
         )
 

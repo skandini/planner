@@ -10,6 +10,7 @@ export type Calendar = {
   created_at: string;
   updated_at: string;
   owner_id: string | null;
+  organization_id: string | null;
   current_user_role: CalendarRole | null;
 };
 

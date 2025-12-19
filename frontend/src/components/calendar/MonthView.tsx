@@ -39,8 +39,51 @@ export function MonthView({
     position: { top: number; left: number };
   } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mousePositionRef = useRef<{ x: number; y: number } | null>(null);
   
-  const handleEventMouseEnter = useCallback((event: EventRecord, element: HTMLDivElement) => {
+  const handleEventMouseMove = useCallback((event: EventRecord, e: React.MouseEvent<HTMLDivElement>) => {
+    if (!hoveredEvent || hoveredEvent.event.id !== event.id) {
+      return;
+    }
+    
+    const tooltipWidth = 320;
+    const tooltipHeight = 400;
+    const offset = 15;
+    
+    // Позиция мыши относительно viewport
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    
+    // Рассчитываем позицию слева от курсора (fixed позиционирование)
+    let left = mouseX - tooltipWidth - offset;
+    let top = mouseY;
+    
+    // Проверяем границы viewport
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Если слева нет места, показываем справа от курсора
+    if (left < 10) {
+      left = mouseX + offset;
+    }
+    
+    // Ограничиваем по горизонтали
+    const maxLeft = viewportWidth - tooltipWidth - 10;
+    left = Math.max(10, Math.min(maxLeft, left));
+    
+    // Ограничиваем по вертикали
+    const maxTop = viewportHeight - tooltipHeight - 10;
+    top = Math.max(10, Math.min(maxTop, top));
+    
+    mousePositionRef.current = { x: mouseX, y: mouseY };
+    
+    setHoveredEvent({
+      event,
+      position: { top, left },
+    });
+  }, [hoveredEvent]);
+  
+  const handleEventMouseEnter = useCallback((event: EventRecord, element: HTMLDivElement, e?: React.MouseEvent<HTMLDivElement>) => {
     // Проверяем, не показывается ли уже окно для этого события
     if (hoveredEvent?.event.id === event.id) {
       return;
@@ -60,32 +103,43 @@ export function MonthView({
     }
     
     hoverTimeoutRef.current = setTimeout(() => {
-      const rect = element.getBoundingClientRect();
-      const container = element.closest('[class*="grid"]') || element.closest('div');
-      const containerRect = container?.getBoundingClientRect();
-      
-      if (!containerRect) return;
-      
       const tooltipWidth = 320;
-      const spaceOnRight = window.innerWidth - rect.right;
-      const spaceOnLeft = rect.left;
+      const tooltipHeight = 400;
+      const offset = 15;
       
-      let left: number;
-      if (spaceOnRight >= tooltipWidth + 10) {
-        left = rect.right - containerRect.left + 10;
-      } else if (spaceOnLeft >= tooltipWidth + 10) {
-        left = rect.left - containerRect.left - tooltipWidth - 10;
-      } else {
-        left = rect.left - containerRect.left + (rect.width / 2) - (tooltipWidth / 2);
+      // Используем позицию мыши, если доступна, иначе позицию элемента
+      const rect = element.getBoundingClientRect();
+      const mouseX = e?.clientX || rect.left;
+      const mouseY = e?.clientY || rect.top;
+      
+      // Позиционируем слева от курсора (fixed позиционирование)
+      let left = mouseX - tooltipWidth - offset;
+      let top = mouseY;
+      
+      // Проверяем границы viewport
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Если слева нет места, показываем справа от курсора
+      if (left < 10) {
+        left = mouseX + offset;
       }
       
-      const top = rect.bottom - containerRect.top + 5;
+      // Ограничиваем по горизонтали
+      const maxLeft = viewportWidth - tooltipWidth - 10;
+      left = Math.max(10, Math.min(maxLeft, left));
+      
+      // Ограничиваем по вертикали
+      const maxTop = viewportHeight - tooltipHeight - 10;
+      top = Math.max(10, Math.min(maxTop, top));
+      
+      mousePositionRef.current = { x: mouseX, y: mouseY };
       
       setHoveredEvent({
         event,
         position: { top, left },
       });
-    }, 300);
+    }, 200);
   }, [hoveredEvent]);
   
   const handleEventMouseLeave = useCallback(() => {
@@ -94,6 +148,7 @@ export function MonthView({
     }
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredEvent(null);
+      mousePositionRef.current = null;
     }, 100);
   }, []);
   
@@ -105,6 +160,7 @@ export function MonthView({
   
   const handleTooltipMouseLeave = useCallback(() => {
     setHoveredEvent(null);
+    mousePositionRef.current = null;
   }, []);
 
   const eventsByDay = useMemo(() => {
@@ -177,6 +233,7 @@ export function MonthView({
                 {dayEvents.slice(0, 3).map((event) => {
                   // Проверяем, является ли событие расписанием доступности
                   const isUnavailable = event.status === "unavailable";
+                  const isAvailable = event.status === "available";
                   
                   // Проверяем статус текущего пользователя для события
                   const userParticipant = currentUserEmail && event.participants
@@ -193,34 +250,58 @@ export function MonthView({
                       onClick={(e) => {
                         e.stopPropagation();
                         // Не открываем модальное окно для событий расписания доступности
-                        if (!isUnavailable) {
+                        if (!isUnavailable && !isAvailable) {
                           onEventClick(event);
                         }
                       }}
                       onMouseEnter={(e) => {
                         // Не показываем всплывающее окно для событий расписания доступности
-                        if (!isUnavailable) {
-                          handleEventMouseEnter(event, e.currentTarget);
+                        if (!isUnavailable && !isAvailable) {
+                          handleEventMouseEnter(event, e.currentTarget, e);
+                        }
+                      }}
+                      onMouseMove={(e) => {
+                        if (!isUnavailable && !isAvailable && hoveredEvent?.event.id === event.id) {
+                          handleEventMouseMove(event, e);
                         }
                       }}
                       onMouseLeave={handleEventMouseLeave}
                       className={`flex items-center gap-2 rounded-xl px-2 py-1 text-[0.65rem] transition ${
                         isUnavailable
                           ? "bg-slate-100 border border-slate-300 cursor-default"
-                          : needsAction
-                            ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm cursor-pointer"
-                            : "bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                          : isAvailable
+                            ? "bg-green-50 border border-green-300 cursor-default"
+                            : needsAction
+                              ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm cursor-pointer"
+                              : "bg-slate-100 hover:bg-slate-200 cursor-pointer"
                       }`}
+                      style={{
+                        borderColor: event.department_color && !isUnavailable && !isAvailable && !needsAction
+                          ? event.department_color
+                          : undefined,
+                        backgroundColor: event.department_color && !isUnavailable && !isAvailable && !needsAction
+                          ? `${event.department_color}15`
+                          : undefined,
+                      }}
                     >
                       <span
                         className={`h-2 w-2 rounded-full ${isUnavailable ? "" : ""}`}
                         style={{ 
-                          background: isUnavailable ? "#94a3b8" : accent 
+                          background: isUnavailable 
+                            ? "#94a3b8" 
+                            : isAvailable 
+                              ? "#22c55e" 
+                              : event.department_color || accent
                         }}
                       />
-                      <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : "text-slate-700"}`}>
-                        {isUnavailable ? "Недоступен" : event.title}
+                      <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : isAvailable ? "text-green-700 font-medium" : "text-slate-700"}`}>
+                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : event.title}
                       </span>
+                      {isAvailable && event.description && event.description !== event.title && (
+                        <span className="text-[0.6rem] text-green-600 truncate">
+                          {event.description}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -241,17 +322,19 @@ export function MonthView({
       {/* Всплывающее окно с деталями события */}
       {hoveredEvent && (
         <div
-          className="absolute z-50 rounded-xl border border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)] p-4 pointer-events-auto"
+          className="fixed z-50 rounded-xl border border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)] p-4 pointer-events-auto overflow-hidden flex flex-col"
           style={{
             top: `${hoveredEvent.position.top}px`,
             left: `${hoveredEvent.position.left}px`,
             width: "320px",
+            maxHeight: "500px",
+            maxWidth: "calc(100vw - 20px)",
           }}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
         >
-          <div className="mb-2">
-            <h3 className="text-sm font-semibold text-slate-900">
+          <div className="mb-2 flex-shrink-0">
+            <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 break-words">
               {hoveredEvent.event.title}
             </h3>
             <p className="mt-1 text-xs text-slate-600">
@@ -276,12 +359,12 @@ export function MonthView({
           )}
           
           {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 && (
-            <div className="mb-2">
-              <p className="mb-1 text-xs font-semibold text-slate-700">
+            <div className="mb-2 flex-1 min-h-0 flex flex-col">
+              <p className="mb-1 text-xs font-semibold text-slate-700 flex-shrink-0">
                 Участники ({hoveredEvent.event.participants.length}):
               </p>
-              <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                {hoveredEvent.event.participants.map((participant) => {
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto flex-1">
+                {hoveredEvent.event.participants.slice(0, 8).map((participant) => {
                   const statusLabels: Record<string, string> = {
                     accepted: "Принял",
                     declined: "Отклонил",
@@ -329,14 +412,34 @@ export function MonthView({
                     </div>
                   );
                 })}
+                {hoveredEvent.event.participants.length > 8 && (
+                  <p className="text-[0.65rem] text-slate-500 text-center pt-1">
+                    и ещё {hoveredEvent.event.participants.length - 8} участников
+                  </p>
+                )}
               </div>
             </div>
           )}
           
           {hoveredEvent.event.location && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 truncate flex-shrink-0 mb-2">
               📍 {hoveredEvent.event.location}
             </p>
+          )}
+          
+          {hoveredEvent.event.room_online_meeting_url && (
+            <a
+              href={hoveredEvent.event.room_online_meeting_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition hover:from-blue-600 hover:to-indigo-700 flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Присоединиться к встрече
+            </a>
           )}
         </div>
       )}
