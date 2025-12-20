@@ -1008,7 +1008,7 @@ export default function Home() {
         room_id: null,
         starts_at: toLocalString(start),
         ends_at: toLocalString(end),
-        participant_ids: [],
+        participant_ids: currentUser?.id ? [currentUser.id] : [], // Автор добавляется по умолчанию
         recurrence_enabled: false,
         recurrence_frequency: "weekly",
         recurrence_interval: 1,
@@ -2449,6 +2449,7 @@ export default function Home() {
             organizations={organizations}
             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+            currentUserEmail={userEmail || undefined}
             onEventUpdated={async () => {
               // Перезагружаем событие после обновления вложений
               if (editingEventId) {

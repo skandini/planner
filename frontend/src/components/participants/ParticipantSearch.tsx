@@ -17,6 +17,8 @@ interface ParticipantSearchProps {
   organizations?: Array<{id: string; name: string; slug: string}>;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   apiBaseUrl?: string;
+  currentUserEmail?: string;
+  compact?: boolean;
 }
 
 export function ParticipantSearch({
@@ -31,6 +33,8 @@ export function ParticipantSearch({
   organizations = [],
   getUserOrganizationAbbreviation,
   apiBaseUrl = "http://localhost:8000",
+  currentUserEmail,
+  compact = false,
 }: ParticipantSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -89,6 +93,155 @@ export function ParticipantSearch({
     }));
   };
 
+  const isCurrentUser = (user: UserProfile) => {
+    return currentUserEmail && user.email === currentUserEmail;
+  };
+
+  if (compact) {
+    // Компактный режим - в одну строчку
+    return (
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-semibold text-slate-700">Участники:</span>
+        
+        {/* Выбранные участники - компактные чипсы */}
+        {selectedUsers.map((user) => {
+          const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
+          const avatarUrl = getAvatarUrl(user);
+          const isCurrent = isCurrentUser(user);
+          return (
+            <div
+              key={user.id}
+              className="group flex items-center gap-1.5 rounded-full border border-lime-200 bg-lime-50 px-2 py-1 pr-1.5 transition hover:border-lime-300 hover:bg-lime-100"
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={user.full_name || user.email}
+                  className="h-5 w-5 rounded-full object-cover border border-white shadow-sm"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-lime-400 to-emerald-500 text-[0.6rem] font-semibold text-white">
+                  {(user.full_name || user.email)[0].toUpperCase()}
+                </div>
+              )}
+              <span className="text-xs font-medium text-slate-900 max-w-[120px] truncate">
+                {user.full_name || user.email.split("@")[0]}
+              </span>
+              {orgAbbr && (
+                <span className="rounded-full bg-slate-200 px-1 py-0.5 text-[0.55rem] font-semibold text-slate-700">
+                  {orgAbbr}
+                </span>
+              )}
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => removeParticipant(user.id)}
+                  className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:bg-lime-200 hover:text-slate-600"
+                  title={isCurrent ? "Удалить себя из участников" : "Удалить участника"}
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Кнопка добавления участника */}
+        {!readOnly && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-lime-400 hover:bg-lime-50 hover:text-lime-700"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Добавить</span>
+            </button>
+
+            {/* Результаты поиска */}
+            {isExpanded && (
+              <div className="absolute z-20 mt-2 left-0 max-h-64 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                <div className="p-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                    }}
+                    onFocus={() => setIsExpanded(true)}
+                    placeholder="Поиск участников..."
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 mb-2"
+                    autoFocus
+                  />
+                  {usersLoading || membersLoading ? (
+                    <div className="p-4 text-center text-sm text-slate-500">Загрузка...</div>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-slate-500">
+                      {searchQuery ? "Ничего не найдено" : "Все участники уже добавлены"}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {filteredUsers.map((user) => {
+                        const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
+                        const avatarUrl = getAvatarUrl(user);
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              toggleParticipant(user.id);
+                            }}
+                            className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-left transition hover:bg-slate-50"
+                          >
+                            {avatarUrl ? (
+                              <img
+                                src={avatarUrl}
+                                alt={user.full_name || user.email}
+                                className="flex h-6 w-6 items-center justify-center rounded-full border border-white shadow-sm object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-semibold text-slate-700">
+                                {(user.full_name || user.email)[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-slate-900 truncate">
+                                {user.full_name || user.email}
+                              </p>
+                              {user.full_name && (
+                                <p className="text-[0.65rem] text-slate-500 truncate">{user.email}</p>
+                              )}
+                            </div>
+                            {orgAbbr && (
+                              <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.6rem] font-semibold text-slate-700 flex-shrink-0">
+                                {orgAbbr}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Полный режим (старый UI)
   return (
     <div className="space-y-4">
       {/* Заголовок и счетчик */}
@@ -122,6 +275,7 @@ export function ParticipantSearch({
               : null;
             const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
             const avatarUrl = getAvatarUrl(user);
+            const isCurrent = isCurrentUser(user);
             return (
               <div
                 key={user.id}
@@ -159,6 +313,7 @@ export function ParticipantSearch({
                     type="button"
                     onClick={() => removeParticipant(user.id)}
                     className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-lime-200 hover:text-slate-600"
+                    title={isCurrent ? "Удалить себя из участников" : "Удалить участника"}
                   >
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

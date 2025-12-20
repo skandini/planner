@@ -520,7 +520,7 @@ export function EnhancedTimeline({
                 } else if (state === "unavailable") {
                   slotClassName += "bg-slate-200 border-2 border-slate-400 cursor-not-allowed";
                 } else if (state === "available") {
-                  slotClassName += "bg-gradient-to-r from-green-100 to-green-200 border-2 border-green-400 shadow-sm";
+                  slotClassName += "bg-gradient-to-r from-blue-100 to-indigo-200 border-2 border-blue-400 shadow-sm";
                 } else if (state === "busy") {
                   slotClassName += "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm cursor-not-allowed";
                 } else if (state === "selected") {

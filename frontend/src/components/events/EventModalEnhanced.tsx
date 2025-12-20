@@ -526,8 +526,12 @@ export function EventModalEnhanced({
                   </label>
                 </div>
 
-                {/* Правая колонка - Участники */}
-                <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5">
+              </div>
+
+              {/* Таймлайн и переговорки */}
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
+                {/* Компактный выбор участников в одну строчку */}
+                <div className="mb-4">
                   <ParticipantSearch
                     form={form}
                     setForm={setForm}
@@ -540,12 +544,11 @@ export function EventModalEnhanced({
                     organizations={organizations}
                     getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                     apiBaseUrl={apiBaseUrl}
+                    currentUserEmail={currentUserEmail}
+                    compact={true}
                   />
                 </div>
-              </div>
-
-              {/* Таймлайн и переговорки */}
-              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
+                
                 {/* Навигация по дням */}
                 <div className="mb-4 flex items-center justify-center">
                   <div className="flex items-center gap-2">
