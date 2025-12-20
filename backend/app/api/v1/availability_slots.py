@@ -354,6 +354,7 @@ def book_availability_slot(
     participant_ids = list(set(participant_ids))
     
     # Check for conflicts before creating event (ensures unified busy status)
+    # Skip availability check for current user (booker) - they explicitly want to book this slot
     _ensure_no_conflicts(
         session,
         calendar_id=payload.calendar_id,
@@ -361,6 +362,7 @@ def book_availability_slot(
         ends_at=slot.ends_at,
         room_id=payload.room_id,
         participant_ids=participant_ids,
+        skip_availability_check_for=[current_user.id],
     )
     
     event = Event(

@@ -368,6 +368,7 @@ def _ensure_no_conflicts(
     room_id: UUID | None,
     participant_ids: list[UUID],
     exclude_event_id: UUID | None = None,
+    skip_availability_check_for: list[UUID] | None = None,
 ) -> None:
     filters = [
         Event.calendar_id == calendar_id,
@@ -400,11 +401,16 @@ def _ensure_no_conflicts(
             ).all()
             confirmed_participant_ids = set(confirmed_participants)
         
+        # Добавляем пользователей, для которых нужно пропустить проверку расписания
+        skip_check_ids = set(confirmed_participant_ids)
+        if skip_availability_check_for:
+            skip_check_ids.update(skip_availability_check_for)
+        
         # Проверяем расписание доступности для каждого участника
-        # Пропускаем проверку для тех, кто уже подтвердил участие
+        # Пропускаем проверку для тех, кто уже подтвердил участие или явно указан в skip_availability_check_for
         for user_id in participant_ids:
-            # Если участник уже подтвердил участие, пропускаем проверку расписания
-            if user_id in confirmed_participant_ids:
+            # Если участник уже подтвердил участие или явно указан для пропуска проверки, пропускаем проверку расписания
+            if user_id in skip_check_ids:
                 continue
                 
             is_available, error_message = _check_availability_schedule(
