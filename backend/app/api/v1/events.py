@@ -388,8 +388,25 @@ def _ensure_no_conflicts(
             )
 
     if participant_ids:
-        # Сначала проверяем расписание доступности для каждого участника
+        # Получаем список участников, которые уже подтвердили участие в событии (если это обновление)
+        confirmed_participant_ids = set()
+        if exclude_event_id:
+            # Это обновление события - проверяем, кто уже подтвердил участие
+            confirmed_participants = session.exec(
+                select(EventParticipant.user_id).where(
+                    EventParticipant.event_id == exclude_event_id,
+                    EventParticipant.response_status == "accepted"
+                )
+            ).all()
+            confirmed_participant_ids = set(confirmed_participants)
+        
+        # Проверяем расписание доступности для каждого участника
+        # Пропускаем проверку для тех, кто уже подтвердил участие
         for user_id in participant_ids:
+            # Если участник уже подтвердил участие, пропускаем проверку расписания
+            if user_id in confirmed_participant_ids:
+                continue
+                
             is_available, error_message = _check_availability_schedule(
                 session,
                 user_id=user_id,
