@@ -1538,7 +1538,7 @@ export default function Home() {
 
   // Фильтруем режимы просмотра на основе прав доступа пользователя
   const availableViewModes = useMemo(() => {
-    const allModes: ViewMode[] = ["week", "month"];
+    const allModes: ViewMode[] = ["day", "week", "month"];
     
     // Добавляем "availability-slots" только если есть доступ
     if (currentUser?.access_availability_slots) {
@@ -2547,6 +2547,44 @@ export default function Home() {
             </p>
           )}
             </div>
+
+          {selectedCalendar && viewMode === "day" && (
+              <div 
+                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-1 overflow-auto transition-opacity duration-300"
+                style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
+              >
+            <DayView
+              day={selectedDate}
+              events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
+              loading={eventsLoading || myAvailabilityLoading}
+              accent={selectedCalendar.color}
+              onEventClick={(event) => {
+                if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
+                  return;
+                }
+                openEventModal(undefined, event);
+              }}
+              rooms={rooms}
+              onEventMove={canManageEvents ? handleEventMove : undefined}
+              onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date) => {
+                openEventModal(date, undefined, startTime, endTime);
+              } : undefined}
+              onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
+                try {
+                  const { eventApi } = await import("@/lib/api/eventApi");
+                  await eventApi.updateParticipantStatus(authFetch, eventId, userId, status);
+                  await loadEvents();
+                } catch (err) {
+                  console.error("Failed to update participant status:", err);
+                }
+              }}
+              currentUserEmail={userEmail || undefined}
+              users={users}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+            />
+              </div>
+          )}
 
           {selectedCalendar && viewMode === "week" && (
               <div 
