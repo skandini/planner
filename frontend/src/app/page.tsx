@@ -28,6 +28,7 @@ import type { Room } from "@/types/room.types";
 import type { ViewMode, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
 import { WeekView } from "@/components/calendar/WeekView";
 import { MonthView } from "@/components/calendar/MonthView";
+import { DayView } from "@/components/calendar/DayView";
 import { UpcomingEvents } from "@/components/calendar/UpcomingEvents";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
@@ -576,8 +577,20 @@ export default function Home() {
     [monthGridDays],
   );
 
-  const rangeStart = viewMode === "week" ? weekStart : monthGridStart;
-  const rangeEnd = viewMode === "week" ? weekEnd : monthGridEnd;
+  const dayStart = useMemo(() => {
+    const d = new Date(selectedDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [selectedDate]);
+  
+  const dayEnd = useMemo(() => {
+    const d = new Date(selectedDate);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [selectedDate]);
+  
+  const rangeStart = viewMode === "day" ? dayStart : viewMode === "week" ? weekStart : monthGridStart;
+  const rangeEnd = viewMode === "day" ? dayEnd : viewMode === "week" ? weekEnd : monthGridEnd;
 
 
   const filteredUsers = useMemo(() => {
@@ -1791,6 +1804,7 @@ export default function Home() {
               
               const getLabel = () => {
                 switch (mode) {
+                  case "day": return "День";
                   case "week": return "Неделя";
                   case "month": return "Месяц";
                   case "org": return "Оргструктура";
