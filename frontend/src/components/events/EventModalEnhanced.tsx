@@ -230,13 +230,19 @@ export function EventModalEnhanced({
   }, [form.room_id, form.starts_at, loadRoomAvailability]);
 
   useEffect(() => {
-    if (!selectedCalendarId || !form.starts_at || !form.ends_at) {
+    if (!selectedCalendarId) {
       setConflicts([]);
       setConflictsError(null);
       return;
     }
-    const fromDate = new Date(form.starts_at);
-    const toDate = new Date(form.ends_at);
+    
+    // Загружаем конфликты для всего дня, чтобы видеть их в таймлайне
+    // Используем viewDate для определения дня, а не выбранное время события
+    const targetDate = viewDate || (form.starts_at ? new Date(form.starts_at.split("T")[0]) : new Date());
+    const fromDate = new Date(targetDate);
+    fromDate.setHours(0, 0, 0, 0);
+    const toDate = new Date(targetDate);
+    toDate.setHours(23, 59, 59, 999);
 
     let cancelled = false;
     setConflictsLoading(true);
@@ -285,11 +291,10 @@ export function EventModalEnhanced({
     };
   }, [
     authFetch,
-    form.ends_at,
     form.participant_ids,
     form.room_id,
-    form.starts_at,
     selectedCalendarId,
+    viewDate,  // Загружаем конфликты при изменении дня просмотра
   ]);
 
   return (
