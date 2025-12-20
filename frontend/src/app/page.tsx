@@ -1777,6 +1777,208 @@ export default function Home() {
           </div>
           
           <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[300px] lg:flex-shrink-0 overflow-y-auto">
+            {/* Мини-календарь - перемещен наверх */}
+            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <h2 className="text-sm font-bold text-slate-900">Календарь</h2>
+                </div>
+              </div>
+
+              {(() => {
+
+                const getDaysInMonth = (date: Date) => {
+                  const year = date.getFullYear();
+                  const month = date.getMonth();
+                  const firstDay = new Date(year, month, 1);
+                  const lastDay = new Date(year, month + 1, 0);
+                  const daysInMonth = lastDay.getDate();
+                  const startingDayOfWeek = firstDay.getDay();
+                  
+                  const days: Array<{ date: Date; isCurrentMonth: boolean; hasEvents: boolean; eventCount: number }> = [];
+                  
+                  // Функция для нормализации даты (только год, месяц, день)
+                  const normalizeDate = (d: Date): string => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  };
+                  
+                  // Добавляем дни предыдущего месяца для заполнения первой недели
+                  const prevMonth = new Date(year, month - 1, 0);
+                  const daysInPrevMonth = prevMonth.getDate();
+                  for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+                    const date = new Date(year, month - 1, daysInPrevMonth - i);
+                    const dateStr = normalizeDate(date);
+                    const dayEvents = events.filter(e => {
+                      const eventDate = new Date(e.starts_at);
+                      const eventDateStr = normalizeDate(eventDate);
+                      return eventDateStr === dateStr;
+                    });
+                    days.push({
+                      date,
+                      isCurrentMonth: false,
+                      hasEvents: dayEvents.length > 0,
+                      eventCount: dayEvents.length,
+                    });
+                  }
+                  
+                  // Добавляем дни текущего месяца
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, month, day);
+                    const dateStr = normalizeDate(date);
+                    const dayEvents = events.filter(e => {
+                      const eventDate = new Date(e.starts_at);
+                      const eventDateStr = normalizeDate(eventDate);
+                      return eventDateStr === dateStr;
+                    });
+                    days.push({
+                      date,
+                      isCurrentMonth: true,
+                      hasEvents: dayEvents.length > 0,
+                      eventCount: dayEvents.length,
+                    });
+                  }
+                  
+                  // Добавляем дни следующего месяца для заполнения последней недели
+                  const remainingDays = 42 - days.length; // 6 недель * 7 дней
+                  for (let day = 1; day <= remainingDays; day++) {
+                    const date = new Date(year, month + 1, day);
+                    const dateStr = normalizeDate(date);
+                    const dayEvents = events.filter(e => {
+                      const eventDate = new Date(e.starts_at);
+                      const eventDateStr = normalizeDate(eventDate);
+                      return eventDateStr === dateStr;
+                    });
+                    days.push({
+                      date,
+                      isCurrentMonth: false,
+                      hasEvents: dayEvents.length > 0,
+                      eventCount: dayEvents.length,
+                    });
+                  }
+                  
+                  return days;
+                };
+
+                const miniCalendarDays = getDaysInMonth(miniCalendarMonth);
+                const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const isToday = (date: Date) => {
+                  const d = new Date(date);
+                  d.setHours(0, 0, 0, 0);
+                  return d.getTime() === today.getTime();
+                };
+
+                const isSelected = (date: Date) => {
+                  const d = new Date(date);
+                  d.setHours(0, 0, 0, 0);
+                  const s = new Date(selectedDate);
+                  s.setHours(0, 0, 0, 0);
+                  return d.getTime() === s.getTime();
+                };
+
+                const navigateMonth = (direction: number) => {
+                  const newMonth = new Date(miniCalendarMonth);
+                  newMonth.setMonth(newMonth.getMonth() + direction);
+                  setMiniCalendarMonth(newMonth);
+                };
+
+                const handleDayClick = (date: Date) => {
+                  setSelectedDate(date);
+                  if (viewMode !== 'week' && viewMode !== 'month') {
+                    setViewMode('week');
+                  }
+                };
+
+                return (
+                  <div className="space-y-2">
+                    {/* Навигация по месяцам */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => navigateMonth(-1)}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                        title="Предыдущий месяц"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <span className="text-xs font-semibold text-slate-900">
+                        {monthNames[miniCalendarMonth.getMonth()]} {miniCalendarMonth.getFullYear()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => navigateMonth(1)}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                        title="Следующий месяц"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Дни недели */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {dayNames.map((day) => (
+                        <div key={day} className="text-center text-[0.6rem] font-semibold text-slate-500 py-1">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Дни месяца */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {miniCalendarDays.map((day, index) => {
+                        const dayDate = new Date(day.date);
+                        dayDate.setHours(0, 0, 0, 0);
+                        const dayIsToday = isToday(dayDate);
+                        const dayIsSelected = isSelected(dayDate);
+
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleDayClick(dayDate)}
+                            className={`
+                              relative h-7 w-7 rounded-md text-[0.65rem] font-medium transition-all
+                              ${!day.isCurrentMonth 
+                                ? 'text-slate-300' 
+                                : dayIsSelected
+                                  ? 'bg-lime-500 text-white shadow-md'
+                                  : dayIsToday
+                                    ? 'bg-lime-100 text-lime-700 border-2 border-lime-400'
+                                    : 'text-slate-700 hover:bg-slate-100'
+                              }
+                            `}
+                            title={day.hasEvents ? `${day.eventCount} ${day.eventCount === 1 ? 'событие' : 'событий'}` : 'Нет событий'}
+                          >
+                            {day.date.getDate()}
+                            {/* Отметка о событиях */}
+                            {day.hasEvents && day.isCurrentMonth && (
+                              <span className={`
+                                absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full
+                                ${dayIsSelected ? 'bg-white' : 'bg-lime-500'}
+                              `} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </section>
+
             {/* Компактный блок календарей */}
             <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
