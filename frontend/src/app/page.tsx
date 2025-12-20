@@ -1815,6 +1815,10 @@ export default function Home() {
                     const date = new Date(year, month - 1, daysInPrevMonth - i);
                     const dateStr = normalizeDate(date);
                     const dayEvents = events.filter(e => {
+                      // Пропускаем события расписания доступности (unavailable, available)
+                      if (e.status === "unavailable" || e.status === "available") {
+                        return false;
+                      }
                       const eventDate = new Date(e.starts_at);
                       const eventDateStr = normalizeDate(eventDate);
                       return eventDateStr === dateStr;
@@ -1832,6 +1836,10 @@ export default function Home() {
                     const date = new Date(year, month, day);
                     const dateStr = normalizeDate(date);
                     const dayEvents = events.filter(e => {
+                      // Пропускаем события расписания доступности (unavailable, available)
+                      if (e.status === "unavailable" || e.status === "available") {
+                        return false;
+                      }
                       const eventDate = new Date(e.starts_at);
                       const eventDateStr = normalizeDate(eventDate);
                       return eventDateStr === dateStr;
@@ -1850,6 +1858,10 @@ export default function Home() {
                     const date = new Date(year, month + 1, day);
                     const dateStr = normalizeDate(date);
                     const dayEvents = events.filter(e => {
+                      // Пропускаем события расписания доступности (unavailable, available)
+                      if (e.status === "unavailable" || e.status === "available") {
+                        return false;
+                      }
                       const eventDate = new Date(e.starts_at);
                       const eventDateStr = normalizeDate(eventDate);
                       return eventDateStr === dateStr;
