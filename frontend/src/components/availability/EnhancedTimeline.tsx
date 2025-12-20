@@ -641,8 +641,15 @@ export function EnhancedTimeline({
               {/* Слоты времени */}
               {timeSlots.map((slot) => {
                 const { slotStart, slotEnd } = buildSlotTimes(slot.index);
+                // Проверяем, занят ли слот для любого из ресурсов
+                // Игнорируем события со статусом "available" (они не считаются занятыми)
+                // Учитываем события со статусом "unavailable" (они считаются занятыми)
                 const slotBusy = resourceRows.some((row) =>
                   row.availability.some((event) => {
+                    // Пропускаем события "доступен" - они не считаются занятыми
+                    if (event.status === "available") {
+                      return false;
+                    }
                     const eventStart = parseUTC(event.starts_at);
                     const eventEnd = parseUTC(event.ends_at);
                     return eventStart < slotEnd && eventEnd > slotStart;
