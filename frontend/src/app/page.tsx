@@ -759,6 +759,13 @@ export default function Home() {
     loadCalendarMembers();
   }, [loadCalendarMembers]);
 
+  // Синхронизируем месяц мини-календаря с выбранной датой
+  useEffect(() => {
+    const newMonth = new Date(selectedDate);
+    newMonth.setDate(1);
+    setMiniCalendarMonth(newMonth);
+  }, [selectedDate]);
+
   const loadUserAvailability = useCallback(
     async (userId: string) => {
       if (!selectedCalendarId || !accessToken) {
