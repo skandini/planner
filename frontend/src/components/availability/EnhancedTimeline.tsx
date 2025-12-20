@@ -664,16 +664,31 @@ export function EnhancedTimeline({
                   selectionRange.start < slotEnd &&
                   selectionRange.end > slotStart;
 
+                // Проверяем, есть ли недоступность по расписанию (для явной индикации)
+                const slotUnavailable = resourceRows.some((row) =>
+                  row.availability.some((event) => {
+                    if (event.status !== "unavailable") {
+                      return false;
+                    }
+                    const eventStart = parseUTC(event.starts_at);
+                    const eventEnd = parseUTC(event.ends_at);
+                    return eventStart < slotEnd && eventEnd > slotStart;
+                  }),
+                );
+
                 return (
                   <div
                     key={`combined-${slot.index}`}
-                    className={`h-8 rounded-md transition-all ${
-                      slotBusy
-                        ? "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm"
-                        : selected
-                          ? "bg-gradient-to-r from-lime-100 to-lime-200 border-2 border-lime-400 shadow-md"
-                          : "bg-gradient-to-r from-lime-200 to-emerald-300 border border-lime-400"
+                    className={`h-8 rounded-md transition-all relative overflow-hidden ${
+                      slotUnavailable
+                        ? "bg-gradient-to-br from-red-300 via-red-400 to-orange-300 border-2 border-red-600 shadow-inner before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_3px,rgba(220,38,38,0.4)_3px,rgba(220,38,38,0.4)_6px)] before:pointer-events-none"
+                        : slotBusy
+                          ? "bg-gradient-to-r from-red-300 to-red-400 border border-red-500 shadow-sm"
+                          : selected
+                            ? "bg-gradient-to-r from-lime-100 to-lime-200 border-2 border-lime-400 shadow-md"
+                            : "bg-gradient-to-r from-lime-200 to-emerald-300 border border-lime-400"
                     }`}
+                    title={slotUnavailable ? "Недоступен по расписанию - встреча не может быть назначена" : slotBusy ? "Занято" : "Все свободны"}
                   />
                 );
               })}
