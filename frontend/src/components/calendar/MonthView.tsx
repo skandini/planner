@@ -234,6 +234,7 @@ export function MonthView({
                   // Проверяем, является ли событие расписанием доступности
                   const isUnavailable = event.status === "unavailable";
                   const isAvailable = event.status === "available";
+                  const isBookedSlot = event.status === "booked_slot";
                   
                   // Проверяем статус текущего пользователя для события
                   const userParticipant = currentUserEmail && event.participants
@@ -249,19 +250,19 @@ export function MonthView({
                       key={event.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Не открываем модальное окно для событий расписания доступности
-                        if (!isUnavailable && !isAvailable) {
+                        // Не открываем модальное окно для событий расписания доступности и забронированных слотов
+                        if (!isUnavailable && !isAvailable && !isBookedSlot) {
                           onEventClick(event);
                         }
                       }}
                       onMouseEnter={(e) => {
-                        // Не показываем всплывающее окно для событий расписания доступности
-                        if (!isUnavailable && !isAvailable) {
+                        // Не показываем всплывающее окно для событий расписания доступности и забронированных слотов
+                        if (!isUnavailable && !isAvailable && !isBookedSlot) {
                           handleEventMouseEnter(event, e.currentTarget, e);
                         }
                       }}
                       onMouseMove={(e) => {
-                        if (!isUnavailable && !isAvailable && hoveredEvent?.event.id === event.id) {
+                        if (!isUnavailable && !isAvailable && !isBookedSlot && hoveredEvent?.event.id === event.id) {
                           handleEventMouseMove(event, e);
                         }
                       }}
@@ -271,15 +272,17 @@ export function MonthView({
                           ? "bg-slate-100 border border-slate-300 cursor-default"
                           : isAvailable
                             ? "bg-green-50 border border-green-300 cursor-default"
-                            : needsAction
-                              ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm cursor-pointer"
-                              : "bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                            : isBookedSlot
+                              ? "bg-orange-100 border border-orange-400 cursor-default"
+                              : needsAction
+                                ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm cursor-pointer"
+                                : "bg-slate-100 hover:bg-slate-200 cursor-pointer"
                       }`}
                       style={{
-                        borderColor: event.department_color && !isUnavailable && !isAvailable && !needsAction
+                        borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction
                           ? event.department_color
                           : undefined,
-                        backgroundColor: event.department_color && !isUnavailable && !isAvailable && !needsAction
+                        backgroundColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction
                           ? `${event.department_color}15`
                           : undefined,
                       }}
@@ -290,12 +293,14 @@ export function MonthView({
                           background: isUnavailable 
                             ? "#94a3b8" 
                             : isAvailable 
-                              ? "#22c55e" 
-                              : event.department_color || accent
+                              ? "#22c55e"
+                              : isBookedSlot
+                                ? "#f97316"
+                                : event.department_color || accent
                         }}
                       />
-                      <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : isAvailable ? "text-green-700 font-medium" : "text-slate-700"}`}>
-                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : event.title}
+                      <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : isAvailable ? "text-green-700 font-medium" : isBookedSlot ? "text-orange-700 font-medium" : "text-slate-700"}`}>
+                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                       </span>
                       {isAvailable && event.description && event.description !== event.title && (
                         <span className="text-[0.6rem] text-green-600 truncate">

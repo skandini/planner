@@ -590,6 +590,7 @@ export function WeekView({
                   // Проверяем, является ли событие расписанием доступности
                   const isUnavailable = event.status === "unavailable";
                   const isAvailable = event.status === "available";
+                  const isBookedSlot = event.status === "booked_slot";
                   
                   return (
                     <div
@@ -604,14 +605,14 @@ export function WeekView({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Не открываем модальное окно для событий расписания доступности
-                        if (!isUnavailable && !isAvailable) {
+                        // Не открываем модальное окно для событий расписания доступности и забронированных слотов
+                        if (!isUnavailable && !isAvailable && !isBookedSlot) {
                           handleCardClick(event);
                         }
                       }}
                       onMouseEnter={(e) => {
-                        // Не показываем всплывающее окно для событий расписания доступности
-                        if (!isUnavailable && !isAvailable) {
+                        // Не показываем всплывающее окно для событий расписания доступности и забронированных слотов
+                        if (!isUnavailable && !isAvailable && !isBookedSlot) {
                           const hasContent = (event.participants && event.participants.length > 0) ||
                                            (event.description && event.description.trim().length > 0) ||
                                            event.room_id;
@@ -621,9 +622,9 @@ export function WeekView({
                         }
                       }}
                       onMouseLeave={handleEventMouseLeave}
-                      draggable={Boolean(onEventMove) && !event.all_day && !isUnavailable && !isAvailable}
+                      draggable={Boolean(onEventMove) && !event.all_day && !isUnavailable && !isAvailable && !isBookedSlot}
                       onDragStart={(dragEvent) => {
-                        if (!isUnavailable && !isAvailable) {
+                        if (!isUnavailable && !isAvailable && !isBookedSlot) {
                           handleDragStart(dragEvent, event);
                         }
                       }}
@@ -633,11 +634,13 @@ export function WeekView({
                           ? "cursor-default border-slate-300 bg-slate-100 z-5"
                           : isAvailable
                             ? "cursor-default border-green-300 bg-green-50 z-15"
-                            : isStartingSoon 
-                            ? "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg" 
-                            : needsAction
-                              ? "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
-                              : "border-slate-200 cursor-pointer hover:shadow-lg"
+                            : isBookedSlot
+                              ? "cursor-default border-orange-400 bg-orange-100 z-10"
+                              : isStartingSoon 
+                              ? "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg" 
+                              : needsAction
+                                ? "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
+                                : "border-slate-200 cursor-pointer hover:shadow-lg"
                       }`}
                       style={{
                         top: `${topPx}px`,
@@ -646,25 +649,32 @@ export function WeekView({
                           ? "rgba(148, 163, 184, 0.3)"
                           : isAvailable
                             ? "rgba(34, 197, 94, 0.2)"
-                            : isStartingSoon 
-                              ? event.department_color 
-                                ? `${event.department_color}40`
-                                : `${accent}40`
-                              : needsAction
-                                ? "white"
-                                : event.department_color
-                                  ? `${event.department_color}20`
-                                  : `${accent}20`,
-                        borderColor: event.department_color && !isUnavailable && !isAvailable && !isStartingSoon && !needsAction
+                            : isBookedSlot
+                              ? "rgba(249, 115, 22, 0.2)"
+                              : isStartingSoon 
+                                ? event.department_color 
+                                  ? `${event.department_color}40`
+                                  : `${accent}40`
+                                : needsAction
+                                  ? "white"
+                                  : event.department_color
+                                    ? `${event.department_color}20`
+                                    : `${accent}20`,
+                        borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
                           ? event.department_color
                           : undefined,
                       }}
                     >
-                      <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : "text-slate-900"}`}>
-                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : event.title}
+                      <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                       </p>
                       {isAvailable && event.description && event.description !== event.title && (
                         <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
+                          {event.description}
+                        </p>
+                      )}
+                      {isBookedSlot && event.description && event.description !== event.title && (
+                        <p className="text-[0.65rem] text-orange-600 leading-tight truncate mt-0.5">
                           {event.description}
                         </p>
                       )}

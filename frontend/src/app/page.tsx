@@ -850,22 +850,74 @@ export default function Home() {
       
       const fromStr = rangeStart.toISOString();
       const toStr = rangeEnd.toISOString();
-      const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${currentUser.id}/availability?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
       
-      const response = await authFetch(url, { 
+      // Загружаем расписание доступности
+      const availabilityUrl = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${currentUser.id}/availability?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
+      const availabilityResponse = await authFetch(availabilityUrl, { 
         cache: "no-store",
       });
       
-      if (response.ok) {
-        const data: EventRecord[] = await response.json();
+      let unavailableEvents: EventRecord[] = [];
+      if (availabilityResponse.ok) {
+        const data: EventRecord[] = await availabilityResponse.json();
         // Фильтруем только события с status="unavailable" (расписание доступности)
-        const unavailableEvents = data.filter(event => event.status === "unavailable");
-        setMyAvailabilitySchedule(unavailableEvents);
+        unavailableEvents = data.filter(event => event.status === "unavailable");
       } else {
-        const errorText = await response.text().catch(() => "");
-        console.error("Failed to load availability schedule:", response.status, errorText);
-        setMyAvailabilitySchedule([]);
+        console.error("Failed to load availability schedule:", availabilityResponse.status);
       }
+      
+      // Загружаем забронированные availability slots
+      let bookedSlotsEvents: EventRecord[] = [];
+      try {
+        const { AVAILABILITY_SLOTS_ENDPOINT } = await import("@/lib/constants");
+        const slotsUrl = `${AVAILABILITY_SLOTS_ENDPOINT}?my_slots_only=true&status=booked&from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
+        const slotsResponse = await authFetch(slotsUrl, { cache: "no-store" });
+        
+        if (slotsResponse.ok) {
+          interface AvailabilitySlot {
+            id: string;
+            user_id: string;
+            process_name: string;
+            starts_at: string;
+            ends_at: string;
+            description?: string;
+            status: "available" | "booked" | "cancelled";
+            booked_by_user_name?: string;
+            booked_by_user_email?: string;
+          }
+          
+          const slots: AvailabilitySlot[] = await slotsResponse.json();
+          
+          // Преобразуем забронированные слоты в формат EventRecord
+          bookedSlotsEvents = slots.map(slot => ({
+            id: slot.id,
+            calendar_id: selectedCalendarId,
+            room_id: null,
+            title: `Забронирован слот: ${slot.process_name}${slot.booked_by_user_name ? ` (${slot.booked_by_user_name})` : ''}`,
+            description: slot.description || `Забронированный слот для процесса "${slot.process_name}"${slot.booked_by_user_name ? ` пользователем ${slot.booked_by_user_name}` : ''}`,
+            location: null,
+            timezone: "Europe/Moscow",
+            starts_at: slot.starts_at,
+            ends_at: slot.ends_at,
+            all_day: false,
+            status: "booked_slot", // Специальный статус для забронированных слотов
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            participants: [],
+            recurrence_rule: null,
+            recurrence_parent_id: null,
+            attachments: [],
+            department_color: null,
+            room_online_meeting_url: null,
+          }));
+        }
+      } catch (slotsErr) {
+        console.error("Failed to load booked availability slots:", slotsErr);
+        // Не критично, продолжаем без них
+      }
+      
+      // Объединяем расписание доступности и забронированные слоты
+      setMyAvailabilitySchedule([...unavailableEvents, ...bookedSlotsEvents]);
     } catch (err) {
       console.error("Failed to load my availability schedule:", err);
       setMyAvailabilitySchedule([]);
