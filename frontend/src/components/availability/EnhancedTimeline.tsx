@@ -518,7 +518,10 @@ export function EnhancedTimeline({
                 if (state === "conflict") {
                   slotClassName += "conflict-blink border border-amber-500 shadow-sm";
                 } else if (state === "unavailable") {
-                  slotClassName += "bg-slate-200 border-2 border-slate-400 cursor-not-allowed";
+                  // Явная индикация недоступности: красный цвет с диагональными полосами
+                  slotClassName += "bg-gradient-to-br from-red-300 via-red-400 to-orange-300 border-2 border-red-600 cursor-not-allowed relative overflow-hidden shadow-inner";
+                  // Добавляем диагональные полосы для явной индикации недоступности
+                  slotClassName += " before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_3px,rgba(220,38,38,0.4)_3px,rgba(220,38,38,0.4)_6px)] before:pointer-events-none";
                 } else if (state === "available") {
                   slotClassName += "bg-gradient-to-r from-blue-100 to-indigo-200 border-2 border-blue-400 shadow-sm";
                 } else if (state === "busy") {
