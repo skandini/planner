@@ -458,11 +458,11 @@ export function EventModalEnhanced({
 
             <div className="space-y-6">
               {/* Основная информация */}
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {/* Левая колонка */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-slate-700">
+                    <span className="mb-1.5 block text-xs font-semibold text-slate-700">
                       Название <span className="text-red-500">*</span>
                     </span>
                     <input
@@ -473,14 +473,14 @@ export function EventModalEnhanced({
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, title: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
                       placeholder="Например, Стендап команды"
                     />
                   </label>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <label className="block">
-                      <span className="mb-2 block text-xs font-medium text-slate-600">
+                      <span className="mb-1.5 block text-xs font-medium text-slate-600">
                         Начало <span className="text-red-500">*</span>
                       </span>
                       <input
@@ -491,11 +491,11 @@ export function EventModalEnhanced({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, starts_at: e.target.value }))
                         }
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-2 block text-xs font-medium text-slate-600">
+                      <span className="mb-1.5 block text-xs font-medium text-slate-600">
                         Конец <span className="text-red-500">*</span>
                       </span>
                       <input
@@ -506,21 +506,21 @@ export function EventModalEnhanced({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, ends_at: e.target.value }))
                         }
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
                       />
                     </label>
                   </div>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-slate-700">Описание</span>
+                    <span className="mb-1.5 block text-xs font-semibold text-slate-700">Описание</span>
                     <textarea
                       value={form.description}
                       disabled={isReadOnly}
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, description: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
-                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      rows={2}
                       placeholder="Дополнительная информация..."
                     />
                   </label>
