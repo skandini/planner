@@ -601,6 +601,7 @@ export function EventModalEnhanced({
                   selectedCalendarId={selectedCalendarId}
                   isAllDay={false}
                   onRefreshMembers={onRefreshMembers}
+                  conflicts={conflicts}
                   getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                   organizations={organizations}
                   apiBaseUrl={apiBaseUrl}

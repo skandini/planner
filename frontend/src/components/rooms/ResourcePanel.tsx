@@ -30,6 +30,7 @@ interface ResourcePanelProps {
   selectedCalendarId: string | null;
   isAllDay: boolean;
   onRefreshMembers: () => Promise<void> | void;
+  conflicts: ConflictEntry[];
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   organizations?: Array<{ id: string; name: string; slug: string }>;
   apiBaseUrl?: string;
@@ -54,6 +55,7 @@ export function ResourcePanel({
   selectedCalendarId,
   isAllDay,
   onRefreshMembers,
+  conflicts = [],
   getUserOrganizationAbbreviation,
   organizations = [],
   apiBaseUrl = "",
