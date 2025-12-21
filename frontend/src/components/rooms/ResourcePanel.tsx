@@ -8,7 +8,6 @@ import type { UserProfile, ParticipantProfile } from "@/types/user.types";
 import type { TimelineRowData } from "@/types/common.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
-import { ConflictSummary } from "@/components/availability/ConflictSummary";
 import { inputToDate } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
 
@@ -31,9 +30,6 @@ interface ResourcePanelProps {
   selectedCalendarId: string | null;
   isAllDay: boolean;
   onRefreshMembers: () => Promise<void> | void;
-  conflicts: ConflictEntry[];
-  conflictsLoading: boolean;
-  conflictsError: string | null;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   organizations?: Array<{ id: string; name: string; slug: string }>;
   apiBaseUrl?: string;
@@ -58,9 +54,6 @@ export function ResourcePanel({
   selectedCalendarId,
   isAllDay,
   onRefreshMembers,
-  conflicts,
-  conflictsLoading,
-  conflictsError,
   getUserOrganizationAbbreviation,
   organizations = [],
   apiBaseUrl = "",
@@ -493,11 +486,6 @@ export function ResourcePanel({
         }}
       />
 
-      <ConflictSummary
-        conflicts={conflicts}
-        loading={conflictsLoading}
-        error={conflictsError}
-      />
     </div>
   );
 }

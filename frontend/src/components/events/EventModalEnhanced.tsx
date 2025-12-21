@@ -457,14 +457,16 @@ export function EventModalEnhanced({
             )}
 
             <div className="space-y-6">
-              {/* Основная информация */}
-              <div className="grid gap-4 md:grid-cols-2">
-                {/* Левая колонка */}
+              {/* Основная информация - компактный дизайн */}
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-4">
                 <div className="space-y-3">
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-semibold text-slate-700">
-                      Название <span className="text-red-500">*</span>
-                    </span>
+                  {/* Название */}
+                  <div>
+                    <label className="block mb-1.5">
+                      <span className="text-xs font-semibold text-slate-700">
+                        Название <span className="text-red-500">*</span>
+                      </span>
+                    </label>
                     <input
                       required
                       type="text"
@@ -473,16 +475,19 @@ export function EventModalEnhanced({
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, title: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                       placeholder="Например, Стендап команды"
                     />
-                  </label>
+                  </div>
 
+                  {/* Даты - в одну строку */}
                   <div className="grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className="mb-1.5 block text-xs font-medium text-slate-600">
-                        Начало <span className="text-red-500">*</span>
-                      </span>
+                    <div>
+                      <label className="block mb-1.5">
+                        <span className="text-xs font-medium text-slate-600">
+                          Начало <span className="text-red-500">*</span>
+                        </span>
+                      </label>
                       <input
                         required
                         type="datetime-local"
@@ -491,13 +496,15 @@ export function EventModalEnhanced({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, starts_at: e.target.value }))
                         }
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                       />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1.5 block text-xs font-medium text-slate-600">
-                        Конец <span className="text-red-500">*</span>
-                      </span>
+                    </div>
+                    <div>
+                      <label className="block mb-1.5">
+                        <span className="text-xs font-medium text-slate-600">
+                          Конец <span className="text-red-500">*</span>
+                        </span>
+                      </label>
                       <input
                         required
                         type="datetime-local"
@@ -506,26 +513,28 @@ export function EventModalEnhanced({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, ends_at: e.target.value }))
                         }
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                       />
-                    </label>
+                    </div>
                   </div>
 
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-semibold text-slate-700">Описание</span>
+                  {/* Описание */}
+                  <div>
+                    <label className="block mb-1.5">
+                      <span className="text-xs font-semibold text-slate-700">Описание</span>
+                    </label>
                     <textarea
                       value={form.description}
                       disabled={isReadOnly}
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, description: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-500/20"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 resize-none"
                       rows={2}
                       placeholder="Дополнительная информация..."
                     />
-                  </label>
+                  </div>
                 </div>
-
               </div>
 
               {/* Таймлайн и переговорки */}
@@ -592,9 +601,6 @@ export function EventModalEnhanced({
                   selectedCalendarId={selectedCalendarId}
                   isAllDay={false}
                   onRefreshMembers={onRefreshMembers}
-                  conflicts={conflicts}
-                  conflictsLoading={conflictsLoading}
-                  conflictsError={conflictsError}
                   getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                   organizations={organizations}
                   apiBaseUrl={apiBaseUrl}
