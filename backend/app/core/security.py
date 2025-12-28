@@ -4,14 +4,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
-os.environ.setdefault("PASSLIB_BCRYPT_STRICT", "0")
-
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_token(
@@ -60,9 +56,26 @@ def verify_token(token: str, token_type: str = "access") -> dict[str, Any]:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a hash using bcrypt directly."""
+    try:
+        password_bytes = plain_password.encode('utf-8')
+        # Ограничиваем до 72 байт (ограничение bcrypt)
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        hashed_bytes = hashed_password.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Password verification error: {e}")
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
+    """Hash a password using bcrypt directly."""
+    password_bytes = password.encode('utf-8')
+    # Ограничиваем до 72 байт (ограничение bcrypt)
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(password_bytes, salt).decode('utf-8')

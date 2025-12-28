@@ -17,6 +17,8 @@ export type UserProfile = {
   access_org_structure?: boolean;
   access_tickets?: boolean;
   access_availability_slots?: boolean;
+  show_local_time?: boolean;  // Добавить это свойство
+  show_moscow_time?: boolean;  // Добавить это свойство
   // Many-to-many relationships
   department_ids?: string[];  // All departments user belongs to
   organization_ids?: string[];  // All organizations user belongs to

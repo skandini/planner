@@ -2693,7 +2693,7 @@ export default function Home() {
               <AvailabilitySlotsManager
                 authFetch={authFetch}
                 currentUserId={currentUser?.id}
-                selectedCalendarId={selectedCalendarId}
+		selectedCalendarId={selectedCalendarId ?? undefined}             
                 onSlotBooked={() => {
                   loadEvents();
                 }}
