@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, Event, EventAttachment, EventParticipant, User, UserAvailabilitySchedule
+from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, Notification, User, UserAvailabilitySchedule
 from app.schemas import (
     EventCreate,
     EventRead,
@@ -1142,17 +1142,56 @@ def delete_event(
             )
         ).all()
         if series_ids:
+            # Удалить связанные данные перед удалением событий
             session.exec(
                 delete(EventParticipant).where(
                     EventParticipant.event_id.in_(series_ids)
                 )
             )
+            session.exec(
+                delete(Notification).where(
+                    Notification.event_id.in_(series_ids)
+                )
+            )
+            session.exec(
+                delete(EventAttachment).where(
+                    EventAttachment.event_id.in_(series_ids)
+                )
+            )
+            session.exec(
+                delete(EventComment).where(
+                    EventComment.event_id.in_(series_ids)
+                )
+            )
             session.exec(delete(Event).where(Event.id.in_(series_ids)))
         else:
+            # Удалить связанные данные перед удалением события
+            session.exec(
+                delete(EventParticipant).where(EventParticipant.event_id == event_id)
+            )
+            session.exec(
+                delete(Notification).where(Notification.event_id == event_id)
+            )
+            session.exec(
+                delete(EventAttachment).where(EventAttachment.event_id == event_id)
+            )
+            session.exec(
+                delete(EventComment).where(EventComment.event_id == event_id)
+            )
             session.delete(event)
     else:
+        # Удалить связанные данные перед удалением события
         session.exec(
             delete(EventParticipant).where(EventParticipant.event_id == event_id)
+        )
+        session.exec(
+            delete(Notification).where(Notification.event_id == event_id)
+        )
+        session.exec(
+            delete(EventAttachment).where(EventAttachment.event_id == event_id)
+        )
+        session.exec(
+            delete(EventComment).where(EventComment.event_id == event_id)
         )
         session.delete(event)
 
