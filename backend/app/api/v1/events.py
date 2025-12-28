@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from calendar import monthrange
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional
@@ -7,6 +8,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import and_, delete, or_, select
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
@@ -820,13 +823,19 @@ def create_event(
     # Create notifications for participants (асинхронно через Celery)
     if participant_ids:
         inviter_name = current_user.full_name or current_user.email
+        logger.info(f"Creating notifications for {len(participant_ids)} participants for event {event.id}")
+        
         for participant_id in participant_ids:
             if participant_id != current_user.id:  # Don't notify yourself
-                notify_event_invited_task.delay(
-                    user_id=str(participant_id),
-                    event_id=str(event.id),
-                    inviter_name=inviter_name,
-                )
+                try:
+                    result = notify_event_invited_task.delay(
+                        user_id=str(participant_id),
+                        event_id=str(event.id),
+                        inviter_name=inviter_name,
+                    )
+                    logger.info(f"Sent notification task {result.id} to Celery for user {participant_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send notification task for user {participant_id}: {e}", exc_info=True)
 
     serialized_event = _serialize_event_with_participants(session, event)
 

@@ -26,6 +26,8 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    # Broker connection
+    broker_connection_retry_on_startup=True,  # Retry connection on startup
     # Task execution settings
     task_acks_late=True,  # Acknowledge tasks after execution
     task_reject_on_worker_lost=True,  # Re-queue tasks if worker dies
