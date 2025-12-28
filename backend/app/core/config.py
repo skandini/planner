@@ -25,6 +25,14 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
     ]
+    
+    # Redis configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_CACHE_URL: str = "redis://localhost:6379/1"  # Separate DB for cache
+    
+    # Celery configuration
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

@@ -1,0 +1,23 @@
+[Unit]
+Description=Planner Celery Worker
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/planner/backend
+Environment="PATH=/opt/planner/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/opt/planner/backend/.venv/bin/celery -A app.celery_app worker --loglevel=info --concurrency=4
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=planner-celery-worker
+
+# Ограничения ресурсов
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+
