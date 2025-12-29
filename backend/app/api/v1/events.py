@@ -12,6 +12,7 @@ from sqlmodel import and_, delete, or_, select
 logger = logging.getLogger(__name__)
 
 from app.api.deps import get_current_user
+from app.core.celery_utils import safe_celery_delay
 from app.db import SessionDep
 from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, Notification, User, UserAvailabilitySchedule
 from app.schemas import (
@@ -827,15 +828,14 @@ def create_event(
         
         for participant_id in participant_ids:
             if participant_id != current_user.id:  # Don't notify yourself
-                try:
-                    result = notify_event_invited_task.delay(
-                        user_id=str(participant_id),
-                        event_id=str(event.id),
-                        inviter_name=inviter_name,
-                    )
+                result = safe_celery_delay(
+                    notify_event_invited_task,
+                    user_id=str(participant_id),
+                    event_id=str(event.id),
+                    inviter_name=inviter_name,
+                )
+                if result:
                     logger.info(f"Sent notification task {result.id} to Celery for user {participant_id}")
-                except Exception as e:
-                    logger.error(f"Failed to send notification task for user {participant_id}: {e}", exc_info=True)
 
     serialized_event = _serialize_event_with_participants(session, event)
 
@@ -963,7 +963,8 @@ def update_event(
     updater_name = current_user.full_name or current_user.email
     for participant_id in participant_ids:
         if participant_id != current_user.id:  # Don't notify yourself
-            notify_event_updated_task.delay(
+            safe_celery_delay(
+                notify_event_updated_task,
                 user_id=str(participant_id),
                 event_id=str(event_id),
                 updater_name=updater_name,
@@ -998,7 +999,8 @@ def update_event(
             session.add(participant)
             # Отправляем уведомление новым участникам (асинхронно через Celery)
             if user_id != current_user.id:
-                notify_event_invited_task.delay(
+                safe_celery_delay(
+                    notify_event_invited_task,
                     user_id=str(user_id),
                     event_id=str(event_id),
                     inviter_name=updater_name,
@@ -1069,7 +1071,8 @@ def update_participant_status(
             if calendar.owner_id != current_user.id:
                 try:
                     participant_name = current_user.full_name or current_user.email
-                    notify_participant_response_task.delay(
+                    safe_celery_delay(
+                        notify_participant_response_task,
                         calendar_owner_id=str(calendar.owner_id),
                         event_id=str(event_id),
                         participant_name=participant_name,
@@ -1200,7 +1203,8 @@ def delete_event(
     # Notify participants about cancellation (асинхронно через Celery)
     for participant_id in participant_ids:
         if participant_id != current_user.id:
-            notify_event_cancelled_task.delay(
+            safe_celery_delay(
+                notify_event_cancelled_task,
                 user_id=str(participant_id),
                 event_id=str(event_id),
                 canceller_name=canceller_name,
