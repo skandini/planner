@@ -341,30 +341,30 @@ export function EventModalEnhanced({
         style={{ animation: 'fadeInUp 0.3s ease-out forwards' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Современный заголовок с кнопками */}
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
-          <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 shadow-lg shadow-lime-500/30">
-                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        {/* Компактный заголовок */}
+        <div className="sticky top-0 z-10 border-b border-slate-200/60 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/80 backdrop-blur-sm">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-lime-400 to-emerald-500 shadow-md shadow-lime-500/30">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">
+                  <h2 className="text-lg font-bold text-slate-900">
                     {isEditing ? "Редактировать событие" : "Новое событие"}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">{calendarName || "Новый календарь"}</p>
+                  <p className="text-xs text-slate-500">{calendarName || "Новый календарь"}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+              className="rounded-lg border border-slate-200/60 bg-white/80 p-1.5 text-slate-400 transition-all hover:border-slate-300 hover:bg-white hover:text-slate-600"
               aria-label="Закрыть"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -372,29 +372,29 @@ export function EventModalEnhanced({
             
             {/* Кнопка для перехода по ссылке на онлайн встречу */}
             {editingEvent?.room_online_meeting_url && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <a
                   href={editingEvent.room_online_meeting_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-600 hover:to-indigo-700"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-blue-500/30 transition hover:from-blue-600 hover:to-indigo-700"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  Присоединиться к онлайн встрече
+                  Онлайн встреча
                 </a>
               </div>
             )}
             
-            {/* Кнопки действий - перемещены вверх */}
-            <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
+            {/* Кнопки действий - компактные */}
+            <div className="flex flex-wrap gap-2 border-t border-slate-200/60 pt-3">
               {canManageEvents && onDeleteSeries && (
                 <button
                   type="button"
                   onClick={onDeleteSeries}
                   disabled={isSubmitting}
-                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg border border-red-300/60 bg-red-50/80 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Удалить серию
                 </button>
@@ -404,7 +404,7 @@ export function EventModalEnhanced({
                   type="button"
                   onClick={onDelete}
                   disabled={isSubmitting}
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg border border-red-200/60 bg-red-50/80 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Удалить
                 </button>
@@ -412,7 +412,7 @@ export function EventModalEnhanced({
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="flex-1 rounded-lg border border-slate-200/60 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-white hover:border-slate-300"
               >
                 Отмена
               </button>
@@ -421,7 +421,7 @@ export function EventModalEnhanced({
                   type="submit"
                   form="event-form"
                   disabled={isSubmitting}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-lime-500/30 transition hover:from-lime-600 hover:to-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-lime-500/30 transition hover:from-lime-600 hover:to-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting
                     ? isEditing
@@ -437,12 +437,12 @@ export function EventModalEnhanced({
         </div>
 
         {/* Контент */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(96vh - 280px)" }}>
-          <form id="event-form" onSubmit={onSubmit} className="p-6">
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(96vh - 200px)" }}>
+          <form id="event-form" onSubmit={onSubmit} className="p-4">
             {error && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="mb-3 rounded-lg border border-red-200/60 bg-red-50/80 p-2.5 text-xs text-red-700">
+                <div className="flex items-center gap-1.5">
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                   <span>{error}</span>
@@ -451,19 +451,19 @@ export function EventModalEnhanced({
             )}
 
             {isReadOnly && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              <div className="mb-3 rounded-lg border border-amber-200/60 bg-amber-50/80 p-2.5 text-xs text-amber-800">
                 <span>У вас нет прав редактировать события в этом календаре</span>
               </div>
             )}
 
-            <div className="space-y-6">
+            <div className="space-y-3">
               {/* Основная информация - компактный дизайн */}
-              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-4">
+              <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-white/80 to-slate-50/30 p-3 backdrop-blur-sm">
                 <div className="space-y-3">
                   {/* Название */}
                   <div>
-                    <label className="block mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700">
+                    <label className="block mb-1">
+                      <span className="text-[0.65rem] font-semibold text-slate-700 uppercase tracking-wider">
                         Название <span className="text-red-500">*</span>
                       </span>
                     </label>
@@ -475,16 +475,16 @@ export function EventModalEnhanced({
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, title: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                      className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                       placeholder="Например, Стендап команды"
                     />
                   </div>
 
                   {/* Даты - в одну строку */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block mb-1.5">
-                        <span className="text-xs font-medium text-slate-600">
+                      <label className="block mb-1">
+                        <span className="text-[0.65rem] font-medium text-slate-600 uppercase tracking-wider">
                           Начало <span className="text-red-500">*</span>
                         </span>
                       </label>
@@ -496,12 +496,12 @@ export function EventModalEnhanced({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, starts_at: e.target.value }))
                         }
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                        className="w-full rounded-lg border border-slate-200/60 bg-white px-2 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                       />
                     </div>
                     <div>
-                      <label className="block mb-1.5">
-                        <span className="text-xs font-medium text-slate-600">
+                      <label className="block mb-1">
+                        <span className="text-[0.65rem] font-medium text-slate-600 uppercase tracking-wider">
                           Конец <span className="text-red-500">*</span>
                         </span>
                       </label>
@@ -513,15 +513,15 @@ export function EventModalEnhanced({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, ends_at: e.target.value }))
                         }
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                        className="w-full rounded-lg border border-slate-200/60 bg-white px-2 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                       />
                     </div>
                   </div>
 
                   {/* Описание */}
                   <div>
-                    <label className="block mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700">Описание</span>
+                    <label className="block mb-1">
+                      <span className="text-[0.65rem] font-semibold text-slate-700 uppercase tracking-wider">Описание</span>
                     </label>
                     <textarea
                       value={form.description}
@@ -529,7 +529,7 @@ export function EventModalEnhanced({
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, description: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 resize-none"
+                      className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 resize-none"
                       rows={2}
                       placeholder="Дополнительная информация..."
                     />
@@ -537,10 +537,10 @@ export function EventModalEnhanced({
                 </div>
               </div>
 
-              {/* Таймлайн и переговорки */}
-              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
-                {/* Компактный выбор участников в одну строчку */}
-                <div className="mb-4">
+              {/* Таймлайн и переговорки - на всю ширину */}
+              <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-white/80 to-slate-50/30 p-3 backdrop-blur-sm">
+                {/* Компактный выбор участников */}
+                <div className="mb-3">
                   <ParticipantSearch
                     form={form}
                     setForm={setForm}
@@ -558,27 +558,31 @@ export function EventModalEnhanced({
                   />
                 </div>
                 
-                {/* Навигация по дням */}
-                <div className="mb-4 flex items-center justify-center">
-                  <div className="flex items-center gap-2">
+                {/* Навигация по дням - компактная */}
+                <div className="mb-3 flex items-center justify-center">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => handleNavigateDays(-1)}
-                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm"
+                      className="rounded-lg border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:border-slate-300 transition shadow-sm"
                       title="День назад"
                     >
-                      ←
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
                     </button>
-                    <div className="px-6 py-2 text-sm font-semibold text-slate-900 min-w-[180px] text-center bg-gradient-to-r from-slate-50 to-white rounded-lg border border-slate-200 shadow-sm">
-                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <div className="px-4 py-1.5 text-xs font-semibold text-slate-900 min-w-[160px] text-center bg-gradient-to-r from-slate-50/80 to-white rounded-lg border border-slate-200/60 shadow-sm">
+                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })}
                     </div>
                     <button
                       type="button"
                       onClick={() => handleNavigateDays(1)}
-                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm"
+                      className="rounded-lg border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:border-slate-300 transition shadow-sm"
                       title="День вперед"
                     >
-                      →
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -608,38 +612,48 @@ export function EventModalEnhanced({
                 />
               </div>
 
-              {/* Статусы участников (только при редактировании) */}
+              {/* Статусы участников (только при редактировании) - компактный дизайн */}
               {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
-                  <div className="mb-4">
-                    <h3 className="text-base font-semibold text-slate-900">Ответы участников</h3>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли,{" "}
-                      {editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили,{" "}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {editingEvent.participants.map((participant) => {
-                      const isCurrentUser = participant.email === currentUserEmail;
-                      return (
-                        <ParticipantStatusItem
-                          key={participant.user_id}
-                          participant={participant}
-                          eventId={editingEvent.id}
-                          onUpdateStatus={onUpdateParticipantStatus}
-                          canManage={canManageEvents}
-                          isCurrentUser={isCurrentUser}
-                          currentUserEmail={currentUserEmail}
-                          getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                        />
-                      );
-                    })}
+                <div className="flex justify-center">
+                  <div className="w-full max-w-md rounded-xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white p-4 shadow-sm backdrop-blur-sm">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Ответы участников</h3>
+                        <div className="mt-1.5 flex items-center gap-3 text-[0.65rem] text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-lime-500"></div>
+                            <span>{editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
+                            <span>{editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                      {editingEvent.participants.map((participant) => {
+                        const isCurrentUser = participant.email === currentUserEmail;
+                        return (
+                          <ParticipantStatusItem
+                            key={participant.user_id}
+                            participant={participant}
+                            eventId={editingEvent.id}
+                            onUpdateStatus={isCurrentUser ? onUpdateParticipantStatus : undefined}
+                            canManage={false}
+                            isCurrentUser={isCurrentUser}
+                            currentUserEmail={currentUserEmail}
+                            getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Вложения */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
+              {/* Вложения - компактные */}
+              <div className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3">
                 <EventAttachments
                   eventId={editingEvent?.id || null}
                   attachments={editingEvent?.attachments || []}
@@ -665,17 +679,17 @@ export function EventModalEnhanced({
                 />
               )}
 
-              {/* Повторения */}
-              <div className="rounded-lg border border-slate-200 bg-white">
+              {/* Повторения - компактные */}
+              <div className="rounded-lg border border-slate-200/60 bg-white/80 backdrop-blur-sm">
                 <button
                   type="button"
                   onClick={() => setShowRecurrence(!showRecurrence)}
                   disabled={recurrenceControlsDisabled}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-left transition ${
-                    recurrenceControlsDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50"
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left transition ${
+                    recurrenceControlsDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50/80"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={form.recurrence_enabled}
@@ -685,12 +699,12 @@ export function EventModalEnhanced({
                         if (e.target.checked) setShowRecurrence(true);
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="h-4 w-4 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
+                      className="h-3.5 w-3.5 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
                     />
-                    <span className="text-sm font-semibold text-slate-900">Повторять событие</span>
+                    <span className="text-xs font-semibold text-slate-900">Повторять событие</span>
                   </div>
                   <svg
-                    className={`h-5 w-5 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -700,7 +714,7 @@ export function EventModalEnhanced({
                 </button>
 
                 {(isSeriesParent || isSeriesChild) && (
-                  <div className="border-t border-slate-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                  <div className="border-t border-slate-200/60 bg-amber-50/80 px-3 py-2 text-[0.65rem] text-amber-800">
                     {isSeriesParent
                       ? "Это родительская встреча серии. Чтобы изменить правило повторения, удалите серию и создайте новую."
                       : "Это отдельное вхождение серии. Изменения применяются только к выбранному дню."}
@@ -708,10 +722,10 @@ export function EventModalEnhanced({
                 )}
 
                 {showRecurrence && form.recurrence_enabled && (
-                  <div className="border-t border-slate-200 bg-slate-50 p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="border-t border-slate-200/60 bg-slate-50/80 p-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">Как часто</span>
+                        <span className="mb-1 block text-[0.65rem] font-medium text-slate-700">Как часто</span>
                         <select
                           disabled={recurrenceControlsDisabled}
                           value={form.recurrence_frequency}
@@ -721,7 +735,7 @@ export function EventModalEnhanced({
                               recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
                             }))
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                         >
                           <option value="daily">Каждый день</option>
                           <option value="weekly">Каждую неделю</option>
@@ -729,7 +743,7 @@ export function EventModalEnhanced({
                         </select>
                       </label>
                       <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">Интервал</span>
+                        <span className="mb-1 block text-[0.65rem] font-medium text-slate-700">Интервал</span>
                         <input
                           type="number"
                           min={1}
@@ -741,13 +755,13 @@ export function EventModalEnhanced({
                               recurrence_interval: Math.max(1, Number(e.target.value)),
                             }))
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                         />
                       </label>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">Количество повторов</span>
+                        <span className="mb-1 block text-[0.65rem] font-medium text-slate-700">Количество повторов</span>
                         <input
                           type="number"
                           min={1}
@@ -760,11 +774,11 @@ export function EventModalEnhanced({
                             }))
                           }
                           placeholder="Например, 10"
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                         />
                       </label>
                       <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">До даты</span>
+                        <span className="mb-1 block text-[0.65rem] font-medium text-slate-700">До даты</span>
                         <input
                           type="date"
                           disabled={recurrenceControlsDisabled}
@@ -776,11 +790,11 @@ export function EventModalEnhanced({
                               recurrence_count: e.target.value ? undefined : prev.recurrence_count,
                             }))
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                         />
                       </label>
                     </div>
-                    <p className="text-xs text-slate-500">Максимум — 180 повторений</p>
+                    <p className="text-[0.65rem] text-slate-500">Максимум — 180 повторений</p>
                   </div>
                 )}
               </div>

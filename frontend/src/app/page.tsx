@@ -605,12 +605,14 @@ export default function Home() {
     );
   }, [users, userSearchQuery]);
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (silent: boolean = false) => {
     if (!accessToken) {
       setEvents([]);
       return;
     }
-    setEventsLoading(true);
+    if (!silent) {
+      setEventsLoading(true);
+    }
     try {
       const url = new URL(EVENT_ENDPOINT);
       // Не фильтруем по calendar_id, чтобы получить все доступные события
@@ -664,7 +666,9 @@ export default function Home() {
         err instanceof Error ? err.message : "Ошибка получения событий",
       );
     } finally {
-      setEventsLoading(false);
+      if (!silent) {
+        setEventsLoading(false);
+      }
     }
   }, [selectedCalendarId, rangeStart, rangeEnd, accessToken, authFetch, userEmail]);
 
@@ -707,14 +711,13 @@ export default function Home() {
     // Загружаем события сразу
     loadEvents();
     
-    // Polling каждые 12 секунд - оптимально для 300 пользователей
-    // Это обеспечивает быструю синхронизацию без перегрузки сервера
-    // При 300 пользователях: 300 запросов / 12 сек = 25 запросов/сек (вполне приемлемо)
+    // Polling каждые 20 секунд - фоновое обновление без показа индикатора загрузки
+    // Это обеспечивает синхронизацию без визуального отвлечения пользователя
     const interval = setInterval(() => {
       if (accessToken) {
-        loadEvents();
+        loadEvents(true); // silent = true - не показываем индикатор загрузки
       }
-    }, 12000); // 12 секунд - оптимальный баланс между скоростью и нагрузкой
+    }, 20000); // 20 секунд - фоновое обновление
     
     return () => {
       clearInterval(interval);
@@ -1287,10 +1290,21 @@ export default function Home() {
         );
       }
 
-      // Перезагружаем события для синхронизации
-      await loadEvents();
+      // Перезагружаем события для синхронизации (в фоне, не блокируя закрытие модального окна)
+      loadEvents(true).catch((err) => {
+        console.error("Ошибка перезагрузки событий после создания:", err);
+      });
       
-      // Загружаем временные файлы, если они были выбраны до создания события
+      // Закрываем модальное окно сразу после успешного создания события
+      setIsEventModalOpen(false);
+      setEventForm(DEFAULT_EVENT_FORM);
+      setEditingEventId(null);
+      setEditingRecurrenceInfo(null);
+      setPendingFiles([]);
+      setBookingSlotId(null);
+      setEventFormError(null);
+      
+      // Загружаем временные файлы асинхронно после закрытия модального окна
       if (filesToUploadAfterCreation.length > 0 && createdEvent.id) {
         // Загружаем файлы асинхронно, не блокируя создание события
         (async () => {
@@ -1315,19 +1329,13 @@ export default function Home() {
             // Очищаем временные файлы после загрузки
             setPendingFiles([]);
             // Перезагружаем события для отображения загруженных файлов
-            await loadEvents();
+            await loadEvents(true);
           } catch (err) {
             console.error("Ошибка загрузки временных файлов:", err);
             // Не блокируем создание события из-за ошибки загрузки файлов
           }
         })();
       }
-      
-      // Закрываем модальное окно после создания события
-      setIsEventModalOpen(false);
-      setEditingEventId(null);
-      setEditingRecurrenceInfo(null);
-      setPendingFiles([]);
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",
@@ -1602,7 +1610,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 text-slate-900 overflow-hidden backdrop-blur-sm">
       {/* Админские уведомления - toast в правом верхнем углу */}
       <AdminNotifications authFetch={authFetch} />
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
@@ -1848,16 +1856,11 @@ export default function Home() {
             })}
           </div>
           
-          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[300px] lg:flex-shrink-0 overflow-y-auto">
-            {/* Мини-календарь - перемещен наверх */}
-            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-slate-900">Календарь</h2>
-                </div>
+          <aside className="order-2 flex w-full flex-col gap-2.5 lg:order-1 lg:w-[280px] lg:flex-shrink-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+            {/* Мини-календарь - компактный */}
+            <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Календарь</h2>
               </div>
 
               {(() => {
@@ -2012,16 +2015,16 @@ export default function Home() {
                     </div>
 
                     {/* Дни недели */}
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-0.5 mb-1">
                       {dayNames.map((day) => (
-                        <div key={day} className="text-center text-[0.6rem] font-semibold text-slate-500 py-1">
+                        <div key={day} className="text-center text-[0.55rem] font-semibold text-slate-400 py-0.5">
                           {day}
                         </div>
                       ))}
                     </div>
 
                     {/* Дни месяца */}
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-0.5">
                       {miniCalendarDays.map((day, index) => {
                         const dayDate = new Date(day.date);
                         dayDate.setHours(0, 0, 0, 0);
@@ -2034,14 +2037,14 @@ export default function Home() {
                             type="button"
                             onClick={() => handleDayClick(dayDate)}
                             className={`
-                              relative h-7 w-7 rounded-md text-[0.65rem] font-medium transition-all
+                              relative h-6 w-6 rounded-md text-[0.6rem] font-medium transition-all
                               ${!day.isCurrentMonth 
                                 ? 'text-slate-300' 
                                 : dayIsSelected
-                                  ? 'bg-lime-500 text-white shadow-md'
+                                  ? 'bg-gradient-to-br from-lime-500 to-lime-600 text-white shadow-md shadow-lime-500/30'
                                   : dayIsToday
-                                    ? 'bg-lime-100 text-lime-700 border-2 border-lime-400'
-                                    : 'text-slate-700 hover:bg-slate-100'
+                                    ? 'bg-lime-50 text-lime-700 border border-lime-300'
+                                    : 'text-slate-600 hover:bg-slate-50'
                               }
                             `}
                             title={day.hasEvents ? `${day.eventCount} ${day.eventCount === 1 ? 'событие' : 'событий'}` : 'Нет событий'}
@@ -2064,29 +2067,26 @@ export default function Home() {
             </section>
 
             {/* Компактный блок календарей */}
-            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-lime-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-slate-900">
+            <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider truncate">
                     {loading ? "Загружаем…" : `Календари (${calendars.length})`}
                   </h2>
                 </div>
                 {currentUser?.organization_id && userOrganization && (
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100">
+                  <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-slate-50 border border-slate-200/60 flex-shrink-0">
                     {userOrganization.logo_url && (
                       <img 
                         src={userOrganization.logo_url.startsWith('http') ? userOrganization.logo_url : `${API_BASE_URL.replace('/api/v1', '')}${userOrganization.logo_url}`}
                         alt={userOrganization.name}
-                        className="w-4 h-4 object-contain"
+                        className="w-3 h-3 object-contain"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     )}
-                    <span className="text-[0.65rem] font-semibold text-slate-700 truncate max-w-[100px]">
+                    <span className="text-[0.6rem] font-semibold text-slate-600 truncate max-w-[80px]">
                       {userOrganization.name}
                     </span>
                   </div>
@@ -2105,14 +2105,14 @@ export default function Home() {
                 </p>
               )}
 
-              <ul className="space-y-1.5 max-h-[calc(100vh-500px)] overflow-y-auto">
+              <ul className="space-y-1 max-h-[calc(100vh-500px)] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
               {calendars.map((calendar) => (
                 <li
                   key={calendar.id}
-                  className={`rounded-lg border p-2.5 transition-all cursor-pointer ${
+                  className={`rounded-lg border p-2 transition-all cursor-pointer ${
                     selectedCalendarId === calendar.id
-                      ? "border-lime-500 bg-lime-50 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                      ? "border-lime-500/60 bg-gradient-to-r from-lime-50 to-lime-50/50 shadow-sm shadow-lime-500/10"
+                      : "border-slate-200/60 bg-white/60 hover:border-slate-300 hover:bg-white hover:shadow-sm"
                   }`}
                   role="button"
                   tabIndex={0}
@@ -2123,22 +2123,22 @@ export default function Home() {
                     }
                   }}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span
-                        className="h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                        className="h-2.5 w-2.5 rounded-full border border-white/80 shadow-sm flex-shrink-0"
                         style={{ background: calendar.color }}
                         aria-label="calendar color"
                       />
-                      <p className="text-xs font-semibold text-slate-900 truncate">
+                      <p className="text-[0.7rem] font-semibold text-slate-700 truncate">
                         {calendar.name}
                       </p>
                     </div>
                     {calendar.current_user_role === "owner" && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
                         <button
                           type="button"
-                          className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[0.6rem] font-semibold text-slate-600 transition hover:bg-slate-50 hover:border-slate-300"
+                          className="rounded p-0.5 text-[0.65rem] text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
                           onClick={(event) => {
                             event.stopPropagation();
                             setSelectedCalendarId(calendar.id);
@@ -2146,18 +2146,22 @@ export default function Home() {
                           }}
                           title="Управление участниками"
                         >
-                          👥
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
                         </button>
                         <button
                           type="button"
-                          className="rounded-md border border-red-200 bg-white px-1.5 py-0.5 text-[0.6rem] font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-300"
+                          className="rounded p-0.5 text-[0.65rem] text-red-500 transition hover:bg-red-50 hover:text-red-700"
                           onClick={(event) => {
                             event.stopPropagation();
                             handleDeleteCalendar(calendar.id);
                           }}
                           title="Удалить календарь"
                         >
-                          ✕
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
                     )}
@@ -2167,15 +2171,10 @@ export default function Home() {
             </ul>
           </section>
 
-          {/* Статистика */}
-          <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <h2 className="text-sm font-bold text-slate-900">Статистика</h2>
-            </div>
-            <div className="space-y-2">
+          {/* Статистика - компактная */}
+          <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Статистика</h2>
+            <div className="space-y-1.5">
               {(() => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -2197,26 +2196,26 @@ export default function Home() {
                 
                 return (
                   <>
-                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-lime-500"></div>
-                        <span className="text-xs font-medium text-slate-700">Сегодня</span>
+                    <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-lime-50 to-lime-50/50 border border-lime-200/60 p-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-lime-500"></div>
+                        <span className="text-[0.65rem] font-medium text-slate-700">Сегодня</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-900">{todayEventsCount}</span>
+                      <span className="text-[0.7rem] font-bold text-slate-900">{todayEventsCount}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                        <span className="text-xs font-medium text-slate-700">На неделе</span>
+                    <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-indigo-50 to-indigo-50/50 border border-indigo-200/60 p-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                        <span className="text-[0.65rem] font-medium text-slate-700">На неделе</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-900">{weekEventsCount}</span>
+                      <span className="text-[0.7rem] font-bold text-slate-900">{weekEventsCount}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                        <span className="text-xs font-medium text-slate-700">Всего событий</span>
+                    <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-amber-50 to-amber-50/50 border border-amber-200/60 p-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                        <span className="text-[0.65rem] font-medium text-slate-700">Всего</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-900">{events.length}</span>
+                      <span className="text-[0.7rem] font-bold text-slate-900">{events.length}</span>
                     </div>
                   </>
                 );
@@ -2224,14 +2223,9 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Блок с ближайшими событиями */}
-          <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h2 className="text-sm font-bold text-slate-900">Ближайшие события</h2>
-            </div>
+          {/* Блок с ближайшими событиями - компактный */}
+          <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Ближайшие</h2>
             <UpcomingEvents
               events={events}
               currentUserEmail={userEmail || undefined}
@@ -2334,13 +2328,8 @@ export default function Home() {
             </section>
           )}
 
-            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <h2 className="text-sm font-bold text-slate-900">Поиск пользователя</h2>
-              </div>
+            <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
+              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Поиск</h2>
 
               <div>
                 <input
@@ -2348,36 +2337,36 @@ export default function Home() {
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
                   placeholder="Имя или email..."
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500/20"
+                  className="w-full rounded-lg border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-[0.7rem] text-slate-700 outline-none focus:border-lime-500/60 focus:ring-1 focus:ring-lime-500/20 focus:bg-white transition"
                 />
               </div>
 
               {userSearchQuery.trim() && (
-                <div className="mt-3 max-h-[250px] overflow-y-auto space-y-1.5">
+                <div className="mt-2 max-h-[200px] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
                   {usersLoading ? (
-                    <p className="text-xs text-slate-500 text-center py-2">Загружаем...</p>
+                    <p className="text-[0.65rem] text-slate-500 text-center py-2">Загружаем...</p>
                   ) : filteredUsers.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-2">Пользователи не найдены</p>
+                    <p className="text-[0.65rem] text-slate-500 text-center py-2">Не найдено</p>
                   ) : (
                     filteredUsers.map((user) => {
                       const isMember = members.some((m) => m.user_id === user.id);
                       return (
                         <div
                           key={user.id}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50 hover:border-slate-300 transition cursor-pointer"
+                          className="flex items-center justify-between gap-1.5 rounded-lg border border-slate-200/60 bg-white/60 p-1.5 hover:bg-white hover:border-slate-300 hover:shadow-sm transition cursor-pointer"
                           onClick={() => setSelectedUserForView(user.id)}
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-slate-900 truncate">
+                            <p className="text-[0.7rem] font-semibold text-slate-700 truncate">
                               {user.full_name || user.email}
                             </p>
-                            <p className="text-[0.65rem] text-slate-500 truncate">
+                            <p className="text-[0.6rem] text-slate-500 truncate">
                               {user.email}
                             </p>
                           </div>
                           {isMember && (
-                            <span className="rounded-full border border-lime-200 bg-lime-50 px-1.5 py-0.5 text-[0.6rem] font-semibold text-lime-700 flex-shrink-0">
-                              В календаре
+                            <span className="rounded-full border border-lime-200/60 bg-lime-50/80 px-1 py-0.5 text-[0.55rem] font-semibold text-lime-700 flex-shrink-0">
+                              ✓
                             </span>
                           )}
                         </div>
@@ -2388,15 +2377,12 @@ export default function Home() {
               )}
             </section>
 
-            {/* Участники календаря */}
-            <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <h2 className="text-sm font-bold text-slate-900">Участники</h2>
+            {/* Участники календаря - компактные */}
+            <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Участники</h2>
                 {selectedRole && selectedCalendar && (
-                  <span className="ml-auto rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-purple-700">
+                  <span className="rounded-full border border-purple-200/60 bg-purple-50/80 px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-purple-700">
                     {ROLE_LABELS[selectedRole]}
                   </span>
                 )}
@@ -2427,7 +2413,7 @@ export default function Home() {
               )}
 
               {selectedCalendar && !membersLoading && members.length > 0 && (
-                <ul className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                <ul className="space-y-1 max-h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
                   {members.map((member) => {
                     const roleKey = ["owner", "editor", "viewer"].includes(
                       member.role,
@@ -2438,16 +2424,16 @@ export default function Home() {
                     return (
                       <li
                         key={`${member.calendar_id}-${member.user_id}`}
-                        className="rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50 transition"
+                        className="rounded-lg border border-slate-200/60 bg-white/60 p-1.5 hover:bg-white hover:border-slate-300 hover:shadow-sm transition"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center justify-between gap-1.5">
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-slate-900 truncate">
+                            <p className="text-[0.7rem] font-semibold text-slate-700 truncate">
                               {member.full_name || member.email}
                             </p>
-                            <p className="text-[0.65rem] text-slate-500 truncate">{member.email}</p>
+                            <p className="text-[0.6rem] text-slate-500 truncate">{member.email}</p>
                           </div>
-                          <span className="rounded-full border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-purple-700 flex-shrink-0">
+                          <span className="rounded-full border border-purple-200/60 bg-purple-50/80 px-1 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-purple-700 flex-shrink-0">
                             {role}
                           </span>
                         </div>
@@ -2459,20 +2445,20 @@ export default function Home() {
             </section>
           </aside>
 
-          <section className="order-1 flex flex-1 flex-col gap-3 lg:order-2 lg:min-w-0 overflow-hidden">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
+          <section className="order-1 flex flex-1 flex-col gap-2.5 lg:order-2 lg:min-w-0 overflow-hidden">
+            <div className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">
+                    <h2 className="text-base font-bold text-slate-800">
                 {selectedCalendar ? selectedCalendar.name : "Календарь не выбран"}
               </h2>
                     {selectedRole && (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
+                      <span className="rounded-full border border-slate-200/60 bg-slate-50/80 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-slate-600">
                         {ROLE_LABELS[selectedRole]}
                       </span>
                     )}
-                    <span className="text-xs text-slate-500">
+                    <span className="text-[0.7rem] text-slate-500 font-medium">
                 {viewMode === "week"
                         ? `${formatDate(weekStart, { day: "numeric", month: "short" })} – ${formatDate(addDays(weekStart, 6), { day: "numeric", month: "short" })}`
                         : formatDate(selectedDate, { month: "short", year: "numeric" })}
@@ -2482,26 +2468,28 @@ export default function Home() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   {/* Переключатель показа расписания доступности */}
                   {selectedCalendar && (viewMode === "month" || viewMode === "week") && (
-                    <label className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition">
+                    <label className="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-lg border border-slate-200/60 bg-white/60 hover:bg-white hover:border-slate-300 transition">
                       <input
                         type="checkbox"
                         checked={showMyAvailability}
                         onChange={(e) => setShowMyAvailability(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
                       />
-                      <span className="text-xs font-medium text-slate-700 whitespace-nowrap">
-                        Показать мою доступность
+                      <span className="text-[0.7rem] font-medium text-slate-700 whitespace-nowrap">
+                        Доступность
                       </span>
                     </label>
                   )}
                   <button
                     type="button"
                     onClick={() => setIsNotificationCenterOpen(true)}
-                    className="relative rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                    className="relative rounded-lg border border-slate-200/60 bg-white/60 px-2.5 py-1 text-[0.7rem] font-semibold text-slate-600 transition hover:bg-white hover:border-slate-300 hover:shadow-sm"
                   >
-                    🔔 Уведомления
+                    <svg className="w-3.5 h-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[0.6rem] font-bold text-white">
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[0.55rem] font-bold text-white">
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}
@@ -2510,32 +2498,39 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => openEventModal()}
-                      className="rounded-lg bg-lime-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-lime-400"
+                      className="rounded-lg bg-gradient-to-r from-lime-500 to-lime-600 px-3 py-1 text-[0.7rem] font-semibold text-white shadow-sm shadow-lime-500/30 transition hover:from-lime-600 hover:to-lime-700 hover:shadow-md"
                 >
-                      + Событие
+                      <svg className="w-3.5 h-3.5 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Событие
                 </button>
               )}
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5 rounded-lg border border-slate-200/60 bg-white/60 p-0.5">
                 <button
                   type="button"
                   onClick={() => handleNavigate("prev")}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                      className="rounded-md px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-slate-100 transition"
                 >
-                  ←
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleNavigate("today")}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                      className="rounded-md px-2 py-1 text-[0.7rem] font-medium text-slate-700 hover:bg-slate-100 transition"
                 >
                   Сегодня
                 </button>
                 <button
                   type="button"
                   onClick={() => handleNavigate("next")}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                      className="rounded-md px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-slate-100 transition"
                 >
-                  →
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -2794,6 +2789,33 @@ export default function Home() {
             }}
             onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
               try {
+                // Проверка безопасности: пользователь может менять только свой статус
+                // Проверяем по ID и по email для надежности
+                const event = events.find((e) => e.id === eventId);
+                const participant = event?.participants?.find((p) => p.user_id === userId);
+                
+                if (!currentUser || !userEmail) {
+                  throw new Error("Необходима авторизация");
+                }
+                
+                if (userId !== currentUser.id) {
+                  console.error("Попытка изменить статус другого участника заблокирована", {
+                    userId,
+                    currentUserId: currentUser.id,
+                    participantEmail: participant?.email,
+                    currentUserEmail: userEmail
+                  });
+                  throw new Error("Вы можете изменить только свой статус участия");
+                }
+                
+                if (participant && participant.email !== userEmail) {
+                  console.error("Несоответствие email участника", {
+                    participantEmail: participant.email,
+                    currentUserEmail: userEmail
+                  });
+                  throw new Error("Несоответствие данных участника");
+                }
+
                 // Оптимистичное обновление: сразу обновляем событие в списке
                 setEvents((prevEvents) => {
                   return prevEvents.map((event) => {
@@ -2809,8 +2831,9 @@ export default function Home() {
                   });
                 });
 
+                // Используем правильный endpoint для обновления статуса участника
                 const response = await authFetch(
-                  `${EVENT_ENDPOINT}${eventId}/participants/${userId}`,
+                  `${EVENT_ENDPOINT}${eventId}/participants/${userId}/status`,
                   {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -2818,11 +2841,14 @@ export default function Home() {
                   },
                 );
                 if (!response.ok) {
-                  throw new Error("Не удалось обновить статус");
+                  const errorData = await response.json().catch(() => ({}));
+                  throw new Error(errorData.detail || "Не удалось обновить статус");
                 }
                 
-                // Обновляем данные с сервера для синхронизации
-                await loadEvents();
+                // Обновляем данные с сервера для синхронизации (в фоне)
+                loadEvents(true).catch((err) => {
+                  console.error("Ошибка перезагрузки событий после обновления статуса:", err);
+                });
                 
                 // Обновляем уведомления, чтобы увидеть новые уведомления организатору
                 if (notificationsRefresh) {
@@ -2830,10 +2856,10 @@ export default function Home() {
                 }
               } catch (err) {
                 // Откатываем оптимистичное обновление при ошибке
-                await loadEvents();
-                setEventFormError(
-                  err instanceof Error ? err.message : "Не удалось обновить статус",
-                );
+                await loadEvents(true);
+                const errorMessage = err instanceof Error ? err.message : "Не удалось обновить статус";
+                console.error("Ошибка обновления статуса участника:", errorMessage);
+                setEventFormError(errorMessage);
               }
             }}
           />
