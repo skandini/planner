@@ -12,6 +12,8 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # Create Celery app
+# Note: Celery will try to connect to Redis on startup, but won't fail if Redis is unavailable
+# Tasks will fail gracefully when trying to execute if Redis is not running
 celery_app = Celery(
     "planner",
     broker=settings.CELERY_BROKER_URL,
@@ -26,8 +28,10 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    # Broker connection
+    # Broker connection - retry on startup, but don't block if Redis is unavailable
     broker_connection_retry_on_startup=True,  # Retry connection on startup
+    broker_connection_retry=True,  # Retry on connection loss
+    broker_connection_max_retries=10,  # Max retries
     # Task execution settings
     task_acks_late=True,  # Acknowledge tasks after execution
     task_reject_on_worker_lost=True,  # Re-queue tasks if worker dies
@@ -51,4 +55,5 @@ celery_app.conf.beat_schedule = {
 }
 
 logger.info(f"Celery app configured with broker: {settings.CELERY_BROKER_URL}")
+logger.info("Note: If Redis is not running, Celery tasks will fail gracefully. Backend will still work without Celery.")
 

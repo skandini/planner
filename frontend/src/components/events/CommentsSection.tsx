@@ -280,27 +280,37 @@ export function CommentsSection({
     }
   };
 
-  // Форматирование даты
+  // Форматирование даты - точная дата и время
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const isToday = date.toDateString() === now.toDateString();
+    const isThisYear = date.getFullYear() === now.getFullYear();
 
-    if (minutes < 1) return "только что";
-    if (minutes < 60) return `${minutes} ${minutes === 1 ? "минуту" : minutes < 5 ? "минуты" : "минут"} назад`;
-    if (hours < 24) return `${hours} ${hours === 1 ? "час" : hours < 5 ? "часа" : "часов"} назад`;
-    if (days < 7) return `${days} ${days === 1 ? "день" : days < 5 ? "дня" : "дней"} назад`;
-
-    return date.toLocaleDateString("ru-RU", {
-      day: "numeric",
-      month: "long",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (isToday) {
+      // Сегодня - показываем только время
+      return date.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else if (isThisYear) {
+      // В этом году - дата и время без года
+      return date.toLocaleString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      // Другой год - полная дата и время
+      return date.toLocaleString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
   };
 
   // Автоматическое изменение высоты textarea
@@ -316,12 +326,13 @@ export function CommentsSection({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 animate-fade-in">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-slate-900">
+    <div className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm">
+      {/* Заголовок - легкий воздушный */}
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
           Комментарии
           {comments.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-slate-500">
+            <span className="ml-1.5 text-xs font-normal text-slate-500 normal-case">
               ({comments.length})
             </span>
           )}
@@ -329,19 +340,19 @@ export function CommentsSection({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="mb-3 rounded-lg border border-red-200/60 bg-red-50/60 px-3 py-2 text-xs text-red-700">
           {error}
         </div>
       )}
 
-      {/* Список комментариев */}
-      <div className="mb-4 max-h-96 overflow-y-auto space-y-4 pr-2">
+      {/* Список комментариев - легкий воздушный */}
+      <div className="mb-3 max-h-[400px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
         {loading && comments.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">
+          <div className="py-8 text-center text-xs text-slate-500">
             Загрузка комментариев...
           </div>
         ) : comments.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">
+          <div className="py-8 text-center text-xs text-slate-500">
             Пока нет комментариев. Будьте первым!
           </div>
         ) : (
@@ -354,7 +365,9 @@ export function CommentsSection({
             return (
               <div
                 key={comment.id}
-                className="group rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/30 p-4 transition-all hover:border-lime-300 hover:shadow-md hover:shadow-lime-100"
+                className={`group rounded-lg border border-slate-200/60 bg-white/60 backdrop-blur-sm p-2.5 transition-all hover:bg-white/80 hover:border-slate-300 hover:shadow-sm ${
+                  isOwnComment ? "border-lime-200/60 bg-lime-50/30" : ""
+                }`}
               >
                 <div className="flex items-start gap-3">
                   {/* Аватар с tooltip */}
@@ -379,7 +392,7 @@ export function CommentsSection({
                       <img
                         src={apiBaseUrl && !comment.user_avatar_url.startsWith('http') ? `${apiBaseUrl}${comment.user_avatar_url}` : comment.user_avatar_url}
                         alt={comment.user_full_name || comment.user_email || "User"}
-                        className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-md cursor-pointer transition-transform hover:scale-110"
+                        className="h-8 w-8 rounded-full object-cover border border-slate-200 shadow-sm cursor-pointer transition-all hover:scale-105"
                         onError={(e) => {
                           // Если изображение не загрузилось, заменяем на инициал
                           const target = e.target as HTMLImageElement;
@@ -392,7 +405,12 @@ export function CommentsSection({
                       />
                     ) : null}
                     <div 
-                      className={`avatar-fallback flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-lime-400 to-lime-600 text-sm font-semibold text-white shadow-md cursor-pointer transition-transform hover:scale-110 ${comment.user_avatar_url ? 'hidden' : ''}`}
+                      className={`avatar-fallback flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white shadow-sm cursor-pointer transition-all hover:scale-105 ${
+                        comment.user_avatar_url ? 'hidden' : '',
+                        isOwnComment 
+                          ? "bg-gradient-to-br from-lime-400 to-lime-500 border border-lime-300" 
+                          : "bg-gradient-to-br from-slate-300 to-slate-400 border border-slate-200"
+                      }`}
                     >
                       {(comment.user_full_name || comment.user_email || "U")[0].toUpperCase()}
                     </div>
@@ -400,18 +418,25 @@ export function CommentsSection({
 
                   {/* Содержимое комментария */}
                   <div className="flex-1 min-w-0">
-                    <div className="mb-2 flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900 cursor-pointer hover:text-lime-600 transition-colors">
+                    <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs font-semibold cursor-pointer transition-colors ${
+                          isOwnComment ? "text-lime-700" : "text-slate-700"
+                        }`}>
                           {comment.user_full_name || comment.user_email || "Неизвестный пользователь"}
                         </span>
+                        {isOwnComment && (
+                          <span className="inline-flex items-center px-1 py-0.5 rounded text-[0.65rem] font-semibold bg-lime-100 text-lime-700 border border-lime-200/60">
+                            Вы
+                          </span>
+                        )}
                         {orgAbbr && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-lime-100 text-lime-800 border border-lime-200">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[0.65rem] font-semibold bg-slate-50 text-slate-600 border border-slate-200/60">
                             {orgAbbr}
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-[0.65rem] text-slate-500">
                         {formatDate(comment.created_at)}
                       </span>
                     </div>
@@ -443,24 +468,24 @@ export function CommentsSection({
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap break-words leading-relaxed">
+                      <p className="text-xs text-slate-700 whitespace-pre-wrap break-words leading-relaxed">
                         {comment.content}
                       </p>
                     )}
 
                     {/* Кнопки действий (только для своих комментариев) */}
                     {isOwnComment && !isEditing && (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => startEdit(comment)}
-                          className="text-xs font-medium text-slate-600 hover:text-lime-600 hover:bg-lime-50 px-2 py-1 rounded transition-all"
+                          className="text-[0.65rem] font-medium text-slate-600 hover:text-lime-600 hover:bg-lime-50 px-1.5 py-0.5 rounded transition-all"
                         >
                           ✏️ Редактировать
                         </button>
                         <button
                           onClick={() => handleDelete(comment.id)}
                           disabled={submitting}
-                          className="text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-[0.65rem] font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-1.5 py-0.5 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           🗑️ Удалить
                         </button>
@@ -475,15 +500,15 @@ export function CommentsSection({
         <div ref={commentsEndRef} />
       </div>
 
-      {/* Форма добавления комментария (используем div вместо form, т.к. уже внутри формы события) */}
-      <div className="border-t border-slate-200 pt-4">
-        <div className="flex gap-3">
+      {/* Форма добавления комментария - легкий воздушный */}
+      <div className="border-t border-slate-200/60 pt-3">
+        <div className="flex gap-2">
           <textarea
             ref={textareaRef}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Напишите комментарий..."
-            className="flex-1 resize-none rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+            className="flex-1 resize-none rounded-lg border border-slate-200/60 bg-white/80 backdrop-blur-sm px-3 py-2 text-xs text-slate-900 placeholder-slate-400 transition-all focus:border-lime-400 focus:ring-1 focus:ring-lime-400/20"
             rows={2}
             disabled={submitting}
             onKeyDown={(e) => {
@@ -502,12 +527,12 @@ export function CommentsSection({
               handleSubmit(e);
             }}
             disabled={submitting || !newComment.trim()}
-            className="self-end rounded-lg bg-lime-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-lime-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            className="self-end rounded-lg bg-lime-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-lime-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
           >
-            {submitting ? "Отправка..." : "Отправить"}
+            {submitting ? "..." : "Отправить"}
           </button>
         </div>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-1.5 text-[0.65rem] text-slate-500">
           Нажмите Ctrl+Enter для отправки
         </p>
       </div>

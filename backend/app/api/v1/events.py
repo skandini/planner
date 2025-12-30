@@ -7,6 +7,7 @@ from typing import List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from app.schemas.pagination import PaginatedResponse, PaginationParams
 from sqlmodel import and_, delete, or_, select
 
 logger = logging.getLogger(__name__)
@@ -513,6 +514,8 @@ def list_events(
     ends_before: Optional[datetime] = Query(
         default=None, alias="to", description="ISO timestamp filter end"
     ),
+    page: Optional[int] = Query(default=None, ge=1, description="Номер страницы (опционально)"),
+    page_size: Optional[int] = Query(default=None, ge=1, le=100, description="Размер страницы (опционально)"),
 ) -> List[EventRead]:
     # Упрощенная логика: показываем события из личных календарей пользователя
     # и события, где пользователь является участником
@@ -556,9 +559,15 @@ def list_events(
     if filter_expr is not None:
         statement = statement.where(filter_expr)
     statement = statement.order_by(Event.starts_at)
+    
+    # Применяем пагинацию, если указана
+    if page is not None and page_size is not None:
+        pagination = PaginationParams(page=page, page_size=page_size)
+        statement = statement.offset(pagination.skip).limit(pagination.limit)
+    
     events = session.exec(statement).all()
     
-    print(f"[DEBUG] Found {len(events)} events for user {current_user.id}")
+    logger.debug(f"Found {len(events)} events for user {current_user.id}")
 
     # Предзагружаем календари для всех событий одним запросом
     calendar_ids = {event.calendar_id for event in events}
@@ -677,7 +686,7 @@ def list_events(
             )
         )
 
-    print(f"[DEBUG] Returning {len(serialized)} serialized events")
+    logger.debug(f"Returning {len(serialized)} serialized events")
     return serialized
 
 
@@ -822,20 +831,31 @@ def create_event(
     session.refresh(event)
 
     # Create notifications for participants (асинхронно через Celery)
+    # Оптимизация: отправляем уведомления батчами
     if participant_ids:
         inviter_name = current_user.full_name or current_user.email
         logger.info(f"Creating notifications for {len(participant_ids)} participants for event {event.id}")
         
-        for participant_id in participant_ids:
-            if participant_id != current_user.id:  # Don't notify yourself
-                result = safe_celery_delay(
-                    notify_event_invited_task,
-                    user_id=str(participant_id),
-                    event_id=str(event.id),
-                    inviter_name=inviter_name,
-                )
-                if result:
-                    logger.info(f"Sent notification task {result.id} to Celery for user {participant_id}")
+        # Фильтруем участников, которым нужно отправить уведомление
+        participants_to_notify = [
+            pid for pid in participant_ids if pid != current_user.id
+        ]
+        
+        # Отправляем уведомления параллельно (Celery сам управляет очередью)
+        notification_tasks = []
+        for participant_id in participants_to_notify:
+            result = safe_celery_delay(
+                notify_event_invited_task,
+                user_id=str(participant_id),
+                event_id=str(event.id),
+                inviter_name=inviter_name,
+            )
+            if result:
+                notification_tasks.append(result.id)
+                logger.debug(f"Sent notification task {result.id} to Celery for user {participant_id}")
+        
+        if notification_tasks:
+            logger.info(f"Sent {len(notification_tasks)} notification tasks to Celery")
 
     serialized_event = _serialize_event_with_participants(session, event)
 
@@ -959,16 +979,26 @@ def update_event(
     session.refresh(event)
     
     # Notify participants about update (асинхронно через Celery)
+    # Оптимизация: отправляем уведомления батчами
     participant_ids = _get_event_participant_ids(session, event_id)
     updater_name = current_user.full_name or current_user.email
-    for participant_id in participant_ids:
-        if participant_id != current_user.id:  # Don't notify yourself
-            safe_celery_delay(
-                notify_event_updated_task,
-                user_id=str(participant_id),
-                event_id=str(event_id),
-                updater_name=updater_name,
-            )
+    participants_to_notify = [
+        pid for pid in participant_ids if pid != current_user.id
+    ]
+    
+    notification_count = 0
+    for participant_id in participants_to_notify:
+        result = safe_celery_delay(
+            notify_event_updated_task,
+            user_id=str(participant_id),
+            event_id=str(event_id),
+            updater_name=updater_name,
+        )
+        if result:
+            notification_count += 1
+    
+    if notification_count > 0:
+        logger.debug(f"Sent {notification_count} update notification tasks to Celery")
 
     if "participant_ids" in payload.model_dump(exclude_unset=True):
         existing = session.exec(
@@ -1093,8 +1123,7 @@ def update_participant_status(
     except Exception as e:
         # Логируем неожиданные ошибки
         import traceback
-        print(f"[ERROR] update_participant_status failed: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"update_participant_status failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update participant status: {str(e)}"

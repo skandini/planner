@@ -21,6 +21,7 @@ function debounce<T extends (...args: any[]) => any>(
 }
 
 import { useAuth } from "@/context/AuthContext";
+import { logger } from "@/lib/utils/logger";
 import type { Calendar, CalendarMember, CalendarDraft, CalendarRole } from "@/types/calendar.types";
 import type { EventRecord, EventDraft, ConflictEntry } from "@/types/event.types";
 import type { UserProfile } from "@/types/user.types";
@@ -44,6 +45,9 @@ import { TicketTracker } from "@/components/support/TicketTracker";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AvailabilitySlotsManager } from "@/components/availability/AvailabilitySlotsManager";
+import { EmployeeScheduleView } from "@/components/employees/EmployeeScheduleView";
+import { EmployeeScheduleModal } from "@/components/employees/EmployeeScheduleModal";
+import { ShaderGradientBackground } from "@/components/background/ShaderGradientBackground";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -109,6 +113,8 @@ export default function Home() {
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isMembersManagerOpen, setIsMembersManagerOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isEmployeeScheduleModalOpen, setIsEmployeeScheduleModalOpen] = useState(false);
+  const [selectedEmployeeUser, setSelectedEmployeeUser] = useState<UserProfile | null>(null);
   const [eventForm, setEventForm] = useState<EventDraft>(DEFAULT_EVENT_FORM);
   const [isEventSubmitting, setIsEventSubmitting] = useState(false);
   const [eventFormError, setEventFormError] = useState<string | null>(null);
@@ -226,7 +232,7 @@ export default function Home() {
           if (error instanceof TypeError) {
             if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
               // Это может быть CORS ошибка или сервер недоступен
-              console.error(
+              logger.error(
                 `[API Error] Network error when fetching:\n` +
                 `  URL: ${url}\n` +
                 `  Error: ${error.message}\n` +
@@ -252,7 +258,7 @@ export default function Home() {
           
           // Обработка ошибки отмены запроса (может быть из-за таймаута браузера или явной отмены)
           if (error instanceof Error && error.name === "AbortError") {
-            console.error(`[API Error] Request aborted for: ${url}`);
+            logger.error(`[API Error] Request aborted for: ${url}`);
             throw new Error(`Запрос был прерван. URL: ${url}`);
           }
           
@@ -302,8 +308,10 @@ export default function Home() {
       if (!response.ok) {
         throw new Error("Не удалось загрузить пользователей");
       }
-      const data: UserProfile[] = await response.json();
-      setUsers(data);
+      const data = await response.json();
+      // API возвращает PaginatedResponse с полем items
+      const usersList = Array.isArray(data) ? data : (data.items || []);
+      setUsers(usersList);
     } catch (err) {
       setUsers([]);
       setUsersError(
@@ -324,8 +332,8 @@ export default function Home() {
       const response = await authFetch(`${USERS_ENDPOINT}me`, { cache: "no-store" });
       if (response.ok) {
         const data: UserProfile = await response.json();
-        console.log('Loaded user profile:', data);
-        console.log('Avatar URL:', data.avatar_url);
+        logger.debug('Loaded user profile:', data);
+        logger.debug('Avatar URL:', data.avatar_url);
         setCurrentUser(data);
         
         // Загружаем информацию об организации если есть
@@ -337,14 +345,14 @@ export default function Home() {
               setUserOrganization(orgData);
             }
           } catch (err) {
-            console.error("Failed to load organization:", err);
+            logger.error("Failed to load organization:", err);
           }
         } else {
           setUserOrganization(null);
         }
       }
     } catch (err) {
-      console.error("Failed to load current user:", err);
+      logger.error("Failed to load current user:", err);
     }
   }, [accessToken, authFetch]);
 
@@ -358,14 +366,14 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         setOrganizations(data);
-        console.log("Загружено организаций:", data.length);
+        logger.debug("Загружено организаций:", data.length);
       } else {
-        console.error("Ошибка загрузки организаций:", response.status, response.statusText);
+        logger.error("Ошибка загрузки организаций:", response.status, response.statusText);
         const errorData = await response.json().catch(() => ({}));
-        console.error("Детали ошибки:", errorData);
+        logger.error("Детали ошибки:", errorData);
       }
     } catch (err) {
-      console.error("Failed to load organizations:", err);
+      logger.error("Failed to load organizations:", err);
     }
   }, [accessToken, authFetch]);
 
@@ -402,7 +410,7 @@ export default function Home() {
         // 403 - нормальная ситуация, если у пользователя нет прав доступа
         setDepartments([]);
       } else {
-        console.error("Ошибка загрузки отделов:", response.status, response.statusText);
+        logger.error("Ошибка загрузки отделов:", response.status, response.statusText);
       }
     } catch (err) {
       // Игнорируем ошибки загрузки отделов, если у пользователя нет прав
@@ -410,7 +418,7 @@ export default function Home() {
         setDepartments([]);
         return;
       }
-      console.error("Failed to load departments:", err);
+      logger.error("Failed to load departments:", err);
     }
   }, [accessToken, authFetch, currentUser]);
 
@@ -446,14 +454,14 @@ export default function Home() {
       const response = await authFetch(ROOM_ENDPOINT, { cache: "no-store" });
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Failed to load rooms:", response.status, errorText);
+        logger.error("Failed to load rooms:", response.status, errorText);
         throw new Error(`Не удалось загрузить переговорки: ${response.status}`);
       }
       const data: Room[] = await response.json();
-      console.log("Loaded rooms:", data.length);
+      logger.debug("Loaded rooms:", data.length);
       setRooms(data);
     } catch (err) {
-      console.error("Failed to load rooms:", err);
+      logger.error("Failed to load rooms:", err);
       setRooms([]);
     } finally {
       setRoomsLoading(false);
@@ -745,7 +753,7 @@ export default function Home() {
         // Если ошибка доступа (403), просто возвращаем пустой список
         // Это нормально, если пользователь не имеет доступа к списку участников
         if (response.status === 403 || response.status === 404) {
-          console.warn("User doesn't have access to calendar members list, skipping");
+          logger.warn("User doesn't have access to calendar members list, skipping");
           setMembers([]);
           return;
         }
@@ -813,7 +821,7 @@ export default function Home() {
           setUserAvailabilityError(errorText);
         }
       } catch (err) {
-        console.error("Failed to load user availability:", err);
+        logger.error("Failed to load user availability:", err);
         setUserAvailability([]);
         setUserAvailabilityError(
           err instanceof Error ? err.message : "Не удалось загрузить доступность",
@@ -879,7 +887,7 @@ export default function Home() {
         // Фильтруем только события с status="unavailable" (расписание доступности)
         unavailableEvents = data.filter(event => event.status === "unavailable");
       } else {
-        console.error("Failed to load availability schedule:", availabilityResponse.status);
+        logger.error("Failed to load availability schedule:", availabilityResponse.status);
       }
       
       // Загружаем забронированные availability slots
@@ -928,14 +936,14 @@ export default function Home() {
           }));
         }
       } catch (slotsErr) {
-        console.error("Failed to load booked availability slots:", slotsErr);
+        logger.error("Failed to load booked availability slots:", slotsErr);
         // Не критично, продолжаем без них
       }
       
       // Объединяем расписание доступности и забронированные слоты
       setMyAvailabilitySchedule([...unavailableEvents, ...bookedSlotsEvents]);
     } catch (err) {
-      console.error("Failed to load my availability schedule:", err);
+      logger.error("Failed to load my availability schedule:", err);
       setMyAvailabilitySchedule([]);
     } finally {
       setMyAvailabilityLoading(false);
@@ -1006,7 +1014,7 @@ export default function Home() {
         }
         await loadCalendarMembers();
       } catch (err) {
-        console.error("Failed to add user to calendar:", err);
+        logger.error("Failed to add user to calendar:", err);
         throw err;
       }
     },
@@ -1278,7 +1286,7 @@ export default function Home() {
           });
           setBookingSlotId(null);
         } catch (err) {
-          console.error("Failed to book slot:", err);
+          logger.error("Failed to book slot:", err);
           // Не прерываем создание события, если бронирование слота не удалось
         }
       }
@@ -1292,7 +1300,7 @@ export default function Home() {
 
       // Перезагружаем события для синхронизации (в фоне, не блокируя закрытие модального окна)
       loadEvents(true).catch((err) => {
-        console.error("Ошибка перезагрузки событий после создания:", err);
+        logger.error("Ошибка перезагрузки событий после создания:", err);
       });
       
       // Закрываем модальное окно сразу после успешного создания события
@@ -1323,7 +1331,7 @@ export default function Home() {
 
               if (!uploadResponse.ok) {
                 const errorData = await uploadResponse.json().catch(() => ({}));
-                console.error(`Не удалось загрузить файл ${file.name}:`, errorData.detail || uploadResponse.statusText);
+                logger.error(`Не удалось загрузить файл ${file.name}:`, errorData.detail || uploadResponse.statusText);
               }
             }
             // Очищаем временные файлы после загрузки
@@ -1331,7 +1339,7 @@ export default function Home() {
             // Перезагружаем события для отображения загруженных файлов
             await loadEvents(true);
           } catch (err) {
-            console.error("Ошибка загрузки временных файлов:", err);
+            logger.error("Ошибка загрузки временных файлов:", err);
             // Не блокируем создание события из-за ошибки загрузки файлов
           }
         })();
@@ -1581,8 +1589,9 @@ export default function Home() {
 
   if (!isAuthenticated) {
   return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 p-6 text-slate-900">
-        <div className="mx-auto flex max-w-lg flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+      <div className="relative min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 p-6 text-slate-900">
+        <ShaderGradientBackground />
+        <div className="relative z-10 mx-auto flex max-w-lg flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
           <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
             Требуется авторизация
           </p>
@@ -1610,10 +1619,11 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 text-slate-900 overflow-hidden backdrop-blur-sm">
+    <div className="relative h-screen bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 text-slate-900 overflow-hidden backdrop-blur-sm">
+      <ShaderGradientBackground />
       {/* Админские уведомления - toast в правом верхнем углу */}
       <AdminNotifications authFetch={authFetch} />
-      <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
+      <div className="relative z-10 mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
         <header 
           className="relative overflow-hidden rounded-xl border border-slate-200/50 backdrop-blur-sm px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex-shrink-0"
           style={{
@@ -1717,11 +1727,11 @@ export default function Home() {
                           const avatarUrl = currentUser.avatar_url!;
                           const baseUrl = API_BASE_URL.replace('/api/v1', '');
                           const fullUrl = `${baseUrl}${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
-                          console.error('Avatar load error:', avatarUrl, 'Full URL:', fullUrl);
+                          logger.error('Avatar load error:', avatarUrl, 'Full URL:', fullUrl);
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
                         onLoad={() => {
-                          console.log('Avatar loaded successfully');
+                          logger.debug('Avatar loaded successfully');
                         }}
                       />
                     ) : (
@@ -1856,7 +1866,7 @@ export default function Home() {
             })}
           </div>
           
-          <aside className="order-2 flex w-full flex-col gap-2.5 lg:order-1 lg:w-[280px] lg:flex-shrink-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          <aside className="order-2 flex w-full flex-col gap-2.5 lg:order-1 lg:w-[340px] lg:flex-shrink-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
             {/* Мини-календарь - компактный */}
             <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
               <div className="flex items-center justify-between mb-2.5">
@@ -2171,67 +2181,52 @@ export default function Home() {
             </ul>
           </section>
 
-          {/* Статистика - компактная */}
+          {/* Поиск сотрудников и их расписание */}
           <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Статистика</h2>
-            <div className="space-y-1.5">
-              {(() => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const todayEventsCount = events.filter(e => {
-                  const eventDate = new Date(e.starts_at);
-                  return eventDate >= today && eventDate < tomorrow;
-                }).length;
-                
-                const weekStart = new Date(today);
-                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekEnd.getDate() + 7);
-                const weekEventsCount = events.filter(e => {
-                  const eventDate = new Date(e.starts_at);
-                  return eventDate >= weekStart && eventDate < weekEnd;
-                }).length;
-                
-                return (
-                  <>
-                    <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-lime-50 to-lime-50/50 border border-lime-200/60 p-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-lime-500"></div>
-                        <span className="text-[0.65rem] font-medium text-slate-700">Сегодня</span>
-                      </div>
-                      <span className="text-[0.7rem] font-bold text-slate-900">{todayEventsCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-indigo-50 to-indigo-50/50 border border-indigo-200/60 p-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                        <span className="text-[0.65rem] font-medium text-slate-700">На неделе</span>
-                      </div>
-                      <span className="text-[0.7rem] font-bold text-slate-900">{weekEventsCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-amber-50 to-amber-50/50 border border-amber-200/60 p-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                        <span className="text-[0.65rem] font-medium text-slate-700">Всего</span>
-                      </div>
-                      <span className="text-[0.7rem] font-bold text-slate-900">{events.length}</span>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Расписание сотрудников</h2>
+            <EmployeeScheduleView
+              users={users}
+              usersLoading={usersLoading}
+              authFetch={authFetch}
+              onEventClick={(event) => openEventModal(undefined, event)}
+              onUserSelect={async (user) => {
+                // Проверяем права доступа к расписанию сотрудника
+                try {
+                  const checkResponse = await authFetch(
+                    `${API_BASE_URL}/schedule-access/check/${user.id}`,
+                    { cache: "no-store" }
+                  );
+                  if (checkResponse.ok) {
+                    const accessData = await checkResponse.json();
+                    if (accessData.has_access) {
+                      setSelectedEmployeeUser(user);
+                      setIsEmployeeScheduleModalOpen(true);
+                    } else {
+                      alert("У вас нет доступа к расписанию этого сотрудника. Обратитесь к администратору для получения доступа.");
+                    }
+                  } else {
+                    const errorData = await checkResponse.json().catch(() => ({}));
+                    alert(`Ошибка проверки доступа: ${errorData.detail || "Неизвестная ошибка"}`);
+                  }
+                } catch (err) {
+                  logger.error("Ошибка проверки доступа к расписанию:", err);
+                  alert("Не удалось проверить доступ к расписанию. Попробуйте позже.");
+                }
+              }}
+              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+              apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+            />
           </section>
 
           {/* Блок с ближайшими событиями - компактный */}
-          <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Ближайшие</h2>
+          <section className="flex-shrink-0">
             <UpcomingEvents
               events={events}
               currentUserEmail={userEmail || undefined}
               onEventClick={(event) => openEventModal(undefined, event)}
               users={users}
               apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              rooms={rooms}
             />
           </section>
 
@@ -2328,121 +2323,8 @@ export default function Home() {
             </section>
           )}
 
-            <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
-              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">Поиск</h2>
-
-              <div>
-                <input
-                  type="text"
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  placeholder="Имя или email..."
-                  className="w-full rounded-lg border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-[0.7rem] text-slate-700 outline-none focus:border-lime-500/60 focus:ring-1 focus:ring-lime-500/20 focus:bg-white transition"
-                />
-              </div>
-
-              {userSearchQuery.trim() && (
-                <div className="mt-2 max-h-[200px] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-                  {usersLoading ? (
-                    <p className="text-[0.65rem] text-slate-500 text-center py-2">Загружаем...</p>
-                  ) : filteredUsers.length === 0 ? (
-                    <p className="text-[0.65rem] text-slate-500 text-center py-2">Не найдено</p>
-                  ) : (
-                    filteredUsers.map((user) => {
-                      const isMember = members.some((m) => m.user_id === user.id);
-                      return (
-                        <div
-                          key={user.id}
-                          className="flex items-center justify-between gap-1.5 rounded-lg border border-slate-200/60 bg-white/60 p-1.5 hover:bg-white hover:border-slate-300 hover:shadow-sm transition cursor-pointer"
-                          onClick={() => setSelectedUserForView(user.id)}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[0.7rem] font-semibold text-slate-700 truncate">
-                              {user.full_name || user.email}
-                            </p>
-                            <p className="text-[0.6rem] text-slate-500 truncate">
-                              {user.email}
-                            </p>
-                          </div>
-                          {isMember && (
-                            <span className="rounded-full border border-lime-200/60 bg-lime-50/80 px-1 py-0.5 text-[0.55rem] font-semibold text-lime-700 flex-shrink-0">
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </section>
-
-            {/* Участники календаря - компактные */}
-            <section className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3 shadow-sm flex-shrink-0">
-              <div className="flex items-center justify-between mb-2.5">
-                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Участники</h2>
-                {selectedRole && selectedCalendar && (
-                  <span className="rounded-full border border-purple-200/60 bg-purple-50/80 px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-purple-700">
-                    {ROLE_LABELS[selectedRole]}
-                  </span>
-                )}
-              </div>
-
-              {!selectedCalendar && (
-                <p className="text-xs text-slate-400 text-center py-3">
-                  Выберите календарь
-                </p>
-              )}
-
-              {selectedCalendar && membersError && (
-                <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
-                  {membersError}
-                </p>
-              )}
-
-              {selectedCalendar && membersLoading && (
-                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 text-xs text-slate-500 text-center">
-                  Загружаем…
-                </p>
-              )}
-
-              {selectedCalendar && !membersLoading && members.length === 0 && !membersError && (
-                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2 text-xs text-slate-500 text-center">
-                  Пока никто не присоединён
-                </p>
-              )}
-
-              {selectedCalendar && !membersLoading && members.length > 0 && (
-                <ul className="space-y-1 max-h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-                  {members.map((member) => {
-                    const roleKey = ["owner", "editor", "viewer"].includes(
-                      member.role,
-                    )
-                      ? (member.role as CalendarRole)
-                      : null;
-                    const role = roleKey ? ROLE_LABELS[roleKey] : member.role;
-                    return (
-                      <li
-                        key={`${member.calendar_id}-${member.user_id}`}
-                        className="rounded-lg border border-slate-200/60 bg-white/60 p-1.5 hover:bg-white hover:border-slate-300 hover:shadow-sm transition"
-                      >
-                        <div className="flex items-center justify-between gap-1.5">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[0.7rem] font-semibold text-slate-700 truncate">
-                              {member.full_name || member.email}
-                            </p>
-                            <p className="text-[0.6rem] text-slate-500 truncate">{member.email}</p>
-                          </div>
-                          <span className="rounded-full border border-purple-200/60 bg-purple-50/80 px-1 py-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-purple-700 flex-shrink-0">
-                            {role}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
+            {/* Секция "Поиск" скрыта */}
+            {/* Секция "Участники" скрыта */}
           </aside>
 
           <section className="order-1 flex flex-1 flex-col gap-2.5 lg:order-2 lg:min-w-0 overflow-hidden">
@@ -2576,7 +2458,7 @@ export default function Home() {
                   await eventApi.updateParticipantStatus(authFetch, eventId, userId, status);
                   await loadEvents();
                 } catch (err) {
-                  console.error("Failed to update participant status:", err);
+                  logger.error("Failed to update participant status:", err);
                 }
               }}
               currentUserEmail={userEmail || undefined}
@@ -2615,7 +2497,7 @@ export default function Home() {
                   await eventApi.updateParticipantStatus(authFetch, eventId, userId, status);
                   await loadEvents();
                 } catch (err) {
-                  console.error("Failed to update participant status:", err);
+                  logger.error("Failed to update participant status:", err);
                 }
               }}
               currentUserEmail={userEmail || undefined}
@@ -2688,7 +2570,8 @@ export default function Home() {
               <AvailabilitySlotsManager
                 authFetch={authFetch}
                 currentUserId={currentUser?.id}
-		selectedCalendarId={selectedCalendarId ?? undefined}             
+                currentUserRole={currentUser?.role}
+                selectedCalendarId={selectedCalendarId ?? undefined}             
                 onSlotBooked={() => {
                   loadEvents();
                 }}
@@ -2735,6 +2618,22 @@ export default function Home() {
           )}
         </section>
         </main>
+
+        {isEmployeeScheduleModalOpen && selectedEmployeeUser && (
+          <EmployeeScheduleModal
+            user={selectedEmployeeUser}
+            isOpen={isEmployeeScheduleModalOpen}
+            onClose={() => {
+              setIsEmployeeScheduleModalOpen(false);
+              setSelectedEmployeeUser(null);
+            }}
+            authFetch={authFetch}
+            onEventClick={(event) => openEventModal(undefined, event)}
+            getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+            apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+            rooms={rooms}
+          />
+        )}
 
         {isEventModalOpen && (
           <EventModal
@@ -2799,7 +2698,7 @@ export default function Home() {
                 }
                 
                 if (userId !== currentUser.id) {
-                  console.error("Попытка изменить статус другого участника заблокирована", {
+                  logger.error("Попытка изменить статус другого участника заблокирована", {
                     userId,
                     currentUserId: currentUser.id,
                     participantEmail: participant?.email,
@@ -2809,7 +2708,7 @@ export default function Home() {
                 }
                 
                 if (participant && participant.email !== userEmail) {
-                  console.error("Несоответствие email участника", {
+                  logger.error("Несоответствие email участника", {
                     participantEmail: participant.email,
                     currentUserEmail: userEmail
                   });
@@ -2847,7 +2746,7 @@ export default function Home() {
                 
                 // Обновляем данные с сервера для синхронизации (в фоне)
                 loadEvents(true).catch((err) => {
-                  console.error("Ошибка перезагрузки событий после обновления статуса:", err);
+                  logger.error("Ошибка перезагрузки событий после обновления статуса:", err);
                 });
                 
                 // Обновляем уведомления, чтобы увидеть новые уведомления организатору
@@ -2858,7 +2757,7 @@ export default function Home() {
                 // Откатываем оптимистичное обновление при ошибке
                 await loadEvents(true);
                 const errorMessage = err instanceof Error ? err.message : "Не удалось обновить статус";
-                console.error("Ошибка обновления статуса участника:", errorMessage);
+                logger.error("Ошибка обновления статуса участника:", errorMessage);
                 setEventFormError(errorMessage);
               }
             }}
@@ -2926,7 +2825,7 @@ export default function Home() {
                   const { eventApi } = await import("@/lib/api/eventApi");
                   event = await eventApi.get(authFetch, eventId);
                 } catch (err) {
-                  console.error("Failed to load event:", err);
+                  logger.error("Failed to load event:", err);
                   const errorMessage = err instanceof Error 
                     ? err.message 
                     : "Не удалось загрузить событие";

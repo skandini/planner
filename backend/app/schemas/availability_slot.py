@@ -17,7 +17,7 @@ class AvailabilitySlotBase(BaseModel):
 
 class AvailabilitySlotCreate(AvailabilitySlotBase):
     """Schema for creating availability slot."""
-    pass
+    user_id: Optional[UUID] = Field(default=None, description="User ID for admin slot creation. If not provided, uses current user.")
 
 
 class AvailabilitySlotUpdate(BaseModel):

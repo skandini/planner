@@ -442,28 +442,28 @@ export function WeekView({
 
   return (
     <React.Fragment>
-    <div className="h-full flex flex-col rounded-2xl border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.12)] overflow-hidden">
-      <div className="sticky top-0 z-10 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-slate-50 text-sm flex-shrink-0">
-        <div className="p-2 text-right text-[0.65rem] uppercase tracking-[0.3em] text-slate-500 bg-slate-50">
+    <div className="h-full flex flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/30 to-white shadow-[0_4px_20px_rgba(15,23,42,0.12)] overflow-hidden backdrop-blur-sm">
+      <div className="sticky top-0 z-10 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-slate-50/90 to-slate-50 text-sm flex-shrink-0">
+        <div className="p-2 text-right text-[0.65rem] uppercase tracking-[0.3em] text-slate-600 bg-gradient-to-br from-slate-100 to-slate-50 border-r border-slate-200/80 font-semibold">
           Время
         </div>
-        {dayColumns.map(({ date, isToday }) => (
+        {dayColumns.map(({ date, isToday }, idx) => (
           <div
             key={`head-${date.toISOString()}`}
-            className={`border-l border-slate-200 p-2 bg-slate-50 ${isToday ? "bg-lime-50" : ""}`}
+            className={`border-l border-slate-200/80 p-2 ${isToday ? "bg-gradient-to-br from-lime-50 via-lime-50/80 to-lime-50/60" : "bg-gradient-to-br from-slate-50 to-white"} ${idx === dayColumns.length - 1 ? "border-r border-slate-200/80" : ""}`}
           >
-            <p className="uppercase text-[0.65rem] tracking-[0.3em] text-slate-400">
+            <p className="uppercase text-[0.65rem] tracking-[0.3em] text-slate-500 font-semibold">
               {formatDate(date, { weekday: "short" })}
             </p>
             <div className="mt-0.5 flex items-baseline gap-1.5">
-              <p className="text-base font-semibold">
+              <p className={`text-base font-bold ${isToday ? "text-lime-700" : "text-slate-800"}`}>
                 {new Intl.DateTimeFormat("ru-RU", {
                   day: "numeric",
                   month: "short",
                 }).format(date)}
               </p>
               {isToday && (
-                <span className="rounded-full bg-lime-100 px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase text-lime-600">
+                <span className="rounded-full bg-gradient-to-r from-lime-400 to-lime-500 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase text-white shadow-sm">
                   сегодня
                 </span>
               )}
@@ -475,14 +475,14 @@ export function WeekView({
       <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
           <div
-            className="border-r border-slate-200 bg-white"
+            className="border-r border-slate-200/80 bg-gradient-to-br from-slate-50/50 to-white sticky left-0 z-20"
             style={{ height: `${DAY_HEIGHT}px` }}
           >
-            <div className="flex h-full flex-col justify-between text-right text-xs text-slate-500">
+            <div className="flex h-full flex-col justify-between text-right text-xs text-slate-600">
               {hours.map((hour) => (
                 <div
                   key={`label-${hour}`}
-                  className="pr-1.5 text-[0.6rem] uppercase tracking-wide"
+                  className="pr-1.5 text-[0.6rem] uppercase tracking-wide font-medium"
                   style={{ height: `${HOUR_HEIGHT}px` }}
                 >
                   {hour.toString().padStart(2, "0")}:00
@@ -500,8 +500,8 @@ export function WeekView({
             return (
               <div
                 key={`grid-${date.toISOString()}`}
-                className={`relative border-l border-slate-200 ${idx === dayColumns.length - 1 ? "border-r border-slate-200" : ""} ${
-                  isToday ? "bg-lime-50" : "bg-white"
+                className={`relative border-l border-slate-200/80 ${idx === dayColumns.length - 1 ? "border-r border-slate-200/80" : ""} ${
+                  isToday ? "bg-gradient-to-br from-lime-50/40 via-lime-50/20 to-white" : "bg-white"
                 } ${onTimeSlotClick ? "cursor-crosshair" : ""}`}
                 style={{ height: `${DAY_HEIGHT}px` }}
                 ref={(el) => {
@@ -514,7 +514,7 @@ export function WeekView({
                 {hours.map((hour) => (
                   <div
                     key={`line-${date.toISOString()}-${hour}`}
-                    className="absolute left-0 right-0 border-b border-slate-100"
+                    className="absolute left-0 right-0 border-b border-slate-100/60"
                     style={{ top: `${hour * HOUR_HEIGHT}px` }}
                   />
                 ))}

@@ -28,6 +28,7 @@ interface AvailabilitySlot {
 interface AvailabilitySlotsManagerProps {
   authFetch: AuthenticatedFetch;
   currentUserId?: string;
+  currentUserRole?: string;
   selectedCalendarId?: string;
   onSlotBooked?: () => void;
   onClose?: () => void;
@@ -38,6 +39,7 @@ interface AvailabilitySlotsManagerProps {
 export function AvailabilitySlotsManager({
   authFetch,
   currentUserId,
+  currentUserRole,
   selectedCalendarId,
   onSlotBooked,
   onClose,
@@ -299,6 +301,7 @@ export function AvailabilitySlotsManager({
           <AvailabilitySlotsTable
             authFetch={authFetch}
             currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
             selectedCalendarId={selectedCalendarId}
             onSlotBooked={() => {
               loadSlots();

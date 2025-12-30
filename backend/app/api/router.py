@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin_notifications, auth, availability_slots, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, room_access, rooms, statistics, ticket_attachments, ticket_comments, tickets, user_availability, users, user_avatars
+from app.api.v1 import admin_notifications, auth, availability_slots, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, room_access, rooms, schedule_access, statistics, ticket_attachments, ticket_comments, tickets, user_availability, users, user_avatars
 
 
 api_router = APIRouter()
@@ -24,4 +24,4 @@ api_router.include_router(departments.router, prefix="/departments", tags=["depa
 api_router.include_router(tickets.router, prefix="/tickets", tags=["tickets"])
 api_router.include_router(ticket_comments.router, prefix="", tags=["ticket-comments"])
 api_router.include_router(ticket_attachments.router, prefix="", tags=["ticket-attachments"])
-api_router.include_router(ticket_attachments.router, prefix="", tags=["ticket-attachments"])
+api_router.include_router(schedule_access.router, prefix="", tags=["schedule-access"])

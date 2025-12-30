@@ -158,6 +158,33 @@ body {
   background-color: rgb(148 163 184);
 }
 
+/* Современный кастомный скроллбар для компонента UpcomingEvents */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, rgb(148 163 184 / 0.4), rgb(148 163 184 / 0.6));
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, rgb(148 163 184 / 0.6), rgb(148 163 184 / 0.8));
+  background-clip: padding-box;
+}
+
 /* Плавные переходы для всех элементов */
 * {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;

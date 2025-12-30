@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
+import type { Room } from "@/types/room.types";
 import { parseUTC, formatDate } from "@/lib/utils/dateUtils";
 
 interface UpcomingEventsProps {
@@ -11,6 +12,7 @@ interface UpcomingEventsProps {
   users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
   apiBaseUrl?: string;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
+  rooms?: Room[];
 }
 
 export function UpcomingEvents({
@@ -20,31 +22,23 @@ export function UpcomingEvents({
   users = [],
   apiBaseUrl = "http://localhost:8000",
   getUserOrganizationAbbreviation,
+  rooms = [],
 }: UpcomingEventsProps) {
   const [now, setNow] = useState<Date>(new Date());
 
-  // Обновляем «текущее время» каждые 30 секунд, чтобы гасить просроченные live-индикаторы
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
   
-  // Фильтруем события: только будущие и сегодняшние, которые еще не закончились
   const upcomingEvents = useMemo(() => {
     return events
       .filter((event) => {
         const eventStart = parseUTC(event.starts_at);
         const eventEnd = parseUTC(event.ends_at);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Показываем события, которые:
-        // 1. Начинаются сегодня или позже
-        // 2. Еще не закончились (если сегодня)
         const isToday = eventStart.toDateString() === now.toDateString();
         const isFuture = eventStart > now;
         const isTodayAndNotEnded = isToday && eventEnd > now;
-        
         return isFuture || isTodayAndNotEnded;
       })
       .sort((a, b) => {
@@ -52,7 +46,7 @@ export function UpcomingEvents({
         const startB = parseUTC(b.starts_at);
         return startA.getTime() - startB.getTime();
       })
-      .slice(0, 10); // Показываем только ближайшие 10 событий
+      .slice(0, 8);
   }, [events, now]);
 
   const getEventStatus = (event: EventRecord) => {
@@ -63,209 +57,152 @@ export function UpcomingEvents({
     return participant?.response_status;
   };
 
-  const formatEventTime = (event: EventRecord) => {
-    const start = parseUTC(event.starts_at);
-    const end = parseUTC(event.ends_at);
-    
-    if (event.all_day) {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      if (start.toDateString() === today.toDateString()) {
-        return "Сегодня, весь день";
-      } else if (start.toDateString() === tomorrow.toDateString()) {
-        return "Завтра, весь день";
-      } else {
-        return formatDate(start, "dd.MM.yyyy");
-      }
-    }
-    
-    const timeStr = new Intl.DateTimeFormat("ru-RU", {
+  const getRoomName = (roomId: string | null) => {
+    if (!roomId) return null;
+    const room = rooms.find((r) => r.id === roomId);
+    return room?.name || null;
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = parseUTC(dateString);
+    return date.toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
-    }).format(start);
-    
+    });
+  };
+
+  const getDateLabel = (dateString: string) => {
+    const date = parseUTC(dateString);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    if (start.toDateString() === today.toDateString()) {
-      return `Сегодня, ${timeStr}`;
-    } else if (start.toDateString() === tomorrow.toDateString()) {
-      return `Завтра, ${timeStr}`;
+    if (date.toDateString() === today.toDateString()) {
+      return "Сегодня";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Завтра";
     } else {
-      return `${formatDate(start, "dd.MM")}, ${timeStr}`;
+      return formatDate(date, "dd MMM");
     }
   };
 
+  const groupEventsByDate = useMemo(() => {
+    const groups: Record<string, EventRecord[]> = {};
+    upcomingEvents.forEach((event) => {
+      const dateKey = parseUTC(event.starts_at).toDateString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(event);
+    });
+    return groups;
+  }, [upcomingEvents]);
+
   if (upcomingEvents.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">
-          Ближайшие события
-        </h3>
-        <p className="text-sm text-slate-500">Нет предстоящих событий</p>
+      <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white shadow-sm p-3">
+        <h3 className="text-xs font-semibold text-slate-700 mb-1">Ближайшие события</h3>
+        <p className="text-xs text-slate-500">Нет предстоящих событий</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
-        <h3 className="text-sm font-semibold text-slate-700">
-          Ближайшие события
-        </h3>
-        <p className="mt-0.5 text-xs text-slate-500">
-          {upcomingEvents.length} {upcomingEvents.length === 1 ? "событие" : "событий"}
-        </p>
+    <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white shadow-sm overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-transparent">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-slate-700">Ближайшие события</h3>
+          <span className="text-[0.65rem] text-slate-500 font-medium">{upcomingEvents.length}</span>
+        </div>
       </div>
-      <div className="max-h-[600px] overflow-y-auto">
-        <div className="divide-y divide-slate-100">
-          {upcomingEvents.map((event) => {
-            const status = getEventStatus(event);
-            const isAccepted = status === "accepted";
-            const isPending = status === "needs_action" || status === "pending" || !status;
-            const start = parseUTC(event.starts_at);
-            const end = parseUTC(event.ends_at);
-            const isToday = start.toDateString() === now.toDateString();
-            const isStartingSoon = isToday && start.getTime() - now.getTime() < 30 * 60 * 1000 && start > now; // 30 минут до начала
-            const isLive = start <= now && end >= now; // Событие идет прямо сейчас
-
+      
+      <div className="max-h-[400px] overflow-y-auto">
+        <div className="p-2 space-y-2">
+          {Object.entries(groupEventsByDate).map(([dateKey, dayEvents]) => {
+            const firstEvent = dayEvents[0];
+            const dateLabel = getDateLabel(firstEvent.starts_at);
+            const isToday = parseUTC(firstEvent.starts_at).toDateString() === now.toDateString();
+            
             return (
-              <button
-                key={event.id}
-                type="button"
-                onClick={() => onEventClick(event)}
-                className={`w-full text-left transition hover:bg-slate-50 ${
-                  isLive 
-                    ? "bg-gradient-to-r from-red-50 via-pink-50 to-red-50 border-l-4 border-red-500" 
-                    : isStartingSoon 
-                      ? "bg-amber-50" 
-                      : ""
-                }`}
-              >
-                <div className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div
-                          className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                            isPending
-                              ? "bg-slate-400"
-                              : isAccepted
-                                ? "bg-lime-500"
-                                : "bg-slate-300"
-                          }`}
-                        />
-                        <h4
-                          className={`text-sm font-medium truncate ${
-                            isPending
-                              ? "text-slate-700"
-                              : isAccepted
-                                ? "text-slate-900"
-                                : "text-slate-600"
-                          }`}
-                        >
-                          {event.title}
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-500 mb-1">
-                        {formatEventTime(event)}
-                      </p>
-                      {event.room_id && (
-                        <p className="text-xs font-medium text-slate-600">
-                          🏢 {event.room_id}
-                        </p>
-                      )}
-                      {event.participants && event.participants.length > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex -space-x-1.5">
-                            {event.participants.slice(0, 5).map((participant) => {
-                              const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
-                              const avatarUrl = user?.avatar_url;
-                              const displayName = participant.full_name || participant.email.split("@")[0];
-                              const initials = displayName.charAt(0).toUpperCase();
-                              const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
-                              
-                              return (
-                                <div
-                                  key={participant.user_id || participant.email}
-                                  className="relative group"
-                                  title={`${displayName}${orgAbbr ? ` (${orgAbbr})` : ''}`}
-                                >
-                                  {avatarUrl ? (
-                                    <img
-                                      src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
-                                      alt={displayName}
-                                      className="w-6 h-6 rounded-full object-cover border-2 border-white shadow-sm"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
-                                        if (fallback) fallback.classList.remove('hidden');
-                                      }}
-                                    />
-                                  ) : null}
-                                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center border-2 border-white shadow-sm ${avatarUrl ? 'hidden' : ''}`}>
-                                    <span className="text-[0.55rem] font-semibold text-white">
-                                      {initials}
-                                    </span>
-                                  </div>
-                                  {/* Статус участника (цветная точка) */}
-                                  <div
-                                    className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
-                                      participant.response_status === "accepted"
-                                        ? "bg-lime-500"
-                                        : participant.response_status === "declined"
-                                        ? "bg-red-500"
-                                        : "bg-amber-500"
-                                    }`}
-                                  />
-                                </div>
-                              );
-                            })}
-                            {event.participants.length > 5 && (
-                              <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center">
-                                <span className="text-[0.55rem] font-semibold text-slate-600">
-                                  +{event.participants.length - 5}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-xs text-slate-500">
-                            {event.participants.length}{" "}
-                            {event.participants.length === 1
-                              ? "участник"
-                              : event.participants.length < 5
-                                ? "участника"
-                                : "участников"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      {isLive && (
-                        <div className="relative">
-                          <span className="live-indicator inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-500 via-pink-500 to-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-red-500/50">
-                            <span className="relative flex h-2 w-2">
-                              <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 live-dot"></span>
-                              <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
-                            </span>
-                            <span className="relative">Сейчас идет</span>
-                          </span>
-                        </div>
-                      )}
-                      {!isLive && isStartingSoon && (
-                        <div className="flex-shrink-0">
-                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                            Скоро
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+              <div key={dateKey} className="space-y-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className={`w-0.5 h-3 rounded-full ${isToday ? 'bg-gradient-to-b from-blue-500 to-blue-400' : 'bg-slate-300'}`}></div>
+                  <h4 className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-slate-600'}`}>
+                    {dateLabel}
+                  </h4>
                 </div>
-              </button>
+                
+                <div className="space-y-1 ml-2">
+                  {dayEvents.map((event) => {
+                    const status = getEventStatus(event);
+                    const isAccepted = status === "accepted";
+                    const start = parseUTC(event.starts_at);
+                    const end = parseUTC(event.ends_at);
+                    const isLive = start <= now && end >= now;
+                    const isStartingSoon = start.getTime() - now.getTime() < 30 * 60 * 1000 && start > now;
+                    const roomName = getRoomName(event.room_id);
+
+                    return (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => onEventClick(event)}
+                        className="w-full text-left transition-all hover:scale-[1.01] rounded"
+                      >
+                        <div className={`rounded border-l-2 p-1.5 transition-all ${
+                          isLive
+                            ? "bg-gradient-to-r from-red-50 to-red-50/50 border-red-500 shadow-sm"
+                            : isStartingSoon
+                              ? "bg-gradient-to-r from-amber-50 to-amber-50/50 border-amber-400 shadow-sm"
+                              : isAccepted
+                                ? "bg-gradient-to-r from-lime-50 to-lime-50/50 border-lime-500"
+                                : "bg-white border-slate-300"
+                        }`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className="text-xs font-medium text-slate-700 flex-shrink-0">
+                                {formatTime(event.starts_at)}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <h5 className="text-xs font-medium text-slate-900 truncate">
+                                  {event.title}
+                                </h5>
+                                {roomName && (
+                                  <span className="text-[0.65rem] text-slate-600 truncate">
+                                    {roomName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex-shrink-0 flex items-center gap-1">
+                              {isLive && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-500 to-red-600 text-white text-[0.65rem] font-semibold shadow-sm">
+                                  LIVE
+                                </span>
+                              )}
+                              {!isLive && isStartingSoon && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[0.65rem] font-semibold shadow-sm">
+                                  Скоро
+                                </span>
+                              )}
+                              {!isLive && !isStartingSoon && (
+                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                  status === "needs_action" || status === "pending" || !status
+                                    ? "bg-slate-400"
+                                    : isAccepted
+                                      ? "bg-lime-500"
+                                      : "bg-slate-300"
+                                }`}></div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -273,4 +210,3 @@ export function UpcomingEvents({
     </div>
   );
 }
-

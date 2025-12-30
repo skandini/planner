@@ -100,6 +100,11 @@ export function EventModalEnhanced({
   
   // Проверяем, есть ли несохраненные изменения
   const hasUnsavedChanges = useCallback(() => {
+    // Если пользователь не может управлять событиями (только просмотр), не показываем подтверждение
+    if (!canManageEvents) {
+      return false;
+    }
+    
     // При создании проверяем, заполнена ли форма
     if (!isEditing) {
       return form.title.trim() !== "" || 
@@ -114,17 +119,35 @@ export function EventModalEnhanced({
     // При редактировании всегда считаем, что есть изменения (для безопасности)
     // Можно улучшить, сравнивая с исходными данными
     return true;
-  }, [form, isEditing, pendingFiles.length]);
+  }, [form, isEditing, pendingFiles.length, canManageEvents]);
   
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    // Если пользователь не может управлять событиями (только просмотр), закрываем сразу
+    if (!canManageEvents) {
+      onClose();
+      return;
+    }
+    // При просмотре существующего события (isEditing = true) без pendingFiles закрываем сразу
+    // так как это просто просмотр, а не редактирование
+    if (isEditing && !pendingFiles.length) {
+      onClose();
+      return;
+    }
     if (hasUnsavedChanges()) {
       setShowCloseConfirm(true);
     } else {
       onClose();
     }
-  }, [hasUnsavedChanges, onClose]);
+  }, [hasUnsavedChanges, onClose, canManageEvents, isEditing, pendingFiles.length]);
   
-  const handleConfirmClose = useCallback(() => {
+  const handleConfirmClose = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     setShowCloseConfirm(false);
     onClose();
   }, [onClose]);
@@ -310,7 +333,10 @@ export function EventModalEnhanced({
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
-                onClick={() => setShowCloseConfirm(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCloseConfirm(false);
+                }}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Отмена
@@ -328,9 +354,10 @@ export function EventModalEnhanced({
       )}
       
       <div 
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
         style={{ animation: 'fadeIn 0.2s ease-out forwards' }}
         onClick={(e) => {
+          e.stopPropagation(); // Предотвращаем всплытие к родительскому модальному окну
           if (e.target === e.currentTarget) {
             handleClose();
           }
@@ -457,236 +484,113 @@ export function EventModalEnhanced({
             )}
 
             <div className="space-y-3">
-              {/* Основная информация - компактный дизайн */}
-              <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-white/80 to-slate-50/30 p-3 backdrop-blur-sm">
-                <div className="space-y-3">
-                  {/* Название */}
-                  <div>
-                    <label className="block mb-1">
-                      <span className="text-[0.65rem] font-semibold text-slate-700 uppercase tracking-wider">
-                        Название <span className="text-red-500">*</span>
-                      </span>
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      disabled={isReadOnly}
-                      value={form.title}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, title: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                      placeholder="Например, Стендап команды"
-                    />
-                  </div>
-
-                  {/* Даты - в одну строку */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block mb-1">
-                        <span className="text-[0.65rem] font-medium text-slate-600 uppercase tracking-wider">
-                          Начало <span className="text-red-500">*</span>
-                        </span>
-                      </label>
-                      <input
-                        required
-                        type="datetime-local"
-                        disabled={isReadOnly}
-                        value={form.starts_at}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, starts_at: e.target.value }))
-                        }
-                        className="w-full rounded-lg border border-slate-200/60 bg-white px-2 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1">
-                        <span className="text-[0.65rem] font-medium text-slate-600 uppercase tracking-wider">
-                          Конец <span className="text-red-500">*</span>
-                        </span>
-                      </label>
-                      <input
-                        required
-                        type="datetime-local"
-                        disabled={isReadOnly}
-                        value={form.ends_at}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, ends_at: e.target.value }))
-                        }
-                        className="w-full rounded-lg border border-slate-200/60 bg-white px-2 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Описание */}
-                  <div>
-                    <label className="block mb-1">
-                      <span className="text-[0.65rem] font-semibold text-slate-700 uppercase tracking-wider">Описание</span>
-                    </label>
-                    <textarea
-                      value={form.description}
-                      disabled={isReadOnly}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, description: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 resize-none"
-                      rows={2}
-                      placeholder="Дополнительная информация..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Таймлайн и переговорки - на всю ширину */}
-              <div className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-white/80 to-slate-50/30 p-3 backdrop-blur-sm">
-                {/* Компактный выбор участников */}
-                <div className="mb-3">
-                  <ParticipantSearch
-                    form={form}
-                    setForm={setForm}
-                    users={users}
-                    usersLoading={usersLoading}
-                    usersError={usersError}
-                    calendarMembers={members}
-                    membersLoading={membersLoading}
-                    readOnly={isReadOnly}
-                    organizations={organizations}
-                    getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                    apiBaseUrl={apiBaseUrl}
-                    currentUserEmail={currentUserEmail}
-                    compact={true}
-                  />
-                </div>
-                
-                {/* Навигация по дням - компактная */}
-                <div className="mb-3 flex items-center justify-center">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateDays(-1)}
-                      className="rounded-lg border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:border-slate-300 transition shadow-sm"
-                      title="День назад"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <div className="px-4 py-1.5 text-xs font-semibold text-slate-900 min-w-[160px] text-center bg-gradient-to-r from-slate-50/80 to-white rounded-lg border border-slate-200/60 shadow-sm">
-                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateDays(1)}
-                      className="rounded-lg border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:border-slate-300 transition shadow-sm"
-                      title="День вперед"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <ResourcePanel
-                  rooms={rooms}
-                  roomsLoading={roomsLoading}
-                  form={form}
-                  setForm={setForm}
-                  selectedRoom={selectedRoom || null}
-                  selectedDate={viewDate}
-                  roomAvailability={roomAvailability}
-                  loadingAvailability={loadingAvailability}
-                  readOnly={isReadOnly}
-                  members={members}
-                  membersLoading={membersLoading}
-                  users={users}
-                  usersLoading={usersLoading}
-                  usersError={usersError}
-                  authFetch={authFetch}
-                  selectedCalendarId={selectedCalendarId}
-                  isAllDay={false}
-                  onRefreshMembers={onRefreshMembers}
-                  conflicts={conflicts}
-                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                  organizations={organizations}
-                  apiBaseUrl={apiBaseUrl}
-                />
-              </div>
-
-              {/* Статусы участников (только при редактировании) - компактный дизайн */}
-              {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
-                <div className="flex justify-center">
-                  <div className="w-full max-w-md rounded-xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white p-4 shadow-sm backdrop-blur-sm">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Ответы участников</h3>
-                        <div className="mt-1.5 flex items-center gap-3 text-[0.65rem] text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <div className="h-1.5 w-1.5 rounded-full bg-lime-500"></div>
-                            <span>{editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли</span>
+              {/* Компактная верхняя секция: название, описание, даты, ответы участников, повторяемость */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {/* Левая колонка: основная информация */}
+                <div className="lg:col-span-2 space-y-3">
+                  {/* Основная информация - улучшенный дизайн */}
+                  <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/50 to-white p-3.5 shadow-md shadow-slate-200/30 backdrop-blur-sm hover:shadow-lg hover:shadow-slate-200/40 transition-all duration-200">
+                    <div className="space-y-2.5">
+                      {/* Название и даты в одну строку */}
+                      <div className="grid grid-cols-1 gap-2.5">
+                        <div>
+                          <label className="block mb-1">
+                            <span className="text-[0.65rem] font-semibold text-slate-700 uppercase tracking-wider">
+                              Название <span className="text-red-500">*</span>
+                            </span>
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            disabled={isReadOnly}
+                            value={form.title}
+                            onChange={(e) =>
+                              setForm((prev) => ({ ...prev, title: e.target.value }))
+                            }
+                            className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
+                            placeholder="Например, Стендап команды"
+                          />
+                        </div>
+                        
+                        {/* Даты - в одну строку */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block mb-1">
+                              <span className="text-[0.65rem] font-medium text-slate-600 uppercase tracking-wider">
+                                Начало <span className="text-red-500">*</span>
+                              </span>
+                            </label>
+                            <input
+                              required
+                              type="datetime-local"
+                              disabled={isReadOnly}
+                              value={form.starts_at}
+                              onChange={(e) =>
+                                setForm((prev) => ({ ...prev, starts_at: e.target.value }))
+                              }
+                              className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2 py-1.5 text-xs font-medium text-slate-900 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
+                            />
                           </div>
-                          <div className="flex items-center gap-1">
-                            <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                            <span>{editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили</span>
+                          <div>
+                            <label className="block mb-1">
+                              <span className="text-[0.65rem] font-medium text-slate-600 uppercase tracking-wider">
+                                Конец <span className="text-red-500">*</span>
+                              </span>
+                            </label>
+                            <input
+                              required
+                              type="datetime-local"
+                              disabled={isReadOnly}
+                              value={form.ends_at}
+                              onChange={(e) =>
+                                setForm((prev) => ({ ...prev, ends_at: e.target.value }))
+                              }
+                              className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2 py-1.5 text-xs font-medium text-slate-900 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
+                            />
                           </div>
+                        </div>
+
+                        {/* Описание */}
+                        <div>
+                          <label className="block mb-1">
+                            <span className="text-[0.65rem] font-semibold text-slate-700 uppercase tracking-wider">Описание</span>
+                          </label>
+                          <textarea
+                            value={form.description}
+                            disabled={isReadOnly}
+                            onChange={(e) =>
+                              setForm((prev) => ({ ...prev, description: e.target.value }))
+                            }
+                            className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20 resize-none"
+                            rows={2}
+                            placeholder="Дополнительная информация..."
+                          />
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-1.5 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-                      {editingEvent.participants.map((participant) => {
-                        const isCurrentUser = participant.email === currentUserEmail;
-                        return (
-                          <ParticipantStatusItem
-                            key={participant.user_id}
-                            participant={participant}
-                            eventId={editingEvent.id}
-                            onUpdateStatus={isCurrentUser ? onUpdateParticipantStatus : undefined}
-                            canManage={false}
-                            isCurrentUser={isCurrentUser}
-                            currentUserEmail={currentUserEmail}
-                            getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                          />
-                        );
-                      })}
-                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* Вложения - компактные */}
-              <div className="rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-sm p-3">
-                <EventAttachments
-                  eventId={editingEvent?.id || null}
-                  attachments={editingEvent?.attachments || []}
-                  authFetch={authFetch}
-                  canManage={canManageEvents}
-                  onAttachmentsChange={onEventUpdated}
-                  pendingFiles={pendingFiles}
-                  onPendingFilesChange={setPendingFiles}
-                />
-              </div>
+                  {/* Вложения - подняты выше */}
+                  <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/40 to-white p-3.5 shadow-md shadow-slate-200/30 backdrop-blur-sm hover:shadow-lg hover:shadow-slate-200/40 transition-all duration-200">
+                    <EventAttachments
+                      eventId={editingEvent?.id || null}
+                      attachments={editingEvent?.attachments || []}
+                      authFetch={authFetch}
+                      canManage={canManageEvents}
+                      onAttachmentsChange={onEventUpdated}
+                      pendingFiles={pendingFiles}
+                      onPendingFilesChange={setPendingFiles}
+                    />
+                  </div>
 
-              {/* Комментарии */}
-              {editingEvent?.id && (
-                <CommentsSection
-                  eventId={editingEvent.id}
-                  authFetch={authFetch}
-                  currentUserId={editingEvent.participants?.find(p => p.email === currentUserEmail)?.user_id || undefined}
-                  currentUserEmail={currentUserEmail}
-                  users={users}
-                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                  organizations={organizations}
-                  apiBaseUrl={apiBaseUrl}
-                />
-              )}
-
-              {/* Повторения - компактные */}
-              <div className="rounded-lg border border-slate-200/60 bg-white/80 backdrop-blur-sm">
+                  {/* Повторения - улучшенный дизайн */}
+                  <div className="rounded-xl border border-slate-200/80 bg-gradient-to-r from-white via-slate-50/40 to-white backdrop-blur-sm shadow-md shadow-slate-200/30 hover:shadow-lg hover:shadow-slate-200/40 transition-all duration-200">
                 <button
                   type="button"
                   onClick={() => setShowRecurrence(!showRecurrence)}
                   disabled={recurrenceControlsDisabled}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-left transition ${
-                    recurrenceControlsDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50/80"
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-all duration-200 ${
+                    recurrenceControlsDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-gradient-to-r hover:from-slate-50/60 hover:to-white"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -735,7 +639,7 @@ export function EventModalEnhanced({
                               recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
                             }))
                           }
-                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs text-slate-900 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
                         >
                           <option value="daily">Каждый день</option>
                           <option value="weekly">Каждую неделю</option>
@@ -755,7 +659,7 @@ export function EventModalEnhanced({
                               recurrence_interval: Math.max(1, Number(e.target.value)),
                             }))
                           }
-                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs text-slate-900 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
                         />
                       </label>
                     </div>
@@ -774,7 +678,7 @@ export function EventModalEnhanced({
                             }))
                           }
                           placeholder="Например, 10"
-                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs text-slate-900 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
                         />
                       </label>
                       <label className="block">
@@ -790,14 +694,143 @@ export function EventModalEnhanced({
                               recurrence_count: e.target.value ? undefined : prev.recurrence_count,
                             }))
                           }
-                          className="w-full rounded-lg border border-slate-200/60 bg-white px-2.5 py-1.5 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
+                          className="w-full rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs text-slate-900 shadow-sm transition-all focus:border-lime-400 focus:ring-2 focus:ring-lime-400/30 focus:shadow-md focus:shadow-lime-400/20"
                         />
                       </label>
                     </div>
                     <p className="text-[0.65rem] text-slate-500">Максимум — 180 повторений</p>
                   </div>
                 )}
+                  </div>
+                </div>
+
+                {/* Правая колонка: ответы участников (только при редактировании) */}
+                {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
+                  <div className="lg:col-span-1">
+                    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white via-lime-50/20 via-slate-50/40 to-white p-3.5 shadow-md shadow-slate-200/30 backdrop-blur-sm h-full hover:shadow-lg hover:shadow-slate-200/40 transition-all duration-200">
+                      <div className="mb-2.5">
+                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Ответы участников</h3>
+                        <div className="flex items-center gap-2.5 text-[0.65rem] text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-lime-500"></div>
+                            <span>{editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
+                            <span>{editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 max-h-[280px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                        {editingEvent.participants.map((participant) => {
+                          const isCurrentUser = participant.email === currentUserEmail;
+                          return (
+                            <ParticipantStatusItem
+                              key={participant.user_id}
+                              participant={participant}
+                              eventId={editingEvent.id}
+                              onUpdateStatus={isCurrentUser ? onUpdateParticipantStatus : undefined}
+                              canManage={false}
+                              isCurrentUser={isCurrentUser}
+                              currentUserEmail={currentUserEmail}
+                              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Главный блок: Таймлайн с участниками и переговорками - на всю ширину */}
+              <div className="rounded-2xl border-2 border-lime-200/60 bg-gradient-to-br from-white via-lime-50/10 via-slate-50/30 to-white p-5 backdrop-blur-sm shadow-xl shadow-slate-300/30 hover:shadow-2xl hover:shadow-slate-300/40 transition-all duration-300">
+                {/* Компактный выбор участников */}
+                <div className="mb-3">
+                  <ParticipantSearch
+                    form={form}
+                    setForm={setForm}
+                    users={users}
+                    usersLoading={usersLoading}
+                    usersError={usersError}
+                    calendarMembers={members}
+                    membersLoading={membersLoading}
+                    readOnly={isReadOnly}
+                    organizations={organizations}
+                    getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                    apiBaseUrl={apiBaseUrl}
+                    currentUserEmail={currentUserEmail}
+                    compact={true}
+                  />
+                </div>
+                
+                {/* Навигация по дням - компактная */}
+                <div className="mb-3 flex items-center justify-center">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDays(-1)}
+                      className="rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-gradient-to-r hover:from-lime-50 hover:to-white hover:border-lime-300/60 transition-all shadow-sm hover:shadow-md"
+                      title="День назад"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <div className="px-4 py-1.5 text-xs font-bold text-slate-900 min-w-[160px] text-center bg-gradient-to-r from-lime-50/60 via-white to-slate-50/60 rounded-lg border border-lime-200/60 shadow-md">
+                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDays(1)}
+                      className="rounded-lg border border-slate-200/70 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-gradient-to-r hover:from-lime-50 hover:to-white hover:border-lime-300/60 transition-all shadow-sm hover:shadow-md"
+                      title="День вперед"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <ResourcePanel
+                  rooms={rooms}
+                  roomsLoading={roomsLoading}
+                  form={form}
+                  setForm={setForm}
+                  selectedRoom={selectedRoom || null}
+                  selectedDate={viewDate}
+                  roomAvailability={roomAvailability}
+                  loadingAvailability={loadingAvailability}
+                  readOnly={isReadOnly}
+                  members={members}
+                  membersLoading={membersLoading}
+                  users={users}
+                  usersLoading={usersLoading}
+                  usersError={usersError}
+                  authFetch={authFetch}
+                  selectedCalendarId={selectedCalendarId}
+                  isAllDay={false}
+                  onRefreshMembers={onRefreshMembers}
+                  conflicts={conflicts}
+                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                  organizations={organizations}
+                  apiBaseUrl={apiBaseUrl}
+                />
+              </div>
+
+              {/* Комментарии - полностью переработанный дизайн, внизу */}
+              {editingEvent?.id && (
+                <CommentsSection
+                  eventId={editingEvent.id}
+                  authFetch={authFetch}
+                  currentUserId={editingEvent.participants?.find(p => p.email === currentUserEmail)?.user_id || undefined}
+                  currentUserEmail={currentUserEmail}
+                  users={users}
+                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                  organizations={organizations}
+                  apiBaseUrl={apiBaseUrl}
+                />
+              )}
             </div>
 
           </form>

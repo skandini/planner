@@ -27,11 +27,11 @@ export function useAuthenticatedFetch(): AuthenticatedFetch {
         }
         
         const url = typeof input === "string" ? input : input.toString();
-        console.log(`[API] ${init.method || "GET"} ${url}`, {
-          method: init.method,
-          hasBody: !!init.body,
-          headers: Object.fromEntries(headers.entries()),
-        });
+        
+        // Логирование только в development режиме
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[API] ${init.method || "GET"} ${url}`);
+        }
         
         try {
           // Создаем объект опций для fetch
@@ -48,26 +48,14 @@ export function useAuthenticatedFetch(): AuthenticatedFetch {
             fetchOptions.body = init.body;
           }
           
-          console.log(`[API] Fetch options for ${init.method || "GET"} ${url}:`, {
-            method: fetchOptions.method,
-            hasHeaders: !!fetchOptions.headers,
-            headers: Object.fromEntries(headers.entries()),
-            hasBody: !!fetchOptions.body,
-            body: init.body ? (typeof init.body === 'string' ? init.body.substring(0, 100) : '[...]') : undefined,
-            mode: fetchOptions.mode,
-            credentials: fetchOptions.credentials,
-          });
-          
-          console.log(`[API] Attempting fetch to: ${url}`);
           const startTime = Date.now();
           const response = await fetch(input, fetchOptions);
           const duration = Date.now() - startTime;
-          console.log(`[API] Response for ${init.method || "GET"} ${url} (${duration}ms):`, {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
-            headers: Object.fromEntries(response.headers.entries()),
-          });
+          
+          // Логирование только в development режиме
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[API] ${init.method || "GET"} ${url} (${duration}ms) - ${response.status}`);
+          }
           
           return response;
         } catch (error) {

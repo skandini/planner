@@ -7,6 +7,7 @@ import type { UserProfile } from "@/types/user.types";
 import { NotificationCreator } from "./NotificationCreator";
 import { RoomManagement } from "./RoomManagement";
 import { Statistics } from "../statistics/Statistics";
+import { ScheduleAccessManager } from "./ScheduleAccessManager";
 
 type Role = "admin" | "it" | "employee";
 
@@ -30,7 +31,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
   });
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
   const [bootstrapMode, setBootstrapMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "rooms" | "statistics">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "rooms" | "statistics" | "schedule-access">("users");
   const [form, setForm] = useState({
     email: "",
     full_name: "",
@@ -76,10 +77,13 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
         throw new Error(txt || "Не удалось загрузить пользователей");
       }
       const data = await res.json();
-      setUsers(data);
+      // API возвращает PaginatedResponse, нужно извлечь items
+      const usersList = Array.isArray(data) ? data : (data.items || []);
+      setUsers(usersList);
       setBootstrapMode(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки пользователей");
+      setUsers([]); // Устанавливаем пустой массив при ошибке
     } finally {
       setLoading(false);
     }
@@ -295,6 +299,16 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
               }`}
             >
               Статистика
+            </button>
+            <button
+              onClick={() => setActiveTab("schedule-access")}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === "schedule-access"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Доступ к расписанию
             </button>
           </div>
 
@@ -583,6 +597,10 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
 
           {activeTab === "statistics" && (
             <Statistics authFetch={authFetch} />
+          )}
+
+          {activeTab === "schedule-access" && (
+            <ScheduleAccessManager authFetch={authFetch} />
           )}
         </div>
       </div>

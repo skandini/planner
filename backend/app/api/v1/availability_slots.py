@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import select
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, is_admin_or_it
 from app.db import SessionDep
 from app.models import AvailabilitySlot, Calendar, Event, User
 from app.schemas.availability_slot import (
@@ -41,9 +41,27 @@ def create_availability_slot(
             detail="ends_at must be after starts_at",
         )
     
+    # Determine target user_id
+    target_user_id = current_user.id
+    if payload.user_id:
+        # Only admins can create slots for other users
+        if not is_admin_or_it(current_user, session):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins can create slots for other users",
+            )
+        # Verify target user exists
+        target_user = session.get(User, payload.user_id)
+        if not target_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Target user not found",
+            )
+        target_user_id = payload.user_id
+    
     # Create the slot
     slot = AvailabilitySlot(
-        user_id=current_user.id,
+        user_id=target_user_id,
         process_name=payload.process_name,
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,

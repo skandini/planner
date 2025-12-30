@@ -78,9 +78,12 @@ export function RoomManagement({ authFetch }: RoomManagementProps) {
       const res = await authFetch(USERS_ENDPOINT);
       if (!res.ok) return;
       const data = await res.json();
-      setUsers(data);
+      // API возвращает PaginatedResponse, нужно извлечь items
+      const usersList = Array.isArray(data) ? data : (data.items || []);
+      setUsers(usersList);
     } catch (err) {
       console.error("Failed to load users:", err);
+      setUsers([]); // Устанавливаем пустой массив при ошибке
     }
   }, [authFetch]);
 

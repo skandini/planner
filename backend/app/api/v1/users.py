@@ -4,24 +4,40 @@ from datetime import date, datetime
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
-from sqlmodel import select
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from sqlmodel import func, select
 from app.core.security import get_password_hash
 
 from app.api.deps import get_current_user, is_admin_or_it
 from app.db import SessionDep
 from app.models import User, UserDepartment, UserOrganization
 from app.schemas import UserBase, UserRead, UserUpdate, UserCreate
+from app.schemas.pagination import PaginatedResponse, PaginationParams
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[UserRead], summary="List users")
+@router.get("/", response_model=PaginatedResponse[UserRead], summary="List users")
 def list_users(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
-) -> List[UserRead]:
-    statement = select(User).order_by(User.created_at.asc())
+    page: int = Query(default=1, ge=1, description="Номер страницы"),
+    page_size: int = Query(default=50, ge=1, le=100, description="Размер страницы"),
+) -> PaginatedResponse[UserRead]:
+    """Список пользователей с пагинацией."""
+    pagination = PaginationParams(page=page, page_size=page_size)
+    
+    # Подсчет общего количества
+    count_statement = select(func.count(User.id))
+    total = session.exec(count_statement).one()
+    
+    # Получение пользователей с пагинацией
+    statement = (
+        select(User)
+        .order_by(User.created_at.asc())
+        .offset(pagination.skip)
+        .limit(pagination.limit)
+    )
     users = session.exec(statement).all()
     
     # Load many-to-many relationships
@@ -36,7 +52,12 @@ def list_users(
         user_dict["organization_ids"] = [str(oid) for oid in session.exec(org_statement).all()]
         result.append(UserRead(**user_dict))
     
-    return result
+    return PaginatedResponse.create(
+        items=result,
+        total=total,
+        page=pagination.page,
+        page_size=pagination.page_size,
+    )
 
 
 @router.get("/me", response_model=UserRead, summary="Get current user profile")

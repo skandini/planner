@@ -7,6 +7,7 @@ from .event_attachment import EventAttachment
 from .event_comment import EventComment
 from .event_participant import EventParticipant
 from .notification import Notification
+from .schedule_access_permission import ScheduleAccessPermission
 from .organization import Organization
 from .room import Room
 from .room_access import RoomAccess
@@ -41,5 +42,6 @@ __all__ = [
     "UserAvailabilitySchedule",
     "UserDepartment",
     "UserOrganization",
+    "ScheduleAccessPermission",
 ]
 
