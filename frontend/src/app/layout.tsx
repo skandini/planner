@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
-import { QueryProvider } from "@/lib/react-query/QueryProvider";
+// Временно отключен QueryProvider до установки зависимостей на сервере
+// import { QueryProvider } from "@/lib/react-query/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +30,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <QueryProvider>
+        {/* Временно отключен QueryProvider до установки зависимостей на сервере */}
+        {/* <QueryProvider> */}
           <AuthProvider>{children}</AuthProvider>
-        </QueryProvider>
+        {/* </QueryProvider> */}
       </body>
     </html>
   );
