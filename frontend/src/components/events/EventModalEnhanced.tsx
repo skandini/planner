@@ -6,7 +6,7 @@ import type { CalendarMember } from "@/types/calendar.types";
 import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
-import ParticipantStatusItem from "@/components/participants/ParticipantStatusItem";
+import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventAttachments } from "@/components/events/EventAttachments";
