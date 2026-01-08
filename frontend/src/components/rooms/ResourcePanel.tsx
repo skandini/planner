@@ -68,6 +68,7 @@ export function ResourcePanel({
   const [participantAvailabilityError, setParticipantAvailabilityError] =
     useState<string | null>(null);
   const [allDepartments, setAllDepartments] = useState<Array<{ id: string; name: string }>>([]);
+  const availabilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Загружаем все отделы для tooltip
   useEffect(() => {
@@ -203,7 +204,6 @@ export function ResourcePanel({
     }
 
     let cancelled = false;
-    let timeoutId: NodeJS.Timeout | null = null;
     
     const fetchAvailability = async () => {
       setParticipantAvailabilityLoading(true);

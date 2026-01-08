@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
     // ⚠️ Отключаем проверку ESLint при сборке
     ignoreDuringBuilds: true,
   },
+  // Убеждаемся, что CSS правильно обрабатывается в production
+  // experimental: {
+  //   optimizeCss: true, // может вызывать проблемы с Tailwind v4
+  // },
 };
 
 export default nextConfig;
