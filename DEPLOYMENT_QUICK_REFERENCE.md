@@ -107,3 +107,4 @@ sudo systemctl restart planner-backend planner-frontend
 **Полная инструкция:** см. `DEPLOYMENT_UBUNTU24.md`
 
 
+

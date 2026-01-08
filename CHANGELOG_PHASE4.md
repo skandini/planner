@@ -139,3 +139,4 @@ chmod +x scripts/setup_backup_cron.sh
 - `PLAN_PROGRESS_REPORT.md` - Общий прогресс
 
 
+

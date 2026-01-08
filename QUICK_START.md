@@ -64,3 +64,4 @@ python backend/check_system.py
 Теперь сервер должен запускаться без проблем!
 
 
+

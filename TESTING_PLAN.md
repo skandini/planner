@@ -265,3 +265,4 @@ curl -I http://localhost:8000/api/v1/health/
 5. 🔒 Настройте SSL сертификаты (Let's Encrypt)
 
 
+

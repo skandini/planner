@@ -426,3 +426,4 @@ def notify_event_invited_celery(user_id, event_id):
 - Для долгих задач нужен Celery
 
 
+
