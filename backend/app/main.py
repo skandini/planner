@@ -24,26 +24,39 @@ def create_application() -> FastAPI:
         expose_headers=["*"],
     )
     
-    # Middleware для логирования всех запросов
+    # Middleware для логирования - только ошибки в продакшене
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
-        print(f"\n[REQUEST] {request.method} {request.url.path}")
-        print(f"[REQUEST] Origin: {request.headers.get('origin')}")
-        print(f"[REQUEST] Authorization: {'Present' if request.headers.get('authorization') else 'Missing'}")
-        try:
-            response = await call_next(request)
-            print(f"[RESPONSE] {response.status_code} for {request.method} {request.url.path}")
-            cors_headers = {k: v for k, v in response.headers.items() if 'access-control' in k.lower()}
-            if cors_headers:
-                print(f"[RESPONSE] CORS headers present: {list(cors_headers.keys())}")
-            else:
-                print(f"[RESPONSE] WARNING: No CORS headers in response!")
-            return response
-        except Exception as e:
-            print(f"[ERROR] Exception in middleware: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Логируем только ошибки в продакшене, все запросы в разработке
+        if settings.ENVIRONMENT == "production":
+            try:
+                response = await call_next(request)
+                # Логируем только ошибки (4xx, 5xx)
+                if response.status_code >= 400:
+                    logger.warning(
+                        f"{request.method} {request.url.path} - {response.status_code}"
+                    )
+                return response
+            except Exception as e:
+                logger.error(f"Exception in {request.method} {request.url.path}: {e}", exc_info=True)
+                raise
+        else:
+            # В разработке логируем все запросы
+            print(f"\n[REQUEST] {request.method} {request.url.path}")
+            try:
+                response = await call_next(request)
+                print(f"[RESPONSE] {response.status_code} for {request.method} {request.url.path}")
+                return response
+            except Exception as e:
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"[ERROR] Exception in middleware: {e}")
+                print(f"[ERROR] Full traceback:\n{error_trace}")
+                logger.error(f"Exception in middleware: {e}", exc_info=True)
+                raise
 
     # Helper function to add CORS headers - всегда добавляем для всех origins
     def get_cors_headers(request: Request) -> dict:

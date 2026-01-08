@@ -5,10 +5,15 @@ Requires=redis-server.service
 
 [Service]
 Type=simple
-User=root
+User=www-data
+Group=www-data
 WorkingDirectory=/opt/planner/backend
 Environment="PATH=/opt/planner/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/opt/planner/backend/.venv/bin/celery -A app.celery_app worker --loglevel=info --concurrency=4
+Environment="ENVIRONMENT=production"
+# Оптимизация для 4-ядерного сервера:
+# - concurrency=2: оставляем 2 ядра для uvicorn workers
+# - max-tasks-per-child: перезапускаем worker после выполнения задач для предотвращения утечек памяти
+ExecStart=/opt/planner/backend/.venv/bin/celery -A app.celery_app worker --loglevel=warning --concurrency=2 --max-tasks-per-child=500
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -17,6 +22,8 @@ SyslogIdentifier=planner-celery-worker
 
 # Ограничения ресурсов
 LimitNOFILE=65536
+MemoryMax=800M
+CPUQuota=100%
 
 [Install]
 WantedBy=multi-user.target

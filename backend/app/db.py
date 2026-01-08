@@ -32,10 +32,38 @@ from app.models import (  # noqa: F401
 
 
 def _build_engine():
+    """
+    Build database engine with appropriate connection arguments.
+    Supports both SQLite and PostgreSQL.
+    """
     connect_args = {}
-    if settings.DATABASE_URL.startswith("sqlite"):
+    database_url = settings.DATABASE_URL
+    
+    if database_url.startswith("sqlite"):
         connect_args = {"check_same_thread": False}
-    return create_engine(settings.DATABASE_URL, connect_args=connect_args)
+    elif database_url.startswith("postgresql"):
+        # PostgreSQL connection pooling settings
+        # These are handled by SQLAlchemy automatically
+        pass
+    
+    # For PostgreSQL, use connection pooling
+    # For SQLite, use default settings
+    # Оптимизированные настройки пула для продакшена
+    # Для 4 ядер CPU и 200 пользователей: pool_size должен быть ~20-30
+    # max_overflow позволяет создавать дополнительные соединения при пиковых нагрузках
+    pool_size = 20 if database_url.startswith("postgresql") else 5
+    max_overflow = 40 if database_url.startswith("postgresql") else 10
+    
+    return create_engine(
+        database_url,
+        connect_args=connect_args,
+        # PostgreSQL-specific optimizations
+        pool_pre_ping=True,  # Verify connections before using
+        pool_size=pool_size,  # Connection pool size
+        max_overflow=max_overflow,  # Max overflow connections
+        pool_recycle=3600,  # Recycle connections after 1 hour
+        pool_reset_on_return='commit',  # Reset connections on return
+    )
 
 
 engine = _build_engine()

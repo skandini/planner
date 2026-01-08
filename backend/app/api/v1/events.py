@@ -12,8 +12,9 @@ from sqlmodel import and_, delete, or_, select
 logger = logging.getLogger(__name__)
 
 from app.api.deps import get_current_user
+from app.core.config import settings
 from app.db import SessionDep
-from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, Notification, User, UserAvailabilitySchedule
+from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, Notification, User
 from app.schemas import (
     EventCreate,
     EventRead,
@@ -83,11 +84,26 @@ MAX_RECURRENCE_OCCURRENCES = 180
 
 
 def _add_months(base: datetime, months: int) -> datetime:
+    """Добавляет месяцы к дате, корректно обрабатывая граничные случаи"""
+    # Убеждаемся, что datetime naive (без tzinfo)
+    if base.tzinfo is not None:
+        base = base.replace(tzinfo=None)
+    
     month_index = base.month - 1 + months
     year = base.year + month_index // 12
     month = month_index % 12 + 1
     day = min(base.day, monthrange(year, month)[1])
-    return base.replace(year=year, month=month, day=day)
+    
+    try:
+        # Создаем новый datetime с правильными значениями
+        result = datetime(year, month, day, base.hour, base.minute, base.second, base.microsecond)
+        return result
+    except (ValueError, OSError) as e:
+        logger.error(f"Error in _add_months: {e}, base: {base}, months: {months}, year: {year}, month: {month}, day: {day}")
+        # Fallback: используем replace, но только если base naive
+        if base.tzinfo is None:
+            return base.replace(year=year, month=month, day=day)
+        raise
 
 
 def _advance_recurrence(start: datetime, rule: RecurrenceRule) -> datetime:
@@ -201,165 +217,6 @@ def _serialize_event_with_participants(
     )
 
 
-def _check_availability_schedule(
-    session: SessionDep,
-    user_id: UUID,
-    starts_at: datetime,
-    ends_at: datetime,
-) -> tuple[bool, str]:
-    """Check if user is available according to their schedule.
-    
-    Event must be completely covered by availability slots.
-    """
-    from datetime import time as dt_time
-    
-    # Normalize datetime objects - remove timezone info for comparison
-    if starts_at.tzinfo:
-        starts_at = starts_at.replace(tzinfo=None)
-    if ends_at.tzinfo:
-        ends_at = ends_at.replace(tzinfo=None)
-    
-    schedule_stmt = select(UserAvailabilitySchedule).where(
-        UserAvailabilitySchedule.user_id == user_id
-    )
-    availability_schedule = session.exec(schedule_stmt).first()
-    
-    if not availability_schedule or not availability_schedule.schedule:
-        # No schedule defined - user is always available
-        return True, ""
-    
-    schedule = availability_schedule.schedule
-    
-    # Ensure schedule is a dict
-    if not isinstance(schedule, dict):
-        # Invalid schedule format - treat as always available
-        return True, ""
-    
-    # Check if schedule is completely empty (no slots for any day)
-    # If schedule is empty, user is always available
-    has_any_slots = False
-    for day_name in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
-        day_slots = schedule.get(day_name, [])
-        if isinstance(day_slots, list) and day_slots:
-            has_any_slots = True
-            break
-    
-    # If no slots defined for any day, user is always available
-    if not has_any_slots:
-        return True, ""
-    
-    # Day names mapping
-    day_names = {
-        0: "monday",
-        1: "tuesday",
-        2: "wednesday",
-        3: "thursday",
-        4: "friday",
-        5: "saturday",
-        6: "sunday",
-    }
-    
-    # Check each day that the event spans
-    current_date = starts_at.date()
-    end_date = ends_at.date()
-    
-    while current_date <= end_date:
-        weekday = current_date.weekday()
-        day_name = day_names[weekday]
-        
-        # Get availability slots for this day
-        day_slots = schedule.get(day_name, [])
-        
-        # Ensure day_slots is a list
-        if not isinstance(day_slots, list):
-            day_slots = []
-        
-        if not day_slots:
-            # No slots defined for this day - user is unavailable this day
-            return False, "Пользователь недоступен в этот день согласно расписанию"
-        
-        # For this day, get the part of event that falls on this day
-        day_start_time = datetime.combine(current_date, dt_time(0, 0))
-        day_end_time = datetime.combine(current_date, dt_time(23, 59, 59))
-        
-        event_start_for_day = max(starts_at, day_start_time)
-        event_end_for_day = min(ends_at, day_end_time)
-        
-        if event_start_for_day < event_end_for_day:
-            # Build list of availability slots for this day
-            availability_slots = []
-            for slot in day_slots:
-                # Ensure slot is a dict
-                if not isinstance(slot, dict):
-                    continue
-                    
-                slot_start_str = slot.get("start", "00:00")
-                slot_end_str = slot.get("end", "23:59")
-                
-                # Ensure strings are valid
-                if not isinstance(slot_start_str, str) or not isinstance(slot_end_str, str):
-                    continue
-                
-                try:
-                    slot_start_parts = slot_start_str.split(":")
-                    slot_end_parts = slot_end_str.split(":")
-                    
-                    if len(slot_start_parts) != 2 or len(slot_end_parts) != 2:
-                        continue
-                    
-                    slot_start_hour, slot_start_minute = map(int, slot_start_parts)
-                    slot_end_hour, slot_end_minute = map(int, slot_end_parts)
-                    
-                    # Validate time values
-                    if not (0 <= slot_start_hour <= 23 and 0 <= slot_start_minute <= 59):
-                        continue
-                    if not (0 <= slot_end_hour <= 23 and 0 <= slot_end_minute <= 59):
-                        continue
-                    
-                except (ValueError, AttributeError, TypeError):
-                    continue
-                
-                try:
-                    slot_start = datetime.combine(current_date, dt_time(slot_start_hour, slot_start_minute))
-                    slot_end = datetime.combine(current_date, dt_time(slot_end_hour, slot_end_minute))
-                    
-                    # Ensure slot_end is after slot_start
-                    if slot_end <= slot_start:
-                        continue
-                    
-                    availability_slots.append((slot_start, slot_end))
-                except (ValueError, TypeError):
-                    continue
-            
-            # Sort slots by start time
-            availability_slots.sort(key=lambda x: x[0])
-            
-            # Check if event time is completely covered by availability slots
-            # We need to find slots that together cover the entire event time
-            remaining_start = event_start_for_day
-            remaining_end = event_end_for_day
-            
-            for slot_start, slot_end in availability_slots:
-                # If this slot covers part of remaining time
-                if slot_start <= remaining_start < slot_end:
-                    # This slot covers from remaining_start to min(slot_end, remaining_end)
-                    remaining_start = min(slot_end, remaining_end)
-                    if remaining_start >= remaining_end:
-                        # Fully covered
-                        break
-            
-            # If there's still uncovered time, user is unavailable
-            if remaining_start < remaining_end:
-                return False, "Пользователь недоступен в это время согласно расписанию"
-        
-        # Move to next day
-        try:
-            current_date = (datetime.combine(current_date, dt_time(0, 0)) + timedelta(days=1)).date()
-        except (ValueError, TypeError):
-            # Invalid date - break the loop
-            break
-    
-    return True, ""
 
 
 def _ensure_no_conflicts(
@@ -371,7 +228,6 @@ def _ensure_no_conflicts(
     room_id: UUID | None,
     participant_ids: list[UUID],
     exclude_event_id: UUID | None = None,
-    skip_availability_check_for: list[UUID] | None = None,
 ) -> None:
     filters = [
         Event.calendar_id == calendar_id,
@@ -404,31 +260,7 @@ def _ensure_no_conflicts(
             ).all()
             confirmed_participant_ids = set(confirmed_participants)
         
-        # Добавляем пользователей, для которых нужно пропустить проверку расписания
-        skip_check_ids = set(confirmed_participant_ids)
-        if skip_availability_check_for:
-            skip_check_ids.update(skip_availability_check_for)
-        
-        # Проверяем расписание доступности для каждого участника
-        # Пропускаем проверку для тех, кто уже подтвердил участие или явно указан в skip_availability_check_for
-        for user_id in participant_ids:
-            # Если участник уже подтвердил участие или явно указан для пропуска проверки, пропускаем проверку расписания
-            if user_id in skip_check_ids:
-                continue
-                
-            is_available, error_message = _check_availability_schedule(
-                session,
-                user_id=user_id,
-                starts_at=starts_at,
-                ends_at=ends_at,
-            )
-            if not is_available:
-                user = session.get(User, user_id)
-                user_name = user.full_name if user and user.full_name else (user.email if user else "Пользователь")
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"{user_name} недоступен в это время согласно расписанию доступности.",
-                )
+        # Расписание доступности удалено - проверка больше не выполняется
         
         # Проверяем конфликты участников во ВСЕХ календарях
         # Учитываем:
@@ -557,7 +389,9 @@ def list_events(
     statement = statement.order_by(Event.starts_at)
     events = session.exec(statement).all()
     
-    print(f"[DEBUG] Found {len(events)} events for user {current_user.id}")
+    # Логируем только в development
+    if settings.ENVIRONMENT != "production":
+        logger.debug(f"Found {len(events)} events for user {current_user.id}")
 
     # Предзагружаем календари для всех событий одним запросом
     calendar_ids = {event.calendar_id for event in events}
@@ -676,7 +510,9 @@ def list_events(
             )
         )
 
-    print(f"[DEBUG] Returning {len(serialized)} serialized events")
+    # Логируем только в development
+    if settings.ENVIRONMENT != "production":
+        logger.debug(f"Returning {len(serialized)} serialized events")
     return serialized
 
 
@@ -899,8 +735,11 @@ def update_event(
 
         updated: List[tuple[Event, datetime, datetime]] = []
         for target in series_events:
-            new_start = target.starts_at + delta
-            new_end = target.ends_at + delta
+            # Убеждаемся, что datetime naive перед операциями
+            target_start = target.starts_at.replace(tzinfo=None) if target.starts_at.tzinfo else target.starts_at
+            target_end = target.ends_at.replace(tzinfo=None) if target.ends_at.tzinfo else target.ends_at
+            new_start = target_start + delta
+            new_end = target_end + delta
             participant_ids = _get_event_participant_ids(session, target.id)
             _ensure_no_conflicts(
                 session,
@@ -926,13 +765,66 @@ def update_event(
     data = payload.model_dump(
         exclude_unset=True, exclude={"participant_ids", "recurrence_rule"}
     )
-    if "starts_at" in data and data["starts_at"].tzinfo:
-        data["starts_at"] = data["starts_at"].replace(tzinfo=None)
-    if "ends_at" in data and data["ends_at"].tzinfo:
-        data["ends_at"] = data["ends_at"].replace(tzinfo=None)
+    # Безопасная обработка datetime: проверяем наличие и корректность перед удалением tzinfo
+    # Pydantic автоматически конвертирует ISO строки в datetime, но может оставить tzinfo
+    if "starts_at" in data and data["starts_at"] is not None:
+        try:
+            if isinstance(data["starts_at"], datetime):
+                # Удаляем tzinfo, если он есть, чтобы сохранить в БД как naive datetime
+                if data["starts_at"].tzinfo is not None:
+                    data["starts_at"] = data["starts_at"].replace(tzinfo=None)
+            else:
+                logger.warning(f"starts_at is not a datetime object: {type(data['starts_at'])}, value: {data['starts_at']}")
+        except (AttributeError, ValueError, OSError) as e:
+            logger.error(f"Error processing starts_at: {e}, type: {type(data.get('starts_at'))}, value: {data.get('starts_at')}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid starts_at format: {str(e)}"
+            )
+    if "ends_at" in data and data["ends_at"] is not None:
+        try:
+            if isinstance(data["ends_at"], datetime):
+                # Удаляем tzinfo, если он есть, чтобы сохранить в БД как naive datetime
+                if data["ends_at"].tzinfo is not None:
+                    data["ends_at"] = data["ends_at"].replace(tzinfo=None)
+            else:
+                logger.warning(f"ends_at is not a datetime object: {type(data['ends_at'])}, value: {data['ends_at']}")
+        except (AttributeError, ValueError, OSError) as e:
+            logger.error(f"Error processing ends_at: {e}, type: {type(data.get('ends_at'))}, value: {data.get('ends_at')}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid ends_at format: {str(e)}"
+            )
+    # Получаем новые значения времени, убеждаясь что они валидны
     new_starts_at = data.get("starts_at", event.starts_at)
     new_ends_at = data.get("ends_at", event.ends_at)
     new_room_id = data.get("room_id", event.room_id)
+    
+    # Валидация datetime значений - проверяем, что они не содержат недопустимых значений
+    if isinstance(new_starts_at, datetime):
+        try:
+            # Проверяем, что datetime валиден, пытаясь создать новый объект с теми же значениями
+            datetime(new_starts_at.year, new_starts_at.month, new_starts_at.day, 
+                    new_starts_at.hour, new_starts_at.minute, new_starts_at.second, 
+                    new_starts_at.microsecond)
+        except (ValueError, OSError) as e:
+            logger.error(f"Invalid starts_at datetime: {e}, value: {new_starts_at}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid starts_at datetime: {str(e)}"
+            )
+    if isinstance(new_ends_at, datetime):
+        try:
+            # Проверяем, что datetime валиден
+            datetime(new_ends_at.year, new_ends_at.month, new_ends_at.day, 
+                    new_ends_at.hour, new_ends_at.minute, new_ends_at.second, 
+                    new_ends_at.microsecond)
+        except (ValueError, OSError) as e:
+            logger.error(f"Invalid ends_at datetime: {e}, value: {new_ends_at}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid ends_at datetime: {str(e)}"
+            )
 
     update_payload = payload.model_dump(exclude_unset=True)
     if "participant_ids" in update_payload:
@@ -950,13 +842,50 @@ def update_event(
         exclude_event_id=event_id,
     )
 
+    # Безопасно обновляем поля события
     for field, value in data.items():
-        setattr(event, field, value)
-    event.touch()
-
-    session.add(event)
-    session.commit()
-    session.refresh(event)
+        try:
+            # Для datetime полей убеждаемся, что они naive
+            if field in ("starts_at", "ends_at") and isinstance(value, datetime):
+                logger.info(f"Processing {field}: {value}, tzinfo: {value.tzinfo}")
+                if value.tzinfo is not None:
+                    try:
+                        value = value.replace(tzinfo=None)
+                        logger.info(f"Removed tzinfo from {field}: {value}")
+                    except (ValueError, OSError) as e:
+                        logger.error(f"Error removing tzinfo from {field}: {e}, value: {value}")
+                        # Пробуем создать новый datetime без tzinfo
+                        value = datetime(
+                            value.year, value.month, value.day,
+                            value.hour, value.minute, value.second, value.microsecond
+                        )
+                        logger.info(f"Created new datetime for {field}: {value}")
+            setattr(event, field, value)
+            logger.info(f"Set {field} = {value}")
+        except (ValueError, OSError, AttributeError, TypeError) as e:
+            logger.error(f"Error setting field {field} to {value}: {e}, type: {type(value)}, exc_info=True", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid value for {field}: {str(e)}"
+            )
+    
+    try:
+        logger.info(f"Touching event, starts_at: {event.starts_at}, ends_at: {event.ends_at}")
+        event.touch()
+        logger.info("Event touched successfully")
+        session.add(event)
+        logger.info("Event added to session")
+        session.commit()
+        logger.info("Event committed successfully")
+        session.refresh(event)
+        logger.info("Event refreshed successfully")
+    except (ValueError, OSError, TypeError) as e:
+        logger.error(f"Error saving event: {e}, event.starts_at: {event.starts_at} (type: {type(event.starts_at)}), event.ends_at: {event.ends_at} (type: {type(event.ends_at)})", exc_info=True)
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error saving event: {str(e)}"
+        )
     
     # Notify participants about update (асинхронно через Celery)
     participant_ids = _get_event_participant_ids(session, event_id)

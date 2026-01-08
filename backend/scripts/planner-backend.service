@@ -1,0 +1,32 @@
+[Unit]
+Description=Planner Backend API
+After=network.target postgresql.service redis-server.service
+Requires=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/planner/backend
+Environment="PATH=/opt/planner/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="ENVIRONMENT=production"
+ExecStart=/opt/planner/backend/.venv/bin/uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 2 \
+    --no-access-log \
+    --log-level warning
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=planner-backend
+
+# Ограничения ресурсов для предотвращения утечек
+LimitNOFILE=65536
+MemoryMax=1.5G
+CPUQuota=200%
+
+[Install]
+WantedBy=multi-user.target
+

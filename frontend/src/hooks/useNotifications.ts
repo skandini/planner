@@ -48,13 +48,13 @@ export function useNotifications() {
     loadNotifications();
     loadUnreadCount();
     
-    // Polling каждые 15 секунд - оптимально для 300 пользователей
+    // Polling каждые 30 секунд - уменьшено для снижения нагрузки
     const interval = setInterval(() => {
       if (accessToken) {
         loadNotifications();
         loadUnreadCount();
       }
-    }, 15000); // 15 секунд
+    }, 30000); // 30 секунд
     
     return () => {
       clearInterval(interval);

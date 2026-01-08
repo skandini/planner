@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import type { EventDraft, EventRecord, ConflictEntry } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
 import type { Room } from "@/types/room.types";
@@ -8,7 +8,7 @@ import type { UserProfile, ParticipantProfile } from "@/types/user.types";
 import type { TimelineRowData } from "@/types/common.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
-import { inputToDate } from "@/lib/utils/dateUtils";
+import { inputToDate, toLocalString } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
 
 interface ResourcePanelProps {
@@ -179,15 +179,10 @@ export function ResourcePanel({
     }
 
     // Загружаем доступность для всего дня, чтобы видеть всю занятость
-    // Используем дату из starts_at или selectedDate
-    let targetDate: Date;
-    if (form.starts_at) {
-      const dateStr = form.starts_at.split("T")[0];
-      targetDate = new Date(dateStr + "T00:00:00");
-    } else {
-      targetDate = new Date(selectedDate);
-      targetDate.setHours(0, 0, 0, 0);
-    }
+    // Всегда используем selectedDate (viewDate) для загрузки доступности
+    // Это гарантирует, что загружается доступность для дня, который отображается в таймлайне
+    const targetDate = new Date(selectedDate);
+    targetDate.setHours(0, 0, 0, 0);
     
     // Загружаем доступность для всего дня (00:00 - 23:59:59)
     const rangeStart = new Date(targetDate);
@@ -208,6 +203,8 @@ export function ResourcePanel({
     }
 
     let cancelled = false;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     const fetchAvailability = async () => {
       setParticipantAvailabilityLoading(true);
       setParticipantAvailabilityError(null);
@@ -215,57 +212,26 @@ export function ResourcePanel({
         // Загружаем доступность для всех выбранных участников
         // Backend позволяет проверять доступность любого пользователя, независимо от доступа к календарю
         if (!selectedCalendarId) {
-          console.warn("Cannot fetch availability: no calendar selected");
           setParticipantAvailability({});
           setParticipantAvailabilityLoading(false);
           return;
         }
         
-        console.log(`Fetching availability for ${selectedParticipantProfiles.length} participants`);
         const entries = await Promise.allSettled(
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
-              console.log(`[Availability] Fetching for ${participant.label} (${participant.user_id})`);
-              console.log(`[Availability] URL: ${url}`);
               const response = await authFetch(url, { cache: "no-store" });
               
-              console.log(`[Availability] Response status: ${response.status} for ${participant.label}`);
-              
               if (!response.ok) {
-                // Если ошибка, логируем и возвращаем пустой список
-                const errorText = await response.text().catch(() => "");
-                console.warn(
-                  `[Availability] Failed to load for ${participant.label}:\n` +
-                  `  Status: ${response.status}\n` +
-                  `  Error: ${errorText}\n` +
-                  `  URL: ${url}`
-                );
+                // Если ошибка, возвращаем пустой список
                 return [participant.user_id, []] as const;
               }
               
               const data: EventRecord[] = await response.json();
-              console.log(`[Availability] Loaded ${data.length} events for ${participant.label} (${participant.user_id})`);
-              if (data.length > 0) {
-                console.log(`[Availability] Events for ${participant.label}:`, data.map(e => ({
-                  title: e.title,
-                  starts_at: e.starts_at,
-                  ends_at: e.ends_at,
-                })));
-              }
+              // Возвращаем все события, включая unavailable (недоступность по расписанию)
               return [participant.user_id, data] as const;
             } catch (err) {
-              // Логируем ошибки при загрузке доступности
-              const errorMessage = err instanceof Error ? err.message : String(err);
-              
-              console.error(
-                `[Availability] Error for ${participant.label} (${participant.user_id}):\n` +
-                `  Error: ${errorMessage}\n` +
-                `  Type: ${err instanceof Error ? err.constructor.name : typeof err}\n` +
-                `  URL: ${url}\n` +
-                `  Full error:`, err
-              );
-              
               // Возвращаем пустой список, но не прерываем загрузку для других участников
               return [participant.user_id, []] as const;
             }
@@ -277,9 +243,8 @@ export function ResourcePanel({
           if (result.status === "fulfilled") {
             return result.value;
           } else {
-            // Если промис был отклонен, логируем и возвращаем пустой список
+            // Если промис был отклонен, возвращаем пустой список
             const participant = selectedParticipantProfiles[index];
-            console.error(`Promise rejected for participant ${participant?.label || 'unknown'}:`, result.reason);
             if (participant) {
               return [participant.user_id, []] as const;
             }
@@ -303,9 +268,19 @@ export function ResourcePanel({
       }
     };
 
-    fetchAvailability();
+    // Debounce 500ms - загружаем доступность только после остановки изменений
+    if (availabilityTimeoutRef.current) {
+      clearTimeout(availabilityTimeoutRef.current);
+    }
+    availabilityTimeoutRef.current = setTimeout(() => {
+      fetchAvailability();
+    }, 500);
+
     return () => {
       cancelled = true;
+      if (availabilityTimeoutRef.current) {
+        clearTimeout(availabilityTimeoutRef.current);
+      }
     };
   }, [
     authFetch,
@@ -314,6 +289,7 @@ export function ResourcePanel({
     form.starts_at,
     selectedCalendarId,
     selectedParticipantProfiles,
+    selectedDate, // Добавляем selectedDate в зависимости, чтобы перезагружать доступность при изменении дня просмотра
   ]);
 
   // Определяем участников с конфликтами
@@ -471,19 +447,28 @@ export function ResourcePanel({
           }));
         }}
         onTimeRangeSelect={(start, end) => {
-          // Форматируем даты для формы
-          const formatDateTime = (date: Date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-          };
+          // start и end уже в UTC, конвертируем их в часовой пояс организации для отображения в форме
+          // Важно: сохраняем дату из selectedDate (viewDate), чтобы не менять день при клике на слот
+          const localStart = toLocalString(start);
+          const localEnd = toLocalString(end);
+          
+          // Получаем дату из selectedDate в правильном формате (локальное время)
+          const selectedDateLocal = new Date(selectedDate);
+          selectedDateLocal.setHours(0, 0, 0, 0);
+          const selectedDateStr = `${selectedDateLocal.getFullYear()}-${String(selectedDateLocal.getMonth() + 1).padStart(2, "0")}-${String(selectedDateLocal.getDate()).padStart(2, "0")}`;
+          
+          // Извлекаем только время из конвертированных значений
+          const startTime = localStart.split("T")[1];
+          const endTime = localEnd.split("T")[1];
+          
+          // Всегда используем дату из selectedDate, чтобы избежать проблем с конвертацией
+          const finalStart = `${selectedDateStr}T${startTime}`;
+          const finalEnd = `${selectedDateStr}T${endTime}`;
+          
           setForm((prev) => ({
             ...prev,
-            starts_at: formatDateTime(start),
-            ends_at: formatDateTime(end),
+            starts_at: finalStart,
+            ends_at: finalEnd,
           }));
         }}
       />

@@ -1,12 +1,12 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState, useRef } from "react";
 import type { EventDraft, EventRecord, ConflictEntry } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
 import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
-import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
+import ParticipantStatusItem from "@/components/participants/ParticipantStatusItem";
 import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventAttachments } from "@/components/events/EventAttachments";
@@ -156,39 +156,67 @@ export function EventModalEnhanced({
     });
   }, []);
   
-  // Синхронизируем viewDate с selectedDate только при первой загрузке
-  const [initialDateSet, setInitialDateSet] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
+  // Синхронизируем viewDate с датой из формы при изменении starts_at
+  // НО только если дата действительно изменилась (не просто время)
+  // Используем useRef для отслеживания предыдущей даты, чтобы избежать лишних обновлений
+  const prevStartsAtDateRef = useRef<string | null>(null);
+  const viewDateRef = useRef<Date>(viewDate);
+  
+  // Обновляем ref при изменении viewDate
+  useEffect(() => {
+    viewDateRef.current = viewDate;
+  }, [viewDate]);
   
   useEffect(() => {
-    if (form.starts_at && !initialDateSet) {
-      const newDate = new Date(form.starts_at.split("T")[0]);
-      setViewDate(newDate);
-      setInitialDateSet(true);
+    if (form.starts_at) {
+      const dateStr = form.starts_at.split("T")[0];
+      
+      // Если дата не изменилась, не обновляем viewDate
+      if (prevStartsAtDateRef.current === dateStr) {
+        return;
+      }
+      
+      // Сохраняем текущую дату для следующей проверки
+      prevStartsAtDateRef.current = dateStr;
+      
+      // Сравниваем только дату (без времени) с текущим viewDate через ref
+      const currentViewDate = viewDateRef.current;
+      const currentViewDateStr = `${currentViewDate.getFullYear()}-${String(currentViewDate.getMonth() + 1).padStart(2, "0")}-${String(currentViewDate.getDate()).padStart(2, "0")}`;
+      
+      // Обновляем viewDate только если дата действительно изменилась
+      if (dateStr !== currentViewDateStr) {
+        const formDate = new Date(dateStr + "T00:00:00");
+        setViewDate(formDate);
+      }
     }
-  }, [form.starts_at, initialDateSet]);
+  }, [form.starts_at]);
   
-  // Обновляем даты в форме при изменении viewDate (после навигации)
-  useEffect(() => {
-    if (isNavigating && form.starts_at && form.ends_at) {
+  // Обновляем даты в форме при изменении viewDate (после навигации по дням)
+  // Это нужно только если пользователь вручную переключает день через кнопки навигации
+  // При клике на слот в таймлайне дата обновляется автоматически через onTimeRangeSelect
+  const handleNavigateDays = useCallback((days: number) => {
+    // Вычисляем новую дату заранее
+    const currentViewDate = new Date(viewDate);
+    const newViewDate = new Date(currentViewDate);
+    newViewDate.setDate(newViewDate.getDate() + days);
+    
+    // Обновляем viewDate
+    setViewDate(newViewDate);
+    
+    // После навигации обновляем даты в форме, если они уже установлены
+    // Делаем это синхронно, чтобы избежать перескакиваний
+    if (form.starts_at && form.ends_at) {
       const startTime = form.starts_at.split("T")[1];
       const endTime = form.ends_at.split("T")[1];
-      const newStart = `${viewDate.toISOString().split("T")[0]}T${startTime}`;
-      const newEnd = `${viewDate.toISOString().split("T")[0]}T${endTime}`;
-      setForm((prev) => ({
-        ...prev,
+      const newStart = `${newViewDate.toISOString().split("T")[0]}T${startTime}`;
+      const newEnd = `${newViewDate.toISOString().split("T")[0]}T${endTime}`;
+      setForm((prevForm) => ({
+        ...prevForm,
         starts_at: newStart,
         ends_at: newEnd,
       }));
-      setIsNavigating(false);
     }
-  }, [viewDate, isNavigating, form.starts_at, form.ends_at, setForm]);
-  
-  // Обновленная навигация с флагом
-  const handleNavigateDays = useCallback((days: number) => {
-    setIsNavigating(true);
-    navigateDays(days);
-  }, [navigateDays]);
+  }, [viewDate, form.starts_at, form.ends_at, setForm]);
 
   const loadRoomAvailability = useCallback(
     async (roomId: string, date: Date) => {
@@ -215,20 +243,19 @@ export function EventModalEnhanced({
 
   useEffect(() => {
     if (form.room_id) {
-      let date: Date;
-      if (form.starts_at) {
-        const dateStr = form.starts_at.split("T")[0];
-        date = new Date(dateStr + "T00:00:00");
-      } else {
-        date = new Date();
-        date.setHours(0, 0, 0, 0);
-      }
+      // Используем viewDate для загрузки доступности комнаты
+      // Это гарантирует, что загружается доступность для дня, который отображается в таймлайне
+      const date = new Date(viewDate);
+      date.setHours(0, 0, 0, 0);
       loadRoomAvailability(form.room_id, date);
     } else {
       setRoomAvailability([]);
     }
-  }, [form.room_id, form.starts_at, loadRoomAvailability]);
+  }, [form.room_id, viewDate, loadRoomAvailability]);
 
+  // Debounce для загрузки конфликтов - уменьшаем количество запросов
+  const conflictsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     if (!selectedCalendarId) {
       setConflicts([]);
@@ -236,58 +263,91 @@ export function EventModalEnhanced({
       return;
     }
     
-    // Загружаем конфликты для всего дня, чтобы видеть их в таймлайне
-    // Используем viewDate для определения дня, а не выбранное время события
-    const targetDate = viewDate || (form.starts_at ? new Date(form.starts_at.split("T")[0]) : new Date());
-    const fromDate = new Date(targetDate);
-    fromDate.setHours(0, 0, 0, 0);
-    const toDate = new Date(targetDate);
-    toDate.setHours(23, 59, 59, 999);
+    // Очищаем предыдущий таймаут
+    if (conflictsTimeoutRef.current) {
+      clearTimeout(conflictsTimeoutRef.current);
+    }
+    
+    // Debounce 500ms - загружаем конфликты только после остановки изменений
+    conflictsTimeoutRef.current = setTimeout(() => {
+      // Загружаем конфликты для всего дня, чтобы видеть их в таймлайне
+      // Используем viewDate для определения дня, а не выбранное время события
+      let targetDate: Date;
+      if (viewDate) {
+        targetDate = viewDate;
+      } else if (form.starts_at) {
+        const dateStr = form.starts_at.split("T")[0];
+        const [year, month, day] = dateStr.split("-").map(Number);
+        targetDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      } else {
+        const now = new Date();
+        targetDate = new Date(Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          0, 0, 0, 0
+        ));
+      }
+      const fromDate = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        0, 0, 0, 0
+      ));
+      const toDate = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        23, 59, 59, 999
+      ));
 
-    let cancelled = false;
-    setConflictsLoading(true);
-    setConflictsError(null);
+      let cancelled = false;
+      setConflictsLoading(true);
+      setConflictsError(null);
 
-    const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/conflicts?from=${encodeURIComponent(
-      fromDate.toISOString(),
-    )}&to=${encodeURIComponent(toDate.toISOString())}`;
+      const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/conflicts?from=${encodeURIComponent(
+        fromDate.toISOString(),
+      )}&to=${encodeURIComponent(toDate.toISOString())}`;
 
-    authFetch(url, { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) {
-          if (response.status === 403 || response.status === 404) {
-            console.warn("Cannot load conflicts, returning empty list");
-            return [] as ConflictEntry[];
+      authFetch(url, { cache: "no-store" })
+        .then((response) => {
+          if (!response.ok) {
+            if (response.status === 403 || response.status === 404) {
+              console.warn("Cannot load conflicts, returning empty list");
+              return [] as ConflictEntry[];
+            }
+            return response.json().then((data) => {
+              throw new Error(data.detail || "Не удалось загрузить конфликты");
+            }).catch(() => {
+              throw new Error("Не удалось загрузить конфликты");
+            });
           }
-          return response.json().then((data) => {
-            throw new Error(data.detail || "Не удалось загрузить конфликты");
-          }).catch(() => {
-            throw new Error("Не удалось загрузить конфликты");
-          });
-        }
-        return response.json() as Promise<ConflictEntry[]>;
-      })
-      .then((data) => {
-        if (!cancelled) {
-          setConflicts(data);
-          setConflictsError(null);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setConflicts([]);
-          console.warn("Failed to load conflicts:", error);
-          setConflictsError(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setConflictsLoading(false);
-        }
-      });
+          return response.json() as Promise<ConflictEntry[]>;
+        })
+        .then((data) => {
+          if (!cancelled) {
+            setConflicts(data);
+            setConflictsError(null);
+          }
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setConflicts([]);
+            console.warn("Failed to load conflicts:", error);
+            setConflictsError(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setConflictsLoading(false);
+          }
+        });
+    }, 500); // Debounce 500ms
 
     return () => {
-      cancelled = true;
+      if (conflictsTimeoutRef.current) {
+        clearTimeout(conflictsTimeoutRef.current);
+      }
     };
   }, [
     authFetch,
