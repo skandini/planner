@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { formatDate, parseUTC, toTimeZone, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface DayViewProps {
@@ -11,6 +11,7 @@ interface DayViewProps {
   events: EventRecord[];
   loading: boolean;
   accent: string;
+  timeZone?: string;
   onEventClick: (event: EventRecord) => void;
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
@@ -151,21 +152,21 @@ export function DayView({
     const eventStart = parseUTC(event.starts_at);
     const eventEnd = parseUTC(event.ends_at);
     
-    const eventStartMoscow = new Date(eventStart.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    const eventEndMoscow = new Date(eventEnd.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+    const eventStartTZ = toTimeZone(eventStart, timeZone);
+    const eventEndTZ = toTimeZone(eventEnd, timeZone);
     
     const dayStart = new Date(day);
     dayStart.setHours(0, 0, 0, 0);
     
-    const startMinutes = (eventStartMoscow.getHours() * 60) + eventStartMoscow.getMinutes();
-    const endMinutes = (eventEndMoscow.getHours() * 60) + eventEndMoscow.getMinutes();
+    const startMinutes = (eventStartTZ.getHours() * 60) + eventStartTZ.getMinutes();
+    const endMinutes = (eventEndTZ.getHours() * 60) + eventEndTZ.getMinutes();
     const duration = endMinutes - startMinutes;
     
     const topPx = (startMinutes / 60) * HOUR_HEIGHT;
     const heightPx = (duration / 60) * HOUR_HEIGHT;
     
     return { topPx, heightPx, startMinutes, endMinutes };
-  }, [day, HOUR_HEIGHT]);
+  }, [day, HOUR_HEIGHT, timeZone]);
   
   const handleCardClick = useCallback((event: EventRecord) => {
     if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
@@ -250,24 +251,20 @@ export function DayView({
   }, [isToday, HOUR_HEIGHT]);
   
   const formatTime = useCallback((date: Date) => {
-    return new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Moscow',
-    }).format(date);
-  }, []);
+    return formatTimeInTimeZone(date, timeZone);
+  }, [timeZone]);
   
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
     const now = new Date();
-    const moscowNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    const hours = moscowNow.getHours();
-    const minutes = moscowNow.getMinutes();
+    const tzNow = toTimeZone(now, timeZone);
+    const hours = tzNow.getHours();
+    const minutes = tzNow.getMinutes();
     const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT);
     
     return position;
-  }, [isToday, currentTime, HOUR_HEIGHT]);
+  }, [isToday, currentTime, HOUR_HEIGHT, timeZone]);
   
   const dayName = useMemo(() => {
     return new Intl.DateTimeFormat('ru-RU', {

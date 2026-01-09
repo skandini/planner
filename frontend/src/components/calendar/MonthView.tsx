@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, parseUTC } from "@/lib/utils/dateUtils";
+import { addDays, parseUTC, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
 interface MonthViewProps {
@@ -13,6 +13,7 @@ interface MonthViewProps {
   events: EventRecord[];
   loading: boolean;
   accent: string;
+  timeZone?: string;
   onEventClick: (event: EventRecord) => void;
   rooms?: Room[];
   currentUserEmail?: string;
@@ -26,6 +27,7 @@ export function MonthView({
   events,
   loading,
   accent,
+  timeZone = 'Europe/Moscow',
   onEventClick,
   rooms = [],
   currentUserEmail,

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC, toTimeZone, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewProps {
@@ -11,6 +11,7 @@ interface WeekViewProps {
   events: EventRecord[];
   loading: boolean;
   accent: string;
+  timeZone?: string;
   onEventClick: (event: EventRecord) => void;
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
@@ -27,6 +28,7 @@ export function WeekView({
   events,
   loading,
   accent,
+  timeZone = 'Europe/Moscow',
   onEventClick,
   rooms,
   onEventMove,

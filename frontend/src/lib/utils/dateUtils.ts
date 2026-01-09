@@ -97,3 +97,50 @@ export const toUTCString = (localStr: string): string => {
 export const toUTCDateISO = (date: Date) =>
   new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
 
+// Конвертирует UTC Date в указанный часовой пояс
+export const toTimeZone = (date: Date, timeZone: string): Date => {
+  // Используем Intl.DateTimeFormat для получения времени в нужном часовом поясе
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+  const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+  
+  return new Date(year, month, day, hour, minute, second);
+};
+
+// Форматирует время в указанном часовом поясе
+export const formatTimeInTimeZone = (date: Date, timeZone: string, options?: Intl.DateTimeFormatOptions): string => {
+  return new Intl.DateTimeFormat('ru-RU', {
+    ...options,
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(options?.second && { second: '2-digit' }),
+  }).format(date);
+};
+
+// Конвертирует UTC Date в строку для datetime-local в указанном часовом поясе
+export const toTimeZoneString = (date: Date, timeZone: string): string => {
+  const tzDate = toTimeZone(date, timeZone);
+  const y = tzDate.getFullYear();
+  const m = String(tzDate.getMonth() + 1).padStart(2, "0");
+  const d = String(tzDate.getDate()).padStart(2, "0");
+  const h = String(tzDate.getHours()).padStart(2, "0");
+  const min = String(tzDate.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${d}T${h}:${min}`;
+};
+
