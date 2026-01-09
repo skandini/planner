@@ -96,31 +96,9 @@ export function EventModalEnhanced({
   const [conflictsLoading, setConflictsLoading] = useState(false);
   const [conflictsError, setConflictsError] = useState<string | null>(null);
   const [showRecurrence, setShowRecurrence] = useState(false);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   
-  const hasUnsavedChanges = useCallback(() => {
-    if (!isEditing) {
-      return form.title.trim() !== "" || 
-             (form.description && form.description.trim() !== "") || 
-             (form.location && form.location.trim() !== "") ||
-             form.room_id !== null ||
-             (form.participant_ids && form.participant_ids.length > 0) ||
-             form.recurrence_enabled ||
-             pendingFiles.length > 0;
-    }
-    return true;
-  }, [form, isEditing, pendingFiles.length]);
-  
+  // Упрощенная функция закрытия - просто закрываем модальное окно
   const handleClose = useCallback(() => {
-    if (hasUnsavedChanges()) {
-      setShowCloseConfirm(true);
-    } else {
-      onClose();
-    }
-  }, [hasUnsavedChanges, onClose]);
-  
-  const handleConfirmClose = useCallback(() => {
-    setShowCloseConfirm(false);
     onClose();
   }, [onClose]);
   
@@ -320,33 +298,6 @@ export function EventModalEnhanced({
 
   return (
     <>
-      {showCloseConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl">
-            <h3 className="text-base font-semibold text-slate-900 mb-2">Вы уверены?</h3>
-            <p className="text-sm text-slate-600 mb-5">
-              Все несохраненные изменения будут потеряны.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowCloseConfirm(false)}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmClose}
-                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
-              >
-                Закрыть
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div 
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
         onClick={(e) => {
