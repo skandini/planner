@@ -293,8 +293,12 @@ export function WeekView({
     const rect = columnEl.getBoundingClientRect();
     let minutes = ((e.clientY - rect.top) / rect.height) * MINUTES_IN_DAY;
     minutes = Math.max(0, Math.min(MINUTES_IN_DAY, minutes));
+    // Округляем до ближайших 5 минут
+    minutes = Math.round(minutes / 5) * 5;
     let newStartMinutes = minutes - dragInfo.current.offsetMinutes;
     newStartMinutes = Math.max(0, Math.min(MINUTES_IN_DAY, newStartMinutes));
+    // Округляем итоговое время начала до ближайших 5 минут
+    newStartMinutes = Math.round(newStartMinutes / 5) * 5;
     const newStart = new Date(dayStart.getTime() + newStartMinutes * 60000);
     onEventMove(dragInfo.current.event, newStart);
     dragInfo.current = null;

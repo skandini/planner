@@ -204,8 +204,11 @@ export function DayView({
     
     const rect = e.currentTarget.getBoundingClientRect();
     const dropY = e.clientY - rect.top;
-    const dropHour = Math.floor(dropY / HOUR_HEIGHT);
-    const dropMinute = Math.floor((dropY % HOUR_HEIGHT) / HOUR_HEIGHT * 60);
+    const totalMinutes = (dropY / HOUR_HEIGHT) * 60;
+    // Округляем до ближайших 5 минут
+    const roundedMinutes = Math.round(totalMinutes / 5) * 5;
+    const dropHour = Math.floor(roundedMinutes / 60);
+    const dropMinute = roundedMinutes % 60;
     
     const { event, offsetMinutes } = dragInfo.current;
     const eventStart = parseUTC(event.starts_at);
@@ -216,6 +219,9 @@ export function DayView({
     const newOffset = (dropHour * 60 + dropMinute) - ((eventStart.getHours() * 60) + eventStart.getMinutes());
     const adjustedStart = new Date(eventStart);
     adjustedStart.setMinutes(adjustedStart.getMinutes() + newOffset - originalOffset);
+    // Округляем итоговое время начала до ближайших 5 минут
+    const finalMinutes = adjustedStart.getMinutes();
+    adjustedStart.setMinutes(Math.round(finalMinutes / 5) * 5);
     
     onEventMove(event, adjustedStart);
     dragInfo.current = null;
