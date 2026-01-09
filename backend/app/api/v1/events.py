@@ -7,6 +7,7 @@ from typing import List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import is_
 from sqlmodel import and_, delete, or_, select
 
 logger = logging.getLogger(__name__)
@@ -269,8 +270,14 @@ def _ensure_no_conflicts(
         # Это дает полную занятость независимо от календаря
         
         # События, где участники являются участниками
+        # ИСКЛЮЧАЕМ события, где участник отклонил участие (declined)
         participant_events_subquery = select(EventParticipant.event_id).where(
-            EventParticipant.user_id.in_(participant_ids)
+            EventParticipant.user_id.in_(participant_ids),
+            # Исключаем отклоненные события - они не считаются занятостью
+            or_(
+                EventParticipant.response_status != "declined",
+                is_(EventParticipant.response_status, None)
+            )
         )
         
         # Личные календари участников
@@ -299,12 +306,18 @@ def _ensure_no_conflicts(
         if conflict_event:
             # Находим пользователя, у которого конфликт
             # Проверяем, является ли он участником конфликтующего события
+            # ИСКЛЮЧАЕМ события, где участник отклонил участие (declined)
             conflict_participant = session.exec(
                 select(EventParticipant, User)
                 .join(User, User.id == EventParticipant.user_id)
                 .where(
                     EventParticipant.event_id == conflict_event.id,
                     EventParticipant.user_id.in_(participant_ids),
+                    # Исключаем отклоненные события - они не считаются занятостью
+                    or_(
+                        EventParticipant.response_status != "declined",
+                        is_(EventParticipant.response_status, None)
+                    )
                 )
             ).first()
             
