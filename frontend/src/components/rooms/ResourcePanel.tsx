@@ -231,18 +231,20 @@ export function ResourcePanel({
               }
               
               const data: EventRecord[] = await response.json();
-              // Фильтруем события: исключаем те, где текущий пользователь отклонил участие
-              // Если это доступность для текущего пользователя, исключаем отклоненные события
+              // Фильтруем события: исключаем те, где данный участник отклонил участие
+              // Если участник отклонил событие, оно не должно показываться как его занятость
               const filteredData = data.filter((event) => {
                 // Если это событие расписания доступности (unavailable, available), всегда показываем
                 if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
                   return true;
                 }
-                // Если есть текущий пользователь, проверяем его статус участия
-                if (currentUserEmail && event.participants) {
-                  const userParticipant = event.participants.find((p) => p.email === currentUserEmail);
-                  // Если пользователь отклонил событие, не показываем его как занятость
-                  if (userParticipant && userParticipant.response_status === "declined") {
+                // Проверяем статус участия конкретного участника в этом событии
+                if (event.participants) {
+                  const participantInEvent = event.participants.find(
+                    (p) => p.user_id === participant.user_id || p.email === participant.email
+                  );
+                  // Если участник отклонил событие, не показываем его как занятость для этого участника
+                  if (participantInEvent && participantInEvent.response_status === "declined") {
                     return false;
                   }
                 }
