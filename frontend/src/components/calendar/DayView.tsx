@@ -58,6 +58,11 @@ export function DayView({
     return () => clearInterval(interval);
   }, []);
   
+  // Получаем текущее время в выбранном часовом поясе
+  const currentTimeInTZ = useMemo(() => {
+    return toTimeZone(currentTime, timeZone);
+  }, [currentTime, timeZone]);
+  
   const [hoveredEvent, setHoveredEvent] = useState<{
     event: EventRecord;
     position: { top: number; left: number };
@@ -243,12 +248,11 @@ export function DayView({
   
   useEffect(() => {
     if (isToday && scrollContainerRef.current) {
-      const now = new Date();
-      const currentHour = now.getHours();
+      const currentHour = currentTimeInTZ.getHours();
       const scrollPosition = (currentHour * HOUR_HEIGHT) - 200;
       scrollContainerRef.current.scrollTop = Math.max(0, scrollPosition);
     }
-  }, [isToday, HOUR_HEIGHT]);
+  }, [isToday, HOUR_HEIGHT, currentTimeInTZ]);
   
   const formatTime = useCallback((date: Date) => {
     return formatTimeInTimeZone(date, timeZone);
@@ -257,14 +261,13 @@ export function DayView({
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
-    const now = new Date();
-    const tzNow = toTimeZone(now, timeZone);
-    const hours = tzNow.getHours();
-    const minutes = tzNow.getMinutes();
-    const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT);
+    const hours = currentTimeInTZ.getHours();
+    const minutes = currentTimeInTZ.getMinutes();
+    const seconds = currentTimeInTZ.getSeconds();
+    const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT) + (seconds / 3600 * HOUR_HEIGHT);
     
     return position;
-  }, [isToday, currentTime, HOUR_HEIGHT, timeZone]);
+  }, [isToday, currentTimeInTZ, HOUR_HEIGHT]);
   
   const dayName = useMemo(() => {
     return new Intl.DateTimeFormat('ru-RU', {
@@ -291,23 +294,36 @@ export function DayView({
           <div className="relative" style={{ minHeight: `${DAY_HEIGHT}px` }}>
             {/* Time grid */}
             <div className="absolute inset-0">
-              {hours.map((hour) => (
-                <div
-                  key={hour}
-                  className="border-t border-slate-100"
-                  style={{ height: `${HOUR_HEIGHT}px` }}
-                >
-                  <div className="flex h-full">
-                    <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
-                      {hour.toString().padStart(2, '0')}:00
+              {hours.map((hour) => {
+                // Создаем дату для этого часа в выбранном часовом поясе
+                // Используем начало дня в выбранном часовом поясе
+                const dayStart = new Date(day);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayStartInTZ = toTimeZone(dayStart, timeZone);
+                const hourDate = new Date(dayStartInTZ);
+                hourDate.setHours(hour, 0, 0, 0);
+                
+                // Форматируем час в выбранном часовом поясе
+                const hourLabel = formatTimeInTimeZone(hourDate, timeZone, { hour: '2-digit', minute: '2-digit' });
+                
+                return (
+                  <div
+                    key={hour}
+                    className="border-t border-slate-100"
+                    style={{ height: `${HOUR_HEIGHT}px` }}
+                  >
+                    <div className="flex h-full">
+                      <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
+                        {hourLabel}
+                      </div>
+                      <div 
+                        className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => handleTimeSlotClick(hour, 0)}
+                      />
                     </div>
-                    <div 
-                      className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
-                      onClick={() => handleTimeSlotClick(hour, 0)}
-                    />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Current time indicator */}

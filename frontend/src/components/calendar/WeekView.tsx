@@ -60,6 +60,11 @@ export function WeekView({
     return () => clearInterval(interval);
   }, []);
   
+  // Получаем текущее время в выбранном часовом поясе
+  const currentTimeInTZ = useMemo(() => {
+    return toTimeZone(currentTime, timeZone);
+  }, [currentTime, timeZone]);
+  
   // Состояние для всплывающего окна с участниками
   const [hoveredEvent, setHoveredEvent] = useState<{
     event: EventRecord;
@@ -201,10 +206,11 @@ export function WeekView({
       const isTodayInView = days.some(day => day.toDateString() === todayKey);
       
       if (isTodayInView) {
-        // Прокручиваем к текущему времени с небольшим отступом сверху
-        const todayStart = new Date(now);
+        // Прокручиваем к текущему времени в выбранном часовом поясе с небольшим отступом сверху
+        const tzNow = toTimeZone(now, timeZone);
+        const todayStart = new Date(tzNow);
         todayStart.setHours(0, 0, 0, 0);
-        const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+        const minutesFromStart = (tzNow.getTime() - todayStart.getTime()) / 60000;
         const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
         // Отступ 100px сверху, чтобы линия была видна
         scrollContainerRef.current.scrollTop = Math.max(0, topPx - 100);
@@ -485,15 +491,28 @@ export function WeekView({
             style={{ height: `${DAY_HEIGHT}px` }}
           >
             <div className="flex h-full flex-col justify-between text-right text-xs text-slate-500">
-              {hours.map((hour) => (
-                <div
-                  key={`label-${hour}`}
-                  className="pr-1.5 text-[0.6rem] uppercase tracking-wide"
-                  style={{ height: `${HOUR_HEIGHT}px` }}
-                >
-                  {hour.toString().padStart(2, "0")}:00
-                </div>
-              ))}
+              {hours.map((hour) => {
+                // Создаем дату для этого часа в выбранном часовом поясе
+                // Используем первый день недели как базовую дату
+                const baseDate = new Date(days[0]);
+                baseDate.setHours(0, 0, 0, 0);
+                const dayStartInTZ = toTimeZone(baseDate, timeZone);
+                const hourDate = new Date(dayStartInTZ);
+                hourDate.setHours(hour, 0, 0, 0);
+                
+                // Форматируем час в выбранном часовом поясе
+                const hourLabel = formatTimeInTimeZone(hourDate, timeZone, { hour: '2-digit', minute: '2-digit' });
+                
+                return (
+                  <div
+                    key={`label-${hour}`}
+                    className="pr-1.5 text-[0.6rem] uppercase tracking-wide"
+                    style={{ height: `${HOUR_HEIGHT}px` }}
+                  >
+                    {hourLabel}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -527,11 +546,12 @@ export function WeekView({
 
                 {/* Красная линия текущего времени - показываем только для сегодняшнего дня */}
                 {isToday && (() => {
-                  const now = currentTime;
-                  const todayStart = new Date(now);
+                  const tzNow = currentTimeInTZ;
+                  const todayStart = new Date(tzNow);
                   todayStart.setHours(0, 0, 0, 0);
-                  const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
-                  const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  const minutesFromStart = (tzNow.getTime() - todayStart.getTime()) / 60000;
+                  const secondsFromStart = (tzNow.getTime() - todayStart.getTime()) / 1000;
+                  const topPx = (secondsFromStart / (24 * 3600)) * DAY_HEIGHT;
                   
                   // Показываем линию только если она в пределах видимой области (0-23:59)
                   if (topPx >= 0 && topPx <= DAY_HEIGHT) {
