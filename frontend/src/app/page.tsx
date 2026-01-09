@@ -1287,12 +1287,21 @@ export default function Home() {
         );
       }
 
-      // Перезагружаем события для синхронизации
+      // Сбрасываем форму и закрываем модальное окно СРАЗУ после успешного сохранения
+      // Делаем это ДО loadEvents(), чтобы модальное окно закрылось сразу и не переоткрылось
+      setEventForm(DEFAULT_EVENT_FORM);
+      setEventFormError(null);
+      setEditingEventId(null);
+      setEditingRecurrenceInfo(null);
+      setPendingFiles([]);
+      setIsEventModalOpen(false);
+      
+      // Перезагружаем события для синхронизации ПОСЛЕ закрытия модального окна
       await loadEvents();
       
-      // Загружаем временные файлы, если они были выбраны до создания события
+      // Загружаем временные файлы асинхронно ПОСЛЕ закрытия модального окна
       if (filesToUploadAfterCreation.length > 0 && createdEvent.id) {
-        // Загружаем файлы асинхронно, не блокируя создание события
+        // Загружаем файлы асинхронно, не блокируя закрытие модального окна
         (async () => {
           try {
             for (const file of filesToUploadAfterCreation) {
@@ -1312,8 +1321,6 @@ export default function Home() {
                 console.error(`Не удалось загрузить файл ${file.name}:`, errorData.detail || uploadResponse.statusText);
               }
             }
-            // Очищаем временные файлы после загрузки
-            setPendingFiles([]);
             // Перезагружаем события для отображения загруженных файлов
             await loadEvents();
           } catch (err) {
@@ -1322,14 +1329,6 @@ export default function Home() {
           }
         })();
       }
-      
-      // Сбрасываем форму и закрываем модальное окно после успешного сохранения
-      setEventForm(DEFAULT_EVENT_FORM);
-      setEventFormError(null);
-      setIsEventModalOpen(false);
-      setEditingEventId(null);
-      setEditingRecurrenceInfo(null);
-      setPendingFiles([]);
     } catch (err) {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",
