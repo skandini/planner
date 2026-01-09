@@ -490,6 +490,7 @@ export function EventModalEnhanced({
                   getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                   organizations={organizations}
                   apiBaseUrl={apiBaseUrl}
+                  currentUserEmail={currentUserEmail}
                 />
               </div>
 

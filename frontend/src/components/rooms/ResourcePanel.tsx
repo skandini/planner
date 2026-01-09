@@ -34,6 +34,7 @@ interface ResourcePanelProps {
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   organizations?: Array<{ id: string; name: string; slug: string }>;
   apiBaseUrl?: string;
+  currentUserEmail?: string;
 }
 
 export function ResourcePanel({
@@ -59,6 +60,7 @@ export function ResourcePanel({
   getUserOrganizationAbbreviation,
   organizations = [],
   apiBaseUrl = "",
+  currentUserEmail,
 }: ResourcePanelProps) {
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
@@ -229,8 +231,24 @@ export function ResourcePanel({
               }
               
               const data: EventRecord[] = await response.json();
-              // Возвращаем все события, включая unavailable (недоступность по расписанию)
-              return [participant.user_id, data] as const;
+              // Фильтруем события: исключаем те, где текущий пользователь отклонил участие
+              // Если это доступность для текущего пользователя, исключаем отклоненные события
+              const filteredData = data.filter((event) => {
+                // Если это событие расписания доступности (unavailable, available), всегда показываем
+                if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
+                  return true;
+                }
+                // Если есть текущий пользователь, проверяем его статус участия
+                if (currentUserEmail && event.participants) {
+                  const userParticipant = event.participants.find((p) => p.email === currentUserEmail);
+                  // Если пользователь отклонил событие, не показываем его как занятость
+                  if (userParticipant && userParticipant.response_status === "declined") {
+                    return false;
+                  }
+                }
+                return true;
+              });
+              return [participant.user_id, filteredData] as const;
             } catch (err) {
               // Возвращаем пустой список, но не прерываем загрузку для других участников
               return [participant.user_id, []] as const;
