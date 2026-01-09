@@ -275,24 +275,18 @@ def _ensure_no_conflicts(
             EventParticipant.response_status != "declined"
         )
         
-        # Личные календари участников
-        participant_calendars_subquery = select(Calendar.id).where(
-            Calendar.owner_id.in_(participant_ids)
-        )
-        
         # Фильтры для проверки конфликтов
+        # Проверяем только события, где участник является участником (не отклоненным)
+        # События в личных календарях проверяем отдельно ниже
         conflict_filters = [
-            or_(
-                Event.id.in_(participant_events_subquery),
-                Event.calendar_id.in_(participant_calendars_subquery),
-            ),
+            Event.id.in_(participant_events_subquery),
             Event.starts_at < ends_at,
             Event.ends_at > starts_at,
         ]
         if exclude_event_id:
             conflict_filters.append(Event.id != exclude_event_id)
         
-        # Проверяем конфликты
+        # Проверяем конфликты через участников
         conflict_event = session.exec(
             select(Event)
             .where(*conflict_filters)
@@ -321,20 +315,53 @@ def _ensure_no_conflicts(
                         f"уже занят в событии «{conflict_event.title}»."
                     ),
                 )
-            else:
-                # Конфликт в личном календаре участника
-                # Находим владельца календаря
-                conflict_calendar = session.get(Calendar, conflict_event.calendar_id)
-                if conflict_calendar and conflict_calendar.owner_id in participant_ids:
-                    conflict_user = session.get(User, conflict_calendar.owner_id)
-                    if conflict_user:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                f"Участник {conflict_user.full_name or conflict_user.email} "
-                                f"уже занят в событии «{conflict_event.title}»."
-                            ),
-                        )
+        
+        # Отдельно проверяем события в личных календарях участников
+        # Но только если участник является участником события и не отклонил его
+        participant_calendars = session.exec(
+            select(Calendar.id).where(Calendar.owner_id.in_(participant_ids))
+        ).all()
+        
+        if participant_calendars:
+            # Проверяем события в личных календарях, где участник является участником
+            # и не отклонил событие
+            personal_calendar_filters = [
+                Event.calendar_id.in_(participant_calendars),
+                EventParticipant.user_id.in_(participant_ids),
+                EventParticipant.response_status != "declined",
+                Event.starts_at < ends_at,
+                Event.ends_at > starts_at,
+            ]
+            if exclude_event_id:
+                personal_calendar_filters.append(Event.id != exclude_event_id)
+            
+            personal_calendar_conflict = session.exec(
+                select(Event)
+                .join(EventParticipant, Event.id == EventParticipant.event_id)
+                .where(*personal_calendar_filters)
+            ).first()
+            
+            if personal_calendar_conflict:
+                # Находим участника, у которого конфликт
+                conflict_participant = session.exec(
+                    select(EventParticipant, User)
+                    .join(User, User.id == EventParticipant.user_id)
+                    .where(
+                        EventParticipant.event_id == personal_calendar_conflict.id,
+                        EventParticipant.user_id.in_(participant_ids),
+                        EventParticipant.response_status != "declined"
+                    )
+                ).first()
+                
+                if conflict_participant:
+                    _, conflict_user = conflict_participant
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=(
+                            f"Участник {conflict_user.full_name or conflict_user.email} "
+                            f"уже занят в событии «{personal_calendar_conflict.title}»."
+                        ),
+                    )
 
 
 @router.get("/", response_model=List[EventRead], summary="List events")
