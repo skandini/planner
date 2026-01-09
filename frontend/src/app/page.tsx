@@ -1848,7 +1848,7 @@ export default function Home() {
             })}
           </div>
           
-          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[300px] lg:flex-shrink-0 overflow-y-auto">
+          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[345px] lg:flex-shrink-0 overflow-y-auto">
             {/* Мини-календарь - перемещен наверх */}
             <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
@@ -2224,14 +2224,8 @@ export default function Home() {
             </div>
           </section> */}
 
-          {/* Блок с ближайшими событиями */}
-          <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h2 className="text-sm font-bold text-slate-900">Ближайшие события</h2>
-            </div>
+          {/* Блок с ближайшими событиями - минималистичный дизайн */}
+          <section className="flex-shrink-0">
             <UpcomingEvents
               events={events}
               currentUserEmail={userEmail || undefined}

@@ -101,174 +101,130 @@ export function UpcomingEvents({
 
   if (upcomingEvents.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
           Ближайшие события
         </h3>
-        <p className="text-sm text-slate-500">Нет предстоящих событий</p>
+        <p className="text-sm text-slate-400">Нет предстоящих событий</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
-        <h3 className="text-sm font-semibold text-slate-700">
-          Ближайшие события
-        </h3>
-        <p className="mt-0.5 text-xs text-slate-500">
-          {upcomingEvents.length} {upcomingEvents.length === 1 ? "событие" : "событий"}
-        </p>
-      </div>
-      <div className="max-h-[600px] overflow-y-auto">
-        <div className="divide-y divide-slate-100">
-          {upcomingEvents.map((event) => {
-            const status = getEventStatus(event);
-            const isAccepted = status === "accepted";
-            const isPending = status === "needs_action" || status === "pending" || !status;
-            const start = parseUTC(event.starts_at);
-            const end = parseUTC(event.ends_at);
-            const isToday = start.toDateString() === now.toDateString();
-            const isStartingSoon = isToday && start.getTime() - now.getTime() < 30 * 60 * 1000 && start > now; // 30 минут до начала
-            const isLive = start <= now && end >= now; // Событие идет прямо сейчас
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+        Ближайшие события
+      </h3>
+      <div className="space-y-2">
+        {upcomingEvents.map((event) => {
+          const status = getEventStatus(event);
+          const isAccepted = status === "accepted";
+          const isPending = status === "needs_action" || status === "pending" || !status;
+          const start = parseUTC(event.starts_at);
+          const end = parseUTC(event.ends_at);
+          const isToday = start.toDateString() === now.toDateString();
+          const isStartingSoon = isToday && start.getTime() - now.getTime() < 30 * 60 * 1000 && start > now;
+          const isLive = start <= now && end >= now;
 
-            return (
-              <button
-                key={event.id}
-                type="button"
-                onClick={() => onEventClick(event)}
-                className={`w-full text-left transition hover:bg-slate-50 ${
-                  isLive 
-                    ? "bg-gradient-to-r from-red-50 via-pink-50 to-red-50 border-l-4 border-red-500" 
-                    : isStartingSoon 
-                      ? "bg-amber-50" 
-                      : ""
-                }`}
-              >
-                <div className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div
-                          className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                            isPending
-                              ? "bg-slate-400"
-                              : isAccepted
-                                ? "bg-lime-500"
-                                : "bg-slate-300"
-                          }`}
-                        />
-                        <h4
-                          className={`text-sm font-medium truncate ${
-                            isPending
-                              ? "text-slate-700"
-                              : isAccepted
-                                ? "text-slate-900"
-                                : "text-slate-600"
-                          }`}
-                        >
-                          {event.title}
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-500 mb-1">
-                        {formatEventTime(event)}
-                      </p>
-                      {event.room_id && (
-                        <p className="text-xs font-medium text-slate-600">
-                          🏢 {event.room_id}
-                        </p>
-                      )}
-                      {event.participants && event.participants.length > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex -space-x-1.5">
-                            {event.participants.slice(0, 5).map((participant) => {
-                              const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
-                              const avatarUrl = user?.avatar_url;
-                              const displayName = participant.full_name || participant.email.split("@")[0];
-                              const initials = displayName.charAt(0).toUpperCase();
-                              const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
-                              
-                              return (
-                                <div
-                                  key={participant.user_id || participant.email}
-                                  className="relative group"
-                                  title={`${displayName}${orgAbbr ? ` (${orgAbbr})` : ''}`}
-                                >
-                                  {avatarUrl ? (
-                                    <img
-                                      src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
-                                      alt={displayName}
-                                      className="w-6 h-6 rounded-full object-cover border-2 border-white shadow-sm"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
-                                        if (fallback) fallback.classList.remove('hidden');
-                                      }}
-                                    />
-                                  ) : null}
-                                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center border-2 border-white shadow-sm ${avatarUrl ? 'hidden' : ''}`}>
-                                    <span className="text-[0.55rem] font-semibold text-white">
-                                      {initials}
-                                    </span>
-                                  </div>
-                                  {/* Статус участника (цветная точка) */}
-                                  <div
-                                    className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
-                                      participant.response_status === "accepted"
-                                        ? "bg-lime-500"
-                                        : participant.response_status === "declined"
-                                        ? "bg-red-500"
-                                        : "bg-amber-500"
-                                    }`}
-                                  />
-                                </div>
-                              );
-                            })}
-                            {event.participants.length > 5 && (
-                              <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center">
-                                <span className="text-[0.55rem] font-semibold text-slate-600">
-                                  +{event.participants.length - 5}
+          return (
+            <button
+              key={event.id}
+              type="button"
+              onClick={() => onEventClick(event)}
+              className="w-full text-left group"
+            >
+              <div className="flex items-start gap-3 p-2 rounded-lg transition-colors hover:bg-slate-50/50">
+                {/* Минималистичный индикатор времени */}
+                <div className="flex-shrink-0 pt-0.5">
+                  <div className={`w-1 h-full rounded-full ${
+                    isLive 
+                      ? "bg-red-500" 
+                      : isStartingSoon 
+                        ? "bg-amber-400" 
+                        : isPending
+                          ? "bg-slate-300"
+                          : isAccepted
+                            ? "bg-lime-500"
+                            : "bg-slate-200"
+                  }`} style={{ minHeight: '40px' }} />
+                </div>
+                
+                <div className="flex-1 min-w-0 space-y-1">
+                  {/* Заголовок события */}
+                  <h4 className={`text-sm font-medium truncate ${
+                    isLive 
+                      ? "text-red-600" 
+                      : "text-slate-900"
+                  }`}>
+                    {event.title}
+                  </h4>
+                  
+                  {/* Время события - минималистично */}
+                  <p className="text-xs text-slate-500">
+                    {formatEventTime(event)}
+                  </p>
+                  
+                  {/* Компактные участники - только аватары */}
+                  {event.participants && event.participants.length > 0 && (
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <div className="flex -space-x-1.5">
+                        {event.participants.slice(0, 4).map((participant) => {
+                          const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
+                          const avatarUrl = user?.avatar_url;
+                          const displayName = participant.full_name || participant.email.split("@")[0];
+                          const initials = displayName.charAt(0).toUpperCase();
+                          
+                          return (
+                            <div
+                              key={participant.user_id || participant.email}
+                              className="relative"
+                              title={displayName}
+                            >
+                              {avatarUrl ? (
+                                <img
+                                  src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
+                                  alt={displayName}
+                                  className="w-5 h-5 rounded-full object-cover border border-white"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.classList.remove('hidden');
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center border border-white ${avatarUrl ? 'hidden' : ''}`}>
+                                <span className="text-[0.5rem] font-medium text-slate-600">
+                                  {initials}
                                 </span>
                               </div>
-                            )}
-                          </div>
-                          <span className="text-xs text-slate-500">
-                            {event.participants.length}{" "}
-                            {event.participants.length === 1
-                              ? "участник"
-                              : event.participants.length < 5
-                                ? "участника"
-                                : "участников"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      {isLive && (
-                        <div className="relative">
-                          <span className="live-indicator inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-500 via-pink-500 to-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg shadow-red-500/50">
-                            <span className="relative flex h-2 w-2">
-                              <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 live-dot"></span>
-                              <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+                            </div>
+                          );
+                        })}
+                        {event.participants.length > 4 && (
+                          <div className="w-5 h-5 rounded-full bg-slate-100 border border-white flex items-center justify-center">
+                            <span className="text-[0.5rem] font-medium text-slate-500">
+                              +{event.participants.length - 4}
                             </span>
-                            <span className="relative">Сейчас идет</span>
-                          </span>
-                        </div>
-                      )}
-                      {!isLive && isStartingSoon && (
-                        <div className="flex-shrink-0">
-                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                            Скоро
-                          </span>
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-              </button>
-            );
-          })}
-        </div>
+                
+                {/* Минималистичные индикаторы статуса */}
+                <div className="flex-shrink-0 pt-0.5">
+                  {isLive && (
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  )}
+                  {!isLive && isStartingSoon && (
+                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                  )}
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
