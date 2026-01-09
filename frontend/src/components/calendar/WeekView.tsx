@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC, toTimeZone, formatTimeInTimeZone, getTimeInTimeZone } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewProps {
@@ -11,7 +11,6 @@ interface WeekViewProps {
   events: EventRecord[];
   loading: boolean;
   accent: string;
-  timeZone?: string;
   onEventClick: (event: EventRecord) => void;
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
@@ -28,7 +27,6 @@ export function WeekView({
   events,
   loading,
   accent,
-  timeZone = 'Europe/Moscow',
   onEventClick,
   rooms,
   onEventMove,
@@ -60,10 +58,6 @@ export function WeekView({
     return () => clearInterval(interval);
   }, []);
   
-  // Получаем компоненты текущего времени в выбранном часовом поясе
-  const currentTimeInTZ = useMemo(() => {
-    return getTimeInTimeZone(currentTime, timeZone);
-  }, [currentTime, timeZone]);
   
   // Состояние для всплывающего окна с участниками
   const [hoveredEvent, setHoveredEvent] = useState<{
@@ -206,10 +200,11 @@ export function WeekView({
       const isTodayInView = days.some(day => day.toDateString() === todayKey);
       
       if (isTodayInView) {
-        // Прокручиваем к текущему времени в выбранном часовом поясе с небольшим отступом сверху
-        const tzTime = getTimeInTimeZone(now, timeZone);
-        const totalSeconds = tzTime.hour * 3600 + tzTime.minute * 60 + tzTime.second;
-        const topPx = (totalSeconds / (24 * 3600)) * DAY_HEIGHT;
+        // Прокручиваем к текущему времени с небольшим отступом сверху
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+        const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
         // Отступ 100px сверху, чтобы линия была видна
         scrollContainerRef.current.scrollTop = Math.max(0, topPx - 100);
       } else {
@@ -489,28 +484,15 @@ export function WeekView({
             style={{ height: `${DAY_HEIGHT}px` }}
           >
             <div className="flex h-full flex-col justify-between text-right text-xs text-slate-500">
-              {hours.map((hour) => {
-                // Создаем дату для этого часа в выбранном часовом поясе
-                // Используем первый день недели как базовую дату
-                const baseDate = new Date(days[0]);
-                baseDate.setHours(0, 0, 0, 0);
-                const dayStartInTZ = toTimeZone(baseDate, timeZone);
-                const hourDate = new Date(dayStartInTZ);
-                hourDate.setHours(hour, 0, 0, 0);
-                
-                // Форматируем час в выбранном часовом поясе
-                const hourLabel = formatTimeInTimeZone(hourDate, timeZone, { hour: '2-digit', minute: '2-digit' });
-                
-                return (
-                  <div
-                    key={`label-${hour}`}
-                    className="pr-1.5 text-[0.6rem] uppercase tracking-wide"
-                    style={{ height: `${HOUR_HEIGHT}px` }}
-                  >
-                    {hourLabel}
-                  </div>
-                );
-              })}
+              {hours.map((hour) => (
+                <div
+                  key={`label-${hour}`}
+                  className="pr-1.5 text-[0.6rem] uppercase tracking-wide"
+                  style={{ height: `${HOUR_HEIGHT}px` }}
+                >
+                  {hour.toString().padStart(2, "0")}:00
+                </div>
+              ))}
             </div>
           </div>
 
@@ -544,11 +526,11 @@ export function WeekView({
 
                 {/* Красная линия текущего времени - показываем только для сегодняшнего дня */}
                 {isToday && (() => {
-                  const hours = currentTimeInTZ.hour;
-                  const minutes = currentTimeInTZ.minute;
-                  const seconds = currentTimeInTZ.second;
-                  const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-                  const topPx = (totalSeconds / (24 * 3600)) * DAY_HEIGHT;
+                  const now = currentTime;
+                  const todayStart = new Date(now);
+                  todayStart.setHours(0, 0, 0, 0);
+                  const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+                  const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
                   
                   // Показываем линию только если она в пределах видимой области (0-23:59)
                   if (topPx >= 0 && topPx <= DAY_HEIGHT) {
@@ -845,9 +827,15 @@ export function WeekView({
           <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
             <p className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2 break-words">{hoveredEvent.event.title}</p>
             <p className="text-xs text-slate-500">
-              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), timeZone)}{" "}
+              {new Intl.DateTimeFormat("ru-RU", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(parseUTC(hoveredEvent.event.starts_at))}{" "}
               —{" "}
-              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), timeZone)}
+              {new Intl.DateTimeFormat("ru-RU", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(parseUTC(hoveredEvent.event.ends_at))}
             </p>
           </div>
           

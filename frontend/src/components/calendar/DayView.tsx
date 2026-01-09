@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { formatDate, parseUTC, toTimeZone, formatTimeInTimeZone, getTimeInTimeZone } from "@/lib/utils/dateUtils";
+import { formatDate, parseUTC } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface DayViewProps {
@@ -11,7 +11,6 @@ interface DayViewProps {
   events: EventRecord[];
   loading: boolean;
   accent: string;
-  timeZone?: string;
   onEventClick: (event: EventRecord) => void;
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
@@ -58,10 +57,6 @@ export function DayView({
     return () => clearInterval(interval);
   }, []);
   
-  // Получаем компоненты текущего времени в выбранном часовом поясе
-  const currentTimeInTZ = useMemo(() => {
-    return getTimeInTimeZone(currentTime, timeZone);
-  }, [currentTime, timeZone]);
   
   const [hoveredEvent, setHoveredEvent] = useState<{
     event: EventRecord;
@@ -157,21 +152,18 @@ export function DayView({
     const eventStart = parseUTC(event.starts_at);
     const eventEnd = parseUTC(event.ends_at);
     
-    const eventStartTZ = toTimeZone(eventStart, timeZone);
-    const eventEndTZ = toTimeZone(eventEnd, timeZone);
-    
     const dayStart = new Date(day);
     dayStart.setHours(0, 0, 0, 0);
     
-    const startMinutes = (eventStartTZ.getHours() * 60) + eventStartTZ.getMinutes();
-    const endMinutes = (eventEndTZ.getHours() * 60) + eventEndTZ.getMinutes();
+    const startMinutes = (eventStart.getHours() * 60) + eventStart.getMinutes();
+    const endMinutes = (eventEnd.getHours() * 60) + eventEnd.getMinutes();
     const duration = endMinutes - startMinutes;
     
     const topPx = (startMinutes / 60) * HOUR_HEIGHT;
     const heightPx = (duration / 60) * HOUR_HEIGHT;
     
     return { topPx, heightPx, startMinutes, endMinutes };
-  }, [day, HOUR_HEIGHT, timeZone]);
+  }, [day, HOUR_HEIGHT]);
   
   const handleCardClick = useCallback((event: EventRecord) => {
     if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
@@ -248,26 +240,31 @@ export function DayView({
   
   useEffect(() => {
     if (isToday && scrollContainerRef.current) {
-      const currentHour = currentTimeInTZ.hour;
+      const now = new Date();
+      const currentHour = now.getHours();
       const scrollPosition = (currentHour * HOUR_HEIGHT) - 200;
       scrollContainerRef.current.scrollTop = Math.max(0, scrollPosition);
     }
-  }, [isToday, HOUR_HEIGHT, currentTimeInTZ]);
+  }, [isToday, HOUR_HEIGHT]);
   
   const formatTime = useCallback((date: Date) => {
-    return formatTimeInTimeZone(date, timeZone);
-  }, [timeZone]);
+    return new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }, []);
   
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
-    const hours = currentTimeInTZ.hour;
-    const minutes = currentTimeInTZ.minute;
-    const seconds = currentTimeInTZ.second;
+    const now = currentTime;
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
     const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT) + (seconds / 3600 * HOUR_HEIGHT);
     
     return position;
-  }, [isToday, currentTimeInTZ, HOUR_HEIGHT]);
+  }, [isToday, currentTime, HOUR_HEIGHT]);
   
   const dayName = useMemo(() => {
     return new Intl.DateTimeFormat('ru-RU', {
@@ -294,36 +291,23 @@ export function DayView({
           <div className="relative" style={{ minHeight: `${DAY_HEIGHT}px` }}>
             {/* Time grid */}
             <div className="absolute inset-0">
-              {hours.map((hour) => {
-                // Создаем дату для этого часа в выбранном часовом поясе
-                // Используем начало дня в выбранном часовом поясе
-                const dayStart = new Date(day);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayStartInTZ = toTimeZone(dayStart, timeZone);
-                const hourDate = new Date(dayStartInTZ);
-                hourDate.setHours(hour, 0, 0, 0);
-                
-                // Форматируем час в выбранном часовом поясе
-                const hourLabel = formatTimeInTimeZone(hourDate, timeZone, { hour: '2-digit', minute: '2-digit' });
-                
-                return (
-                  <div
-                    key={hour}
-                    className="border-t border-slate-100"
-                    style={{ height: `${HOUR_HEIGHT}px` }}
-                  >
-                    <div className="flex h-full">
-                      <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
-                        {hourLabel}
-                      </div>
-                      <div 
-                        className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
-                        onClick={() => handleTimeSlotClick(hour, 0)}
-                      />
+              {hours.map((hour) => (
+                <div
+                  key={hour}
+                  className="border-t border-slate-100"
+                  style={{ height: `${HOUR_HEIGHT}px` }}
+                >
+                  <div className="flex h-full">
+                    <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
+                      {hour.toString().padStart(2, '0')}:00
                     </div>
+                    <div 
+                      className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
+                      onClick={() => handleTimeSlotClick(hour, 0)}
+                    />
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
             
             {/* Current time indicator */}

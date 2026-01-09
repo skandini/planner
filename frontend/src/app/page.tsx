@@ -55,9 +55,6 @@ import {
   toLocalString,
   toUTCString,
   toUTCDateISO,
-  toTimeZone,
-  formatTimeInTimeZone,
-  toTimeZoneString,
 } from "@/lib/utils/dateUtils";
 import {
   API_BASE_URL,
@@ -96,15 +93,6 @@ export default function Home() {
     const date = new Date();
     date.setDate(1);
     return date;
-  });
-  // Часовой пояс для отображения событий (по умолчанию Москва)
-  const [displayTimeZone, setDisplayTimeZone] = useState<string>(() => {
-    // Сохраняем в localStorage для сохранения выбора пользователя
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('displayTimeZone');
-      return saved || 'Europe/Moscow';
-    }
-    return 'Europe/Moscow';
   });
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -1879,33 +1867,6 @@ export default function Home() {
                   <h2 className="text-sm font-bold text-slate-900">Календарь</h2>
                 </div>
               </div>
-              
-              {/* Переключатель часового пояса */}
-              <div className="mb-3 pb-3 border-b border-slate-200">
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                  Часовой пояс отображения
-                </label>
-                <select
-                  value={displayTimeZone}
-                  onChange={(e) => {
-                    const newTz = e.target.value;
-                    setDisplayTimeZone(newTz);
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('displayTimeZone', newTz);
-                    }
-                  }}
-                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                >
-                  <option value="Europe/Moscow">Москва (UTC+3)</option>
-                  <option value="UTC">UTC (UTC+0)</option>
-                  <option value="Europe/London">Лондон (UTC+0/+1)</option>
-                  <option value="America/New_York">Нью-Йорк (UTC-5/-4)</option>
-                  <option value="America/Los_Angeles">Лос-Анджелес (UTC-8/-7)</option>
-                  <option value="Asia/Tokyo">Токио (UTC+9)</option>
-                  <option value="Asia/Shanghai">Шанхай (UTC+8)</option>
-                  <option value="Europe/Berlin">Берлин (UTC+1/+2)</option>
-                </select>
-              </div>
 
               {(() => {
 
@@ -2605,7 +2566,6 @@ export default function Home() {
               events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
               loading={eventsLoading || myAvailabilityLoading}
               accent={selectedCalendar.color}
-              timeZone={displayTimeZone}
               onEventClick={(event) => {
                 if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
                   return;
@@ -2644,7 +2604,6 @@ export default function Home() {
               events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
               loading={eventsLoading || myAvailabilityLoading}
               accent={selectedCalendar.color}
-              timeZone={displayTimeZone}
               onEventClick={(event) => {
                 // Не открываем модальное окно для событий расписания доступности
                 if (event.status === "unavailable") {
