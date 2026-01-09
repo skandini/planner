@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { formatDate, parseUTC, toTimeZone, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
+import { formatDate, parseUTC, toTimeZone, formatTimeInTimeZone, getTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface DayViewProps {
@@ -58,9 +58,9 @@ export function DayView({
     return () => clearInterval(interval);
   }, []);
   
-  // Получаем текущее время в выбранном часовом поясе
+  // Получаем компоненты текущего времени в выбранном часовом поясе
   const currentTimeInTZ = useMemo(() => {
-    return toTimeZone(currentTime, timeZone);
+    return getTimeInTimeZone(currentTime, timeZone);
   }, [currentTime, timeZone]);
   
   const [hoveredEvent, setHoveredEvent] = useState<{
@@ -248,7 +248,7 @@ export function DayView({
   
   useEffect(() => {
     if (isToday && scrollContainerRef.current) {
-      const currentHour = currentTimeInTZ.getHours();
+      const currentHour = currentTimeInTZ.hour;
       const scrollPosition = (currentHour * HOUR_HEIGHT) - 200;
       scrollContainerRef.current.scrollTop = Math.max(0, scrollPosition);
     }
@@ -261,9 +261,9 @@ export function DayView({
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
-    const hours = currentTimeInTZ.getHours();
-    const minutes = currentTimeInTZ.getMinutes();
-    const seconds = currentTimeInTZ.getSeconds();
+    const hours = currentTimeInTZ.hour;
+    const minutes = currentTimeInTZ.minute;
+    const seconds = currentTimeInTZ.second;
     const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT) + (seconds / 3600 * HOUR_HEIGHT);
     
     return position;

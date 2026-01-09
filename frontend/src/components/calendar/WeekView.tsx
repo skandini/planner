@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC, toTimeZone, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC, toTimeZone, formatTimeInTimeZone, getTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewProps {
@@ -60,9 +60,9 @@ export function WeekView({
     return () => clearInterval(interval);
   }, []);
   
-  // Получаем текущее время в выбранном часовом поясе
+  // Получаем компоненты текущего времени в выбранном часовом поясе
   const currentTimeInTZ = useMemo(() => {
-    return toTimeZone(currentTime, timeZone);
+    return getTimeInTimeZone(currentTime, timeZone);
   }, [currentTime, timeZone]);
   
   // Состояние для всплывающего окна с участниками
@@ -207,11 +207,9 @@ export function WeekView({
       
       if (isTodayInView) {
         // Прокручиваем к текущему времени в выбранном часовом поясе с небольшим отступом сверху
-        const tzNow = toTimeZone(now, timeZone);
-        const todayStart = new Date(tzNow);
-        todayStart.setHours(0, 0, 0, 0);
-        const minutesFromStart = (tzNow.getTime() - todayStart.getTime()) / 60000;
-        const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
+        const tzTime = getTimeInTimeZone(now, timeZone);
+        const totalSeconds = tzTime.hour * 3600 + tzTime.minute * 60 + tzTime.second;
+        const topPx = (totalSeconds / (24 * 3600)) * DAY_HEIGHT;
         // Отступ 100px сверху, чтобы линия была видна
         scrollContainerRef.current.scrollTop = Math.max(0, topPx - 100);
       } else {
@@ -546,12 +544,11 @@ export function WeekView({
 
                 {/* Красная линия текущего времени - показываем только для сегодняшнего дня */}
                 {isToday && (() => {
-                  const tzNow = currentTimeInTZ;
-                  const todayStart = new Date(tzNow);
-                  todayStart.setHours(0, 0, 0, 0);
-                  const minutesFromStart = (tzNow.getTime() - todayStart.getTime()) / 60000;
-                  const secondsFromStart = (tzNow.getTime() - todayStart.getTime()) / 1000;
-                  const topPx = (secondsFromStart / (24 * 3600)) * DAY_HEIGHT;
+                  const hours = currentTimeInTZ.hour;
+                  const minutes = currentTimeInTZ.minute;
+                  const seconds = currentTimeInTZ.second;
+                  const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                  const topPx = (totalSeconds / (24 * 3600)) * DAY_HEIGHT;
                   
                   // Показываем линию только если она в пределах видимой области (0-23:59)
                   if (topPx >= 0 && topPx <= DAY_HEIGHT) {

@@ -97,8 +97,8 @@ export const toUTCString = (localStr: string): string => {
 export const toUTCDateISO = (date: Date) =>
   new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
 
-// Конвертирует UTC Date в указанный часовой пояс
-export const toTimeZone = (date: Date, timeZone: string): Date => {
+// Получает компоненты времени в указанном часовом поясе
+export const getTimeInTimeZone = (date: Date, timeZone: string) => {
   // Используем Intl.DateTimeFormat для получения времени в нужном часовом поясе
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -119,6 +119,12 @@ export const toTimeZone = (date: Date, timeZone: string): Date => {
   const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
   const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
   
+  return { year, month, day, hour, minute, second };
+};
+
+// Конвертирует UTC Date в указанный часовой пояс (для совместимости)
+export const toTimeZone = (date: Date, timeZone: string): Date => {
+  const { year, month, day, hour, minute, second } = getTimeInTimeZone(date, timeZone);
   return new Date(year, month, day, hour, minute, second);
 };
 
