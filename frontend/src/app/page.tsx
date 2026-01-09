@@ -1323,7 +1323,9 @@ export default function Home() {
         })();
       }
       
-      // Закрываем модальное окно после создания события
+      // Сбрасываем форму и закрываем модальное окно после успешного сохранения
+      setEventForm(DEFAULT_EVENT_FORM);
+      setEventFormError(null);
       setIsEventModalOpen(false);
       setEditingEventId(null);
       setEditingRecurrenceInfo(null);
