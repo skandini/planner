@@ -378,54 +378,51 @@ export function ResourcePanel({
   }, [conflicts]);
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Ресурсы</h3>
-        {form.room_id && selectedRoom && (
-          <span className="text-xs text-slate-600">🏢 {selectedRoom.name}</span>
+    <div className="flex flex-col gap-3">
+      {/* Компактный выбор переговорки */}
+      <div>
+        {roomsLoading ? (
+          <div className="flex items-center gap-2 text-xs text-slate-500 py-2">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500"></div>
+            Загрузка...
+          </div>
+        ) : (
+          <select
+            value={form.room_id || ""}
+            disabled={readOnly}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                room_id: e.target.value || null,
+              }))
+            }
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-lime-500 focus:ring-1 focus:ring-lime-500/20 hover:border-slate-300"
+          >
+            <option value="" className="bg-white text-slate-900">
+              Без переговорки
+            </option>
+            {rooms.length === 0 ? (
+              <option disabled className="bg-white text-slate-400">
+                Нет доступных переговорок
+              </option>
+            ) : (
+              rooms.map((room) => (
+                <option
+                  key={room.id}
+                  value={room.id}
+                  className="bg-white text-slate-900"
+                >
+                  {room.name}
+                  {room.capacity > 1 ? ` (до ${room.capacity} чел.)` : ""}
+                  {room.location ? ` — ${room.location}` : ""}
+                </option>
+              ))
+            )}
+          </select>
         )}
       </div>
 
-      {roomsLoading ? (
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500"></div>
-          Загрузка...
-        </div>
-      ) : (
-        <select
-          value={form.room_id || ""}
-          disabled={readOnly}
-          onChange={(e) =>
-            setForm((prev) => ({
-              ...prev,
-              room_id: e.target.value || null,
-            }))
-          }
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-all focus:border-lime-500 focus:ring-1 focus:ring-lime-500/20 hover:border-slate-300"
-        >
-          <option value="" className="bg-white text-slate-900">
-            Без переговорки
-          </option>
-          {rooms.length === 0 ? (
-            <option disabled className="bg-white text-slate-400">
-              Нет доступных переговорок
-            </option>
-          ) : (
-            rooms.map((room) => (
-              <option
-                key={room.id}
-                value={room.id}
-                className="bg-white text-slate-900"
-              >
-                {room.name}
-                {room.capacity > 1 ? ` (до ${room.capacity} чел.)` : ""}
-                {room.location ? ` — ${room.location}` : ""}
-              </option>
-            ))
-          )}
-        </select>
-      )}
-
+      {/* Таймлайн - основной элемент */}
       <EnhancedTimeline
         key={`timeline-${form.participant_ids.join(',')}-${conflicts.length}`}
         rows={timelineRows}
