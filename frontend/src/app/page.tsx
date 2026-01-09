@@ -1100,6 +1100,17 @@ export default function Home() {
     loadRooms(); // Перезагружаем переговорки при открытии модального окна
   };
 
+  // Функция для закрытия модального окна события
+  const closeEventModal = useCallback(() => {
+    setIsEventModalOpen(false);
+    setEventForm(DEFAULT_EVENT_FORM);
+    setEditingEventId(null);
+    setEventFormError(null);
+    setEditingRecurrenceInfo(null);
+    setPendingFiles([]);
+    setBookingSlotId(null);
+  }, []);
+
   const handleEventSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedCalendarId) {
@@ -1260,13 +1271,8 @@ export default function Home() {
       const createdEvent: EventRecord = await response.json();
       
       // ЗАКРЫВАЕМ МОДАЛЬНОЕ ОКНО СРАЗУ ПОСЛЕ УСПЕШНОГО ОТВЕТА ОТ СЕРВЕРА
-      // Это гарантирует, что окно закроется даже если что-то пойдет не так дальше
-      setIsEventModalOpen(false);
-      setEventForm(DEFAULT_EVENT_FORM);
-      setEventFormError(null);
-      setEditingEventId(null);
-      setEditingRecurrenceInfo(null);
-      setPendingFiles([]);
+      // Используем функцию closeEventModal для гарантированного закрытия
+      closeEventModal();
       
       // Если это бронирование слота, автоматически бронируем слот
       if (bookingSlotId && !editingEventId) {
@@ -2751,15 +2757,7 @@ export default function Home() {
                 ? () => handleDeleteEvent("series")
                 : undefined
             }
-            onClose={() => {
-      setIsEventModalOpen(false);
-      setEventForm(DEFAULT_EVENT_FORM);
-      setEditingEventId(null);
-      setEventFormError(null);
-      setEditingRecurrenceInfo(null);
-      setPendingFiles([]);
-      setBookingSlotId(null);
-            }}
+            onClose={closeEventModal}
             onPendingFilesReady={setPendingFiles}
             isSubmitting={isEventSubmitting}
             error={eventFormError}
