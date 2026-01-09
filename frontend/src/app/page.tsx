@@ -1259,6 +1259,15 @@ export default function Home() {
 
       const createdEvent: EventRecord = await response.json();
       
+      // ЗАКРЫВАЕМ МОДАЛЬНОЕ ОКНО СРАЗУ ПОСЛЕ УСПЕШНОГО ОТВЕТА ОТ СЕРВЕРА
+      // Это гарантирует, что окно закроется даже если что-то пойдет не так дальше
+      setIsEventModalOpen(false);
+      setEventForm(DEFAULT_EVENT_FORM);
+      setEventFormError(null);
+      setEditingEventId(null);
+      setEditingRecurrenceInfo(null);
+      setPendingFiles([]);
+      
       // Если это бронирование слота, автоматически бронируем слот
       if (bookingSlotId && !editingEventId) {
         try {
@@ -1287,15 +1296,6 @@ export default function Home() {
         );
       }
 
-      // Сбрасываем форму и закрываем модальное окно СРАЗУ после успешного сохранения
-      // Делаем это ДО loadEvents(), чтобы модальное окно закрылось сразу и не переоткрылось
-      setEventForm(DEFAULT_EVENT_FORM);
-      setEventFormError(null);
-      setEditingEventId(null);
-      setEditingRecurrenceInfo(null);
-      setPendingFiles([]);
-      setIsEventModalOpen(false);
-      
       // Перезагружаем события для синхронизации ПОСЛЕ закрытия модального окна
       await loadEvents();
       
@@ -1333,6 +1333,7 @@ export default function Home() {
       setEventFormError(
         err instanceof Error ? err.message : "Произошла ошибка",
       );
+      // При ошибке модальное окно остается открытым, чтобы пользователь мог исправить ошибку
     } finally {
       setIsEventSubmitting(false);
     }
