@@ -828,15 +828,9 @@ export function WeekView({
           <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
             <p className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2 break-words">{hoveredEvent.event.title}</p>
             <p className="text-xs text-slate-500">
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.starts_at))}{" "}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), timeZone)}{" "}
               —{" "}
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.ends_at))}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), timeZone)}
             </p>
           </div>
           
