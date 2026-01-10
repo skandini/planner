@@ -207,14 +207,36 @@ def _check_availability_schedule(
     """Check if user is available according to their schedule.
     
     Event must be completely covered by availability slots.
+    All times are interpreted as Moscow time (Europe/Moscow, UTC+3).
     """
-    from datetime import time as dt_time
+    from datetime import time as dt_time, timezone as dt_timezone, timedelta
     
-    # Normalize datetime objects - remove timezone info for comparison
-    if starts_at.tzinfo:
-        starts_at = starts_at.replace(tzinfo=None)
-    if ends_at.tzinfo:
-        ends_at = ends_at.replace(tzinfo=None)
+    # Москва timezone offset: UTC+3
+    MOSCOW_OFFSET = timedelta(hours=3)
+    moscow_tz = dt_timezone(MOSCOW_OFFSET)
+    utc_tz = dt_timezone.utc
+    
+    # Конвертируем UTC время в московское время для проверки
+    # Если время не имеет timezone, считаем его уже в UTC (как приходит из БД)
+    if starts_at.tzinfo is None:
+        # Naive datetime - считаем что это UTC (как хранится в БД)
+        starts_at_utc = starts_at.replace(tzinfo=utc_tz)
+    else:
+        # Уже timezone-aware datetime - конвертируем в UTC
+        starts_at_utc = starts_at.astimezone(utc_tz)
+    
+    if ends_at.tzinfo is None:
+        ends_at_utc = ends_at.replace(tzinfo=utc_tz)
+    else:
+        ends_at_utc = ends_at.astimezone(utc_tz)
+    
+    # Конвертируем в московское время (UTC+3)
+    starts_at_moscow = starts_at_utc.astimezone(moscow_tz)
+    ends_at_moscow = ends_at_utc.astimezone(moscow_tz)
+    
+    # Используем naive datetime для работы с датами (все в московском времени)
+    starts_at = starts_at_moscow.replace(tzinfo=None)
+    ends_at = ends_at_moscow.replace(tzinfo=None)
     
     schedule_stmt = select(UserAvailabilitySchedule).where(
         UserAvailabilitySchedule.user_id == user_id
