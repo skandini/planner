@@ -363,15 +363,28 @@ export function WeekView({
           const eventStartMoscow = getTimeInTimeZone(eventStartUTC, MOSCOW_TIMEZONE);
           const eventEndMoscow = getTimeInTimeZone(eventEndUTC, MOSCOW_TIMEZONE);
           
-          // Создаем Date объекты для сравнения (используем UTC дату дня, но московское время события)
-          const eventStartDate = new Date(Date.UTC(eventStartMoscow.year, eventStartMoscow.month, eventStartMoscow.day, eventStartMoscow.hour, eventStartMoscow.minute));
-          const eventEndDate = new Date(Date.UTC(eventEndMoscow.year, eventEndMoscow.month, eventEndMoscow.day, eventEndMoscow.hour, eventEndMoscow.minute));
+          // Получаем дату дня в московском времени для сравнения
+          const dayDateMoscow = getTimeInTimeZone(dayStart, MOSCOW_TIMEZONE);
+          const nextDayStart = addDays(dayStart, 1);
+          const nextDayDateMoscow = getTimeInTimeZone(nextDayStart, MOSCOW_TIMEZONE);
           
-          // Конвертируем dayStart и dayEnd в UTC для правильного сравнения
-          const dayStartUTC = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0));
-          const dayEndUTC = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59));
+          // Проверяем, попадает ли событие в этот день в московском времени
+          const eventInDay = (
+            (eventStartMoscow.year === dayDateMoscow.year && 
+             eventStartMoscow.month === dayDateMoscow.month && 
+             eventStartMoscow.day === dayDateMoscow.day) ||
+            (eventEndMoscow.year === dayDateMoscow.year && 
+             eventEndMoscow.month === dayDateMoscow.month && 
+             eventEndMoscow.day === dayDateMoscow.day) ||
+            (eventStartMoscow.year < dayDateMoscow.year || 
+             (eventStartMoscow.year === dayDateMoscow.year && eventStartMoscow.month < dayDateMoscow.month) ||
+             (eventStartMoscow.year === dayDateMoscow.year && eventStartMoscow.month === dayDateMoscow.month && eventStartMoscow.day < dayDateMoscow.day)) &&
+            (eventEndMoscow.year > dayDateMoscow.year || 
+             (eventEndMoscow.year === dayDateMoscow.year && eventEndMoscow.month > dayDateMoscow.month) ||
+             (eventEndMoscow.year === dayDateMoscow.year && eventEndMoscow.month === dayDateMoscow.month && eventEndMoscow.day >= dayDateMoscow.day))
+          );
           
-          return eventStartDate < dayEndUTC && eventEndDate > dayStartUTC;
+          return eventInDay;
         });
 
         return {
