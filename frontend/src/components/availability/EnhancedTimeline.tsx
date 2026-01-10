@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { TimelineRowData } from "@/types/common.types";
 import type { EventRecord } from "@/types/event.types";
 import type { UserProfile } from "@/types/user.types";
-import { inputToDate, parseUTC } from "@/lib/utils/dateUtils";
+import { inputToDate, parseUTC, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { WORKDAY_START_HOUR, WORKDAY_END_HOUR, SLOT_DURATION_MINUTES } from "@/lib/constants";
 
 interface EnhancedTimelineProps {
@@ -552,28 +552,10 @@ export function EnhancedTimeline({
                     title={
                       eventInSlot
                         ? eventInSlot.status === "unavailable"
-                          ? `Недоступен по расписанию (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })})`
+                          ? `Недоступен по расписанию (${formatTimeInTimeZone(parseUTC(eventInSlot.starts_at), 'Europe/Moscow')} - ${formatTimeInTimeZone(parseUTC(eventInSlot.ends_at), 'Europe/Moscow')})`
                           : eventInSlot.status === "available"
-                            ? `${eventInSlot.title || "Доступен"}${eventInSlot.description ? `: ${eventInSlot.description}` : ""} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })})`
-                            : `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })})`
+                            ? `${eventInSlot.title || "Доступен"}${eventInSlot.description ? `: ${eventInSlot.description}` : ""} (${formatTimeInTimeZone(parseUTC(eventInSlot.starts_at), 'Europe/Moscow')} - ${formatTimeInTimeZone(parseUTC(eventInSlot.ends_at), 'Europe/Moscow')})`
+                            : `${eventInSlot.title} (${formatTimeInTimeZone(parseUTC(eventInSlot.starts_at), 'Europe/Moscow')} - ${formatTimeInTimeZone(parseUTC(eventInSlot.ends_at), 'Europe/Moscow')})`
                         : state === "busy" || state === "unavailable"
                           ? state === "unavailable" ? "Недоступен по расписанию" : "Занято"
                           : state === "available"

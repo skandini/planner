@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewEnhancedProps {
@@ -541,15 +541,9 @@ export function WeekViewEnhanced({
           <div className="mb-3 border-b border-slate-100 pb-3">
             <p className="text-sm font-bold text-slate-900 mb-1">{hoveredEvent.event.title}</p>
             <p className="text-xs text-slate-500">
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.starts_at))}{" "}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), 'Europe/Moscow')}{" "}
               —{" "}
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.ends_at))}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), 'Europe/Moscow')}
             </p>
           </div>
           

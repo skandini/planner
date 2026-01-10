@@ -181,13 +181,7 @@ export function UnifiedAvailabilityTimeline({
                       }`}
                       title={
                         eventInSlot
-                          ? `${eventInSlot.title} (${parseUTC(eventInSlot.starts_at).toLocaleTimeString("ru-RU", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                            })} - ${parseUTC(eventInSlot.ends_at).toLocaleTimeString("ru-RU", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })})`
+                          ? `${eventInSlot.title} (${formatTimeInTimeZone(parseUTC(eventInSlot.starts_at), 'Europe/Moscow')} - ${formatTimeInTimeZone(parseUTC(eventInSlot.ends_at), 'Europe/Moscow')})`
                           : undefined
                       }
                     >

@@ -530,7 +530,7 @@ export function AvailabilitySlotsTable({
                                       ? `Зарезервировано: ${getBookedByDisplayName(slot)}`
                                       : isMySlot
                                       ? "Мой слот"
-                                      : `${slot.process_name} (${new Date(slot.starts_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })} - ${new Date(slot.ends_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })})`
+                                      : `${slot.process_name} (${formatTimeInTimeZone(new Date(slot.starts_at), 'Europe/Moscow')} - ${formatTimeInTimeZone(new Date(slot.ends_at), 'Europe/Moscow')})`
                                   }
                                 >
                                   {isBooked ? (

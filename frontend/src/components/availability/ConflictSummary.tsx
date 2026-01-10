@@ -1,6 +1,6 @@
 "use client";
 
-import { parseUTC } from "@/lib/utils/dateUtils";
+import { parseUTC, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 import type { ConflictEntry } from "@/types/event.types";
 
 interface ConflictSummaryProps {
@@ -50,15 +50,9 @@ export function ConflictSummary({
                       {conflict.resource_label}
                     </p>
                     <p className="text-xs text-amber-700">
-                      {slotStart.toLocaleString("ru-RU", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
+                      {formatTimeInTimeZone(slotStart, 'Europe/Moscow')}{" "}
                       –{" "}
-                      {slotEnd.toLocaleString("ru-RU", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTimeInTimeZone(slotEnd, 'Europe/Moscow')}
                     </p>
                   </div>
                   <span className="rounded-full bg-white px-2 py-1 text-xs text-amber-700">

@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
-import { parseUTC, formatDate } from "@/lib/utils/dateUtils";
+import { parseUTC, formatDate, formatTimeInTimeZone, getTimeInTimeZone } from "@/lib/utils/dateUtils";
 
 interface UpcomingEventsProps {
   events: EventRecord[];
@@ -67,35 +67,34 @@ export function UpcomingEvents({
     const start = parseUTC(event.starts_at);
     const end = parseUTC(event.ends_at);
     
+    // Конвертируем время в московское для отображения
+    const startMoscow = getTimeInTimeZone(start, 'Europe/Moscow');
+    const today = new Date();
+    const todayMoscow = getTimeInTimeZone(today, 'Europe/Moscow');
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowMoscow = getTimeInTimeZone(tomorrow, 'Europe/Moscow');
+    
     if (event.all_day) {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      if (start.toDateString() === today.toDateString()) {
+      if (startMoscow.year === todayMoscow.year && startMoscow.month === todayMoscow.month && startMoscow.day === todayMoscow.day) {
         return "Сегодня, весь день";
-      } else if (start.toDateString() === tomorrow.toDateString()) {
+      } else if (startMoscow.year === tomorrowMoscow.year && startMoscow.month === tomorrowMoscow.month && startMoscow.day === tomorrowMoscow.day) {
         return "Завтра, весь день";
       } else {
-        return formatDate(start, "dd.MM.yyyy");
+        const dateStr = `${String(startMoscow.day).padStart(2, '0')}.${String(startMoscow.month + 1).padStart(2, '0')}.${startMoscow.year}`;
+        return dateStr;
       }
     }
     
-    const timeStr = new Intl.DateTimeFormat("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(start);
+    const timeStr = formatTimeInTimeZone(start, 'Europe/Moscow');
     
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (start.toDateString() === today.toDateString()) {
+    if (startMoscow.year === todayMoscow.year && startMoscow.month === todayMoscow.month && startMoscow.day === todayMoscow.day) {
       return `Сегодня, ${timeStr}`;
-    } else if (start.toDateString() === tomorrow.toDateString()) {
+    } else if (startMoscow.year === tomorrowMoscow.year && startMoscow.month === tomorrowMoscow.month && startMoscow.day === tomorrowMoscow.day) {
       return `Завтра, ${timeStr}`;
     } else {
-      return `${formatDate(start, "dd.MM")}, ${timeStr}`;
+      const dateStr = `${String(startMoscow.day).padStart(2, '0')}.${String(startMoscow.month + 1).padStart(2, '0')}`;
+      return `${dateStr}, ${timeStr}`;
     }
   };
 

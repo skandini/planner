@@ -215,6 +215,7 @@ export function AvailabilitySlotsManager({
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("ru-RU", {
+      timeZone: 'Europe/Moscow',
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

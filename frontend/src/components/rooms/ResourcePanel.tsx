@@ -8,7 +8,7 @@ import type { UserProfile, ParticipantProfile } from "@/types/user.types";
 import type { TimelineRowData } from "@/types/common.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
-import { inputToDate, toLocalString } from "@/lib/utils/dateUtils";
+import { inputToDate, toLocalString, toTimeZoneString } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
 
 interface ResourcePanelProps {
@@ -464,10 +464,10 @@ export function ResourcePanel({
           }));
         }}
         onTimeRangeSelect={(start, end) => {
-          // start и end уже в UTC, конвертируем их в часовой пояс организации для отображения в форме
+          // start и end уже в UTC, конвертируем их в московское время для отображения в форме
           // Важно: сохраняем дату из selectedDate (viewDate), чтобы не менять день при клике на слот
-          const localStart = toLocalString(start);
-          const localEnd = toLocalString(end);
+          const localStart = toTimeZoneString(start, 'Europe/Moscow');
+          const localEnd = toTimeZoneString(end, 'Europe/Moscow');
           
           // Получаем дату из selectedDate в правильном формате (локальное время)
           const selectedDateLocal = new Date(selectedDate);

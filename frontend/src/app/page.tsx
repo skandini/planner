@@ -56,6 +56,7 @@ import {
   toUTCString,
   toUTCDateISO,
   formatTimeInTimeZone,
+  toTimeZoneString,
 } from "@/lib/utils/dateUtils";
 import {
   API_BASE_URL,
@@ -1038,8 +1039,9 @@ export default function Home() {
     if (event) {
       const start = parseUTC(event.starts_at);
       const end = parseUTC(event.ends_at);
-      const startsAtLocal = toLocalString(start);
-      const endsAtLocal = toLocalString(end);
+      // Конвертируем в московское время для отображения в форме
+      const startsAtLocal = toTimeZoneString(start, 'Europe/Moscow');
+      const endsAtLocal = toTimeZoneString(end, 'Europe/Moscow');
       const recurrenceRule = event.recurrence_rule || null;
       const recurrenceUntil = recurrenceRule?.until
         ? new Date(recurrenceRule.until).toISOString().split("T")[0]
@@ -1084,8 +1086,8 @@ export default function Home() {
         description: "",
         location: "",
         room_id: null,
-        starts_at: toLocalString(start),
-        ends_at: toLocalString(end),
+        starts_at: toTimeZoneString(start, 'Europe/Moscow'),
+        ends_at: toTimeZoneString(end, 'Europe/Moscow'),
         participant_ids: currentUser?.id ? [currentUser.id] : [], // Автор добавляется по умолчанию
         recurrence_enabled: false,
         recurrence_frequency: "weekly",
@@ -2721,8 +2723,8 @@ export default function Home() {
                     description: slot.description || "",
                     location: "",
                     room_id: null,
-                    starts_at: toLocalString(startDate),
-                    ends_at: toLocalString(endDate),
+                    starts_at: toTimeZoneString(startDate, 'Europe/Moscow'),
+                    ends_at: toTimeZoneString(endDate, 'Europe/Moscow'),
                     participant_ids: participantIds,
                     recurrence_enabled: false,
                     recurrence_frequency: "weekly",

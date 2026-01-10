@@ -1,7 +1,7 @@
 "use client";
 
 import type { PendingMoveContext } from "@/types/common.types";
-import { parseUTC } from "@/lib/utils/dateUtils";
+import { parseUTC, formatTimeInTimeZone } from "@/lib/utils/dateUtils";
 
 interface MoveSeriesDialogProps {
   context: PendingMoveContext;
@@ -25,10 +25,10 @@ export function MoveSeriesDialog({
   const oldStart = parseUTC(context.event.starts_at);
   const oldEnd = parseUTC(context.event.ends_at);
   const formatDateTime = (date: Date) =>
-    new Intl.DateTimeFormat("ru-RU", {
+    formatTimeInTimeZone(date, 'Europe/Moscow', {
       dateStyle: "short",
       timeStyle: "short",
-    }).format(date);
+    });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

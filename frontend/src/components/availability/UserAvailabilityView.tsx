@@ -213,15 +213,9 @@ export function UserAvailabilityView({
                       {event.title}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {start.toLocaleString("ru-RU", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
+                      {formatTimeInTimeZone(start, 'Europe/Moscow')}{" "}
                       –{" "}
-                      {end.toLocaleString("ru-RU", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTimeInTimeZone(end, 'Europe/Moscow')}
                     </p>
                   </div>
                 );

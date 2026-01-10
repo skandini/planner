@@ -76,22 +76,46 @@ export const toLocalString = (date: Date): string => {
   return `${y}-${m}-${d}T${h}:${min}`;
 };
 
-// Простая функция: конвертирует локальное время из datetime-local в UTC ISO
+// Простая функция: конвертирует московское время из datetime-local в UTC ISO
 export const toUTCString = (localStr: string): string => {
   // datetime-local input возвращает строку в формате "YYYY-MM-DDTHH:mm"
-  // Когда мы создаём new Date() из такой строки БЕЗ указания timezone,
-  // браузер интерпретирует её как локальное время
+  // Мы интерпретируем её как московское время (Europe/Moscow)
+  // и конвертируем в UTC для отправки на сервер
   
-  // Простое решение: создаём Date из строки напрямую
-  // Браузер автоматически интерпретирует "YYYY-MM-DDTHH:mm" как локальное время
-  const localDate = new Date(localStr);
+  const [datePart, timePart] = localStr.split('T');
+  if (!datePart || !timePart) {
+    throw new Error(`Invalid date format: ${localStr}`);
+  }
   
-  if (isNaN(localDate.getTime())) {
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  
+  // Создаём дату в московском времени, используя UTC методы для корректной конвертации
+  // Форматируем дату как будто она в московском времени
+  const moscowDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+  
+  // Используем временную зону для конвертации
+  // Создаём дату, интерпретируя строку как московское время
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  
+  // Создаём временную дату в UTC, которая соответствует указанному московскому времени
+  // Используем обратную конвертацию: создаём дату в UTC, которая при форматировании в московском времени даст нужное значение
+  const testDate = new Date(`${moscowDateStr}+03:00`); // Moscow is UTC+3
+  
+  // Проверяем, что дата корректна
+  if (isNaN(testDate.getTime())) {
     throw new Error(`Invalid date: ${localStr}`);
   }
   
-  // toISOString() автоматически конвертирует локальное время в UTC
-  return localDate.toISOString();
+  return testDate.toISOString();
 };
 
 export const toUTCDateISO = (date: Date) =>
