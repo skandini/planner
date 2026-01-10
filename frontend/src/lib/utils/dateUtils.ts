@@ -1,10 +1,40 @@
 export const startOfWeek = (date: Date) => {
-  const result = new Date(date);
-  const day = result.getDay();
-  const diff = (day === 0 ? -6 : 1) - day; // начинаем с понедельника
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
-  return result;
+  // Получаем компоненты даты в московском времени
+  const moscowComponents = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+  
+  // Получаем день недели в московском времени через Intl.DateTimeFormat
+  // Это гарантирует правильное определение дня недели независимо от часового пояса браузера
+  const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: MOSCOW_TIMEZONE,
+    weekday: 'short', // 'Mon', 'Tue', 'Wed', etc.
+  });
+  
+  const weekdayStr = weekdayFormatter.format(date);
+  // Маппинг дня недели на число (0 = воскресенье, 1 = понедельник, ..., 6 = суббота)
+  const weekdayMap: Record<string, number> = {
+    'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
+  };
+  const day = weekdayMap[weekdayStr] ?? 0;
+  
+  // Вычисляем разницу до понедельника (понедельник = 1)
+  // Если воскресенье (0), откатываемся на 6 дней назад к понедельнику
+  // Если понедельник (1), diff = 0 (уже понедельник)
+  // Если вторник (2), diff = -1 (откатываемся на 1 день)
+  // И так далее
+  const diff = (day === 0 ? -6 : 1) - day;
+  
+  // Создаем дату начала недели в московском времени, используя компоненты даты
+  // Используем UTC для создания правильной даты, вычитая 3 часа из московского времени
+  // Но лучше использовать компоненты даты напрямую и создать Date в московском времени
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const moscowWeekStartStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(moscowComponents.day)}T12:00:00+03:00`;
+  const moscowWeekStart = new Date(moscowWeekStartStr);
+  
+  // Применяем diff к дате
+  moscowWeekStart.setDate(moscowWeekStart.getDate() + diff);
+  moscowWeekStart.setHours(0, 0, 0, 0);
+  
+  return moscowWeekStart;
 };
 
 export const addDays = (date: Date, amount: number) => {
@@ -27,7 +57,9 @@ export const addMonths = (date: Date, amount: number) => {
 };
 
 export const getMonthGridDays = (date: Date) => {
+  // Получаем первый день месяца в московском времени
   const firstDay = startOfMonth(date);
+  // Получаем начало недели для первого дня месяца (понедельник недели, в которой находится первый день месяца)
   const gridStart = startOfWeek(firstDay);
   return Array.from({ length: 42 }, (_, idx) => addDays(gridStart, idx));
 };
