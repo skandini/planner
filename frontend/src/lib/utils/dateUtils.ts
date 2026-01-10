@@ -58,12 +58,24 @@ export const startOfWeek = (date: Date) => {
   }
   
   // Создаем дату начала недели в московском времени (UTC+3)
-  // Используем полдень для избежания проблем с переходом дня
+  // Используем полдень (12:00) для избежания проблем с переходом дня при создании Date
+  // Полночь МСК = 21:00 предыдущего дня UTC
+  // Полдень МСК = 09:00 того же дня UTC
+  // Используем полдень для создания Date, чтобы избежать проблем с переходом дня
   const moscowWeekStartStr = `${startYear}-${pad(startMonth + 1)}-${pad(startDay)}T12:00:00+03:00`;
   const result = new Date(moscowWeekStartStr);
-  result.setHours(0, 0, 0, 0);
   
-  return result;
+  // Проверяем, что дата правильная - компоненты должны совпадать
+  const checkComponents = getTimeInTimeZone(result, MOSCOW_TIMEZONE);
+  if (checkComponents.year === startYear && checkComponents.month === startMonth && checkComponents.day === startDay) {
+    // Дата правильная - возвращаем её (время не важно для начала недели, главное - правильный день)
+    return result;
+  }
+  
+  // Если компоненты не совпали (маловероятно), создаем через UTC напрямую
+  // Полночь МСК = 21:00 предыдущего дня UTC (но это может быть неправильно)
+  // Лучше использовать полдень МСК = 09:00 того же дня UTC
+  return new Date(Date.UTC(startYear, startMonth, startDay, 9, 0, 0));
 };
 
 export const addDays = (date: Date, amount: number) => {
