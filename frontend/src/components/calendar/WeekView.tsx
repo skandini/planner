@@ -737,15 +737,9 @@ export function WeekView({
                       {!isShortEvent && (
                         <>
                           <p className="text-[0.65rem] text-slate-600 leading-tight">
-                            {new Intl.DateTimeFormat("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }).format(eventStart)}{" "}
+                            {formatTimeInTimeZone(eventStartUTC, MOSCOW_TIMEZONE)}{" "}
                             —{" "}
-                            {new Intl.DateTimeFormat("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }).format(eventEnd)}
+                            {formatTimeInTimeZone(eventEndUTC, MOSCOW_TIMEZONE)}
                           </p>
                           {event.room_id && (
                             <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 truncate">
