@@ -704,9 +704,6 @@ export function WeekView({
                       {!isShortEvent && (
                         <>
                           <p className="text-[0.65rem] text-slate-600 leading-tight">
-                            {new Intl.DateTimeFormat("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
                             {formatTimeInTimeZone(eventStart, MOSCOW_TIMEZONE)}{" "}
                             —{" "}
                             {formatTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE)}
