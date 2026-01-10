@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { TimelineRowData } from "@/types/common.types";
 import type { EventRecord } from "@/types/event.types";
-import { inputToDate, parseUTC, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { inputToDate, parseUTC, getTimeInTimeZone, formatTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { WORKDAY_START_HOUR, WORKDAY_END_HOUR, SLOT_DURATION_MINUTES } from "@/lib/constants";
 
 interface EnhancedTimelineProps {
@@ -21,6 +21,7 @@ interface EnhancedTimelineProps {
   apiBaseUrl?: string;
   onTimeRangeSelect?: (start: Date, end: Date) => void;
   onRemoveParticipant?: (participantId: string) => void;
+  accentColor?: string; // Цвет календаря для занятого времени
 }
 
 export function EnhancedTimeline({
@@ -38,6 +39,7 @@ export function EnhancedTimeline({
   apiBaseUrl = "",
   onTimeRangeSelect,
   onRemoveParticipant,
+  accentColor = "#6366f1", // По умолчанию indigo-500
 }: EnhancedTimelineProps) {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [currentSelectionSlot, setCurrentSelectionSlot] = useState<number | null>(null);
@@ -52,17 +54,25 @@ export function EnhancedTimeline({
     return { start, end };
   }, [selectedEnd, selectedStart, isAllDay]);
 
+  // Получаем базовую дату в московском времени
   const baseDate = useMemo(() => {
+    let dateToUse: Date;
     if (selectionRange.start) {
-      const normalized = new Date(selectionRange.start);
-      normalized.setHours(0, 0, 0, 0);
-      return normalized;
+      dateToUse = new Date(selectionRange.start);
+    } else {
+      dateToUse = new Date(referenceDate);
     }
-    const fallback = new Date(referenceDate);
-    fallback.setHours(0, 0, 0, 0);
-    return fallback;
+    // Получаем компоненты даты в московском времени
+    const moscowComponents = getTimeInTimeZone(dateToUse, MOSCOW_TIMEZONE);
+    // Создаем дату в московском времени (полдень для избежания проблем с переходом дня)
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const moscowDateStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(moscowComponents.day)}T12:00:00+03:00`;
+    const moscowDate = new Date(moscowDateStr);
+    moscowDate.setHours(0, 0, 0, 0);
+    return moscowDate;
   }, [referenceDate, selectionRange.start]);
 
+  // Создаем слоты времени - метки будут отображаться в московском времени
   const timeSlots = useMemo(() => {
     const totalSlots =
       ((WORKDAY_END_HOUR - WORKDAY_START_HOUR) * 60) / SLOT_DURATION_MINUTES;
@@ -71,6 +81,7 @@ export function EnhancedTimeline({
         WORKDAY_START_HOUR * 60 + index * SLOT_DURATION_MINUTES;
       const hour = Math.floor(totalMinutes / 60);
       const minute = totalMinutes % 60;
+      // Метка времени - просто форматирование, будет использоваться в московском времени
       const label = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
       return { index, hour, minute, label };
     });
@@ -95,71 +106,55 @@ export function EnhancedTimeline({
     );
   }
 
-  const buildSlotTimes = (slotIndex: number) => {
+  // Создаем время слота в московском времени
+  // Создаем функцию для вычисления времени слота в московском времени
+  const buildSlotTimes = useCallback((slotIndex: number) => {
     const slot = timeSlots[slotIndex];
-    const slotStart = new Date(baseDate);
-    slotStart.setHours(slot.hour, slot.minute, 0, 0);
+    // Получаем компоненты базовой даты в московском времени
+    const baseMoscow = getTimeInTimeZone(baseDate, MOSCOW_TIMEZONE);
+    // Создаем дату начала слота в московском времени
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const slotStartStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}:00+03:00`;
+    const slotStart = new Date(slotStartStr);
+    
+    // Вычисляем время окончания слота
     const slotEnd = new Date(slotStart);
     slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_DURATION_MINUTES);
+    
     return { slotStart, slotEnd };
-  };
+  }, [baseDate, timeSlots]);
 
-  const getSlotState = (
+  // Упрощенная логика: только два состояния - занят или доступен
+  const getSlotState = useCallback((
     row: TimelineRowData,
     slotIndex: number,
-  ): "free" | "busy" | "selected" | "conflict" | "selecting" | "unavailable" | "available" => {
+  ): "free" | "busy" => {
     const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
-    const rowConflictSlots = conflictMap?.get(row.id) ?? [];
-    
-    const conflicting = rowConflictSlots.some(
-      (conflict) => conflict.start < slotEnd && conflict.end > slotStart,
-    );
 
+    // Проверяем, есть ли событие в этом слоте
     const eventInSlot = row.availability.find((event) => {
       const eventStart = parseUTC(event.starts_at);
       const eventEnd = parseUTC(event.ends_at);
       return eventStart < slotEnd && eventEnd > slotStart;
     });
+
+    // Если есть событие (кроме available статуса), слот занят
+    if (eventInSlot && eventInSlot.status !== "available") {
+      return "busy";
+    }
     
-    const isUnavailable = eventInSlot && eventInSlot.status === "unavailable";
-    const isAvailable = eventInSlot && eventInSlot.status === "available";
-
-    const selected =
-      selectionRange.start &&
-      selectionRange.end &&
-      selectionRange.start < slotEnd &&
-      selectionRange.end > slotStart;
-
-    const inSelection = isSelecting && selectionStart !== null && currentSelectionSlot !== null &&
-      ((slotIndex >= Math.min(selectionStart, currentSelectionSlot) && 
-        slotIndex <= Math.max(selectionStart, currentSelectionSlot)));
-
-    if (inSelection && isSelecting) return "selecting";
-    if (selected) return "selected";
-    if (conflicting) return "conflict";
-    if (isUnavailable) return "unavailable";
-    if (isAvailable) return "available";
-    if (eventInSlot) return "busy";
+    // Иначе слот доступен
     return "free";
-  };
+  }, [buildSlotTimes]);
 
   const isSlotBusy = useCallback((slotIndex: number): boolean => {
     if (slotIndex < 0 || slotIndex >= timeSlots.length) return true;
     
-    const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
-    
     return resourceRows.some((row) => {
-      const eventInSlot = row.availability.find((event) => {
-        if (event.status === "available") {
-          return false;
-        }
-        const eventStart = parseUTC(event.starts_at);
-        const eventEnd = parseUTC(event.ends_at);
-        return eventStart < slotEnd && eventEnd > slotStart;
-      });
-      return eventInSlot && eventInSlot.status !== "available";
+      const state = getSlotState(row, slotIndex);
+      return state === "busy";
     });
-  }, [resourceRows, timeSlots, baseDate]);
+  }, [resourceRows, getSlotState]);
 
   const handleSlotMouseDown = useCallback((slotIndex: number, e: React.MouseEvent) => {
     if (!onTimeRangeSelect) return;
@@ -309,23 +304,18 @@ export function EnhancedTimeline({
 
   return (
     <div className="space-y-4">
-      {/* Компактная легенда */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
+      {/* Упрощенная легенда - только два состояния */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded bg-slate-400 border border-slate-500" />
+          <div 
+            className="h-2.5 w-2.5 rounded border" 
+            style={{ backgroundColor: accentColor, borderColor: accentColor }}
+          />
           <span className="text-[0.65rem] font-medium text-slate-700">Занято</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border border-red-400 bg-red-200 relative overflow-hidden before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.3)_2px,rgba(220,38,38,0.3)_4px)]" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Недоступно</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border-2 border-indigo-500 bg-indigo-300" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Выбрано</span>
-        </div>
-        <div className="flex items-center gap-1.5">
           <div className="h-2.5 w-2.5 rounded bg-white border border-slate-300" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Свободно</span>
+          <span className="text-[0.65rem] font-medium text-slate-700">Доступно</span>
         </div>
       </div>
 
@@ -338,15 +328,20 @@ export function EnhancedTimeline({
             style={{ gridTemplateColumns: templateColumns }}
           >
             <div className="px-3 py-2 text-xs font-semibold text-slate-700 uppercase tracking-wide">Ресурс</div>
-            {timeSlots.map((slot) =>
-              slot.minute === 0 ? (
+            {timeSlots.map((slot) => {
+              // Создаем дату для слота в московском времени для правильного отображения времени
+              const slotDate = buildSlotTimes(slot.index).slotStart;
+              const moscowTime = getTimeInTimeZone(slotDate, MOSCOW_TIMEZONE);
+              const timeLabel = `${String(moscowTime.hour).padStart(2, "0")}:${String(moscowTime.minute).padStart(2, "0")}`;
+              
+              return slot.minute === 0 ? (
                 <div key={slot.index} className="text-center text-xs font-semibold text-slate-600 py-2">
-                  {slot.label}
+                  {timeLabel}
                 </div>
               ) : (
                 <div key={slot.index} />
-              ),
-            )}
+              );
+            })}
           </div>
 
           {/* Строки ресурсов - красивые карточки */}
@@ -420,23 +415,19 @@ export function EnhancedTimeline({
                     return eventStart < slotEnd && eventEnd > slotStart;
                   });
 
-                  let slotClassName = "h-8 rounded-md transition-all cursor-pointer border shadow-sm ";
+                  // Получаем время слота в московском времени для tooltip
+                  const slotMoscow = getTimeInTimeZone(slotStart, MOSCOW_TIMEZONE);
+                  const slotTimeLabel = `${String(slotMoscow.hour).padStart(2, "0")}:${String(slotMoscow.minute).padStart(2, "0")}`;
+
+                  // Упрощенная цветовая схема - только два состояния
+                  let slotClassName = "h-8 rounded-md transition-all border shadow-sm ";
                   
-                  if (state === "conflict") {
-                    slotClassName += "bg-gradient-to-r from-amber-200 to-orange-200 border-amber-400";
-                  } else if (state === "unavailable") {
-                    slotClassName += "bg-gradient-to-r from-red-100 to-red-200 border-red-300 cursor-not-allowed relative overflow-hidden";
-                    slotClassName += " before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.25)_2px,rgba(220,38,38,0.25)_4px)]";
-                  } else if (state === "available") {
-                    slotClassName += "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200";
-                  } else if (state === "busy") {
-                    slotClassName += "bg-gradient-to-r from-slate-300 to-slate-400 border-slate-500 cursor-not-allowed";
-                  } else if (state === "selected") {
-                    slotClassName += "bg-gradient-to-r from-indigo-300 to-purple-300 border-indigo-500 ring-1 ring-indigo-400/50 shadow-md";
-                  } else if (state === "selecting") {
-                    slotClassName += "bg-gradient-to-r from-blue-200 to-cyan-200 border-blue-400 ring-1 ring-blue-400/50 shadow-md";
+                  if (state === "busy") {
+                    // Занято - используем цвет календаря (accent color)
+                    slotClassName += "cursor-not-allowed opacity-80";
                   } else {
-                    slotClassName += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md";
+                    // Доступно - белый фон
+                    slotClassName += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md cursor-pointer";
                   }
 
                   return (
@@ -444,7 +435,7 @@ export function EnhancedTimeline({
                       key={`${row.id}-${slot.index}`}
                       className={slotClassName}
                       onMouseDown={(e) => {
-                        if (state === "unavailable" || state === "busy") {
+                        if (state === "busy") {
                           e.preventDefault();
                           return;
                         }
@@ -452,14 +443,13 @@ export function EnhancedTimeline({
                           handleSlotMouseDown(slot.index, e);
                         }
                       }}
+                      style={state === "busy" ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
                       title={
                         eventInSlot
-                          ? `${eventInSlot.title} (${slot.label})`
-                          : state === "busy" || state === "unavailable"
+                          ? `${eventInSlot.title} (${slotTimeLabel})`
+                          : state === "busy"
                             ? "Занято"
-                            : state === "available"
-                              ? "Доступно"
-                              : "Кликните для выбора времени"
+                            : "Доступно - кликните для выбора времени"
                       }
                     />
                   );

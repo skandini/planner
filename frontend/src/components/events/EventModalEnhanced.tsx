@@ -48,6 +48,7 @@ interface EventModalEnhancedProps {
   organizations?: Array<{id: string; name: string; slug: string}>;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   apiBaseUrl?: string;
+  accentColor?: string; // Цвет календаря для занятого времени
 }
 
 export function EventModalEnhanced({
@@ -81,6 +82,7 @@ export function EventModalEnhanced({
   organizations = [],
   getUserOrganizationAbbreviation,
   apiBaseUrl,
+  accentColor = "#6366f1", // По умолчанию indigo-500
 }: EventModalEnhancedProps) {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
@@ -702,7 +704,12 @@ export function EventModalEnhanced({
                       ←
                     </button>
                     <div className="px-3 py-1.5 text-xs font-semibold text-slate-900 min-w-[180px] text-center bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
-                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      {new Intl.DateTimeFormat('ru-RU', { 
+                        weekday: 'short', 
+                        day: 'numeric', 
+                        month: 'short',
+                        timeZone: MOSCOW_TIMEZONE 
+                      }).format(viewDate)}
                     </div>
                     <button
                       type="button"
@@ -739,6 +746,7 @@ export function EventModalEnhanced({
                       getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                       organizations={organizations}
                       apiBaseUrl={apiBaseUrl}
+                      accentColor={accentColor}
                     />
                   </div>
                 </div>

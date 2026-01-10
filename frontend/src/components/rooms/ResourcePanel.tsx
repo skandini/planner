@@ -34,6 +34,7 @@ interface ResourcePanelProps {
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   organizations?: Array<{ id: string; name: string; slug: string }>;
   apiBaseUrl?: string;
+  accentColor?: string; // Цвет календаря для занятого времени
 }
 
 export function ResourcePanel({
@@ -59,6 +60,7 @@ export function ResourcePanel({
   getUserOrganizationAbbreviation,
   organizations = [],
   apiBaseUrl = "",
+  accentColor = "#6366f1", // По умолчанию indigo-500
 }: ResourcePanelProps) {
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
@@ -490,6 +492,7 @@ export function ResourcePanel({
         organizations={organizations}
         departments={allDepartments}
         apiBaseUrl={apiBaseUrl}
+        accentColor={accentColor}
         onRemoveParticipant={(participantId) => {
           setForm((prev) => ({
             ...prev,

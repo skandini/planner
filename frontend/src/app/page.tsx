@@ -2797,6 +2797,7 @@ export default function Home() {
             organizations={organizations}
             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+            accentColor={selectedCalendar?.color || "#6366f1"}
             currentUserEmail={userEmail || undefined}
             onEventUpdated={async () => {
               // Перезагружаем событие после обновления вложений
