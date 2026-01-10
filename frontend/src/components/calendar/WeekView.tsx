@@ -357,9 +357,21 @@ export function WeekView({
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = addDays(dayStart, 1);
         const dayEvents = events.filter((event) => {
-          const start = parseUTC(event.starts_at);
-          const end = parseUTC(event.ends_at);
-          return start < dayEnd && end > dayStart;
+          // Проверяем пересечение событий с днем в московском времени
+          const eventStartUTC = parseUTC(event.starts_at);
+          const eventEndUTC = parseUTC(event.ends_at);
+          const eventStartMoscow = getTimeInTimeZone(eventStartUTC, MOSCOW_TIMEZONE);
+          const eventEndMoscow = getTimeInTimeZone(eventEndUTC, MOSCOW_TIMEZONE);
+          
+          // Создаем Date объекты для сравнения (используем UTC дату дня, но московское время события)
+          const eventStartDate = new Date(Date.UTC(eventStartMoscow.year, eventStartMoscow.month, eventStartMoscow.day, eventStartMoscow.hour, eventStartMoscow.minute));
+          const eventEndDate = new Date(Date.UTC(eventEndMoscow.year, eventEndMoscow.month, eventEndMoscow.day, eventEndMoscow.hour, eventEndMoscow.minute));
+          
+          // Конвертируем dayStart и dayEnd в UTC для правильного сравнения
+          const dayStartUTC = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0));
+          const dayEndUTC = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59));
+          
+          return eventStartDate < dayEndUTC && eventEndDate > dayStartUTC;
         });
 
         return {
