@@ -419,6 +419,20 @@ export function EnhancedTimeline({
                   const slotMoscow = getTimeInTimeZone(slotStart, MOSCOW_TIMEZONE);
                   const slotTimeLabel = `${String(slotMoscow.hour).padStart(2, "0")}:${String(slotMoscow.minute).padStart(2, "0")}`;
 
+                  // Формируем tooltip для события с временем в московском времени
+                  let tooltipText = "";
+                  if (eventInSlot) {
+                    const eventStart = parseUTC(eventInSlot.starts_at);
+                    const eventEnd = parseUTC(eventInSlot.ends_at);
+                    const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+                    const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
+                    const eventStartTime = `${String(eventStartMoscow.hour).padStart(2, "0")}:${String(eventStartMoscow.minute).padStart(2, "0")}`;
+                    const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
+                    tooltipText = `${eventInSlot.title} (${eventStartTime} - ${eventEndTime})`;
+                  } else {
+                    tooltipText = state === "busy" ? "Занято" : "Доступно - кликните для выбора времени";
+                  }
+
                   // Упрощенная цветовая схема - только два состояния
                   let slotClassName = "h-8 rounded-md transition-all border shadow-sm ";
                   
@@ -444,13 +458,7 @@ export function EnhancedTimeline({
                         }
                       }}
                       style={state === "busy" ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
-                      title={
-                        eventInSlot
-                          ? `${eventInSlot.title} (${slotTimeLabel})`
-                          : state === "busy"
-                            ? "Занято"
-                            : "Доступно - кликните для выбора времени"
-                      }
+                      title={tooltipText}
                     />
                   );
                 })}
