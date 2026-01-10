@@ -133,7 +133,7 @@ export function AvailabilityScheduleSettings({
   const updateTimeSlot = (
     day: keyof AvailabilitySchedule,
     index: number,
-    field: "label",
+    field: "start" | "end" | "label",
     value: string
   ) => {
     setSchedule((prev) => ({
@@ -217,14 +217,24 @@ export function AvailabilityScheduleSettings({
                   >
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2 flex-1">
-                        <span className="text-xs font-medium text-slate-700">С</span>
-                        <span className="text-sm font-semibold text-slate-900 px-2 py-1 bg-slate-50 rounded border border-slate-200 min-w-[70px] text-center">
-                          {slot.start}
-                        </span>
-                        <span className="text-xs font-medium text-slate-700">До</span>
-                        <span className="text-sm font-semibold text-slate-900 px-2 py-1 bg-slate-50 rounded border border-slate-200 min-w-[70px] text-center">
-                          {slot.end}
-                        </span>
+                        <label className="text-xs font-medium text-slate-700">С</label>
+                        <input
+                          type="time"
+                          value={slot.start}
+                          onChange={(e) =>
+                            updateTimeSlot(day.key, index, "start", e.target.value)
+                          }
+                          className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
+                        />
+                        <label className="text-xs font-medium text-slate-700">До</label>
+                        <input
+                          type="time"
+                          value={slot.end}
+                          onChange={(e) =>
+                            updateTimeSlot(day.key, index, "end", e.target.value)
+                          }
+                          className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
+                        />
                       </div>
                       <button
                         type="button"
