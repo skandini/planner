@@ -329,7 +329,6 @@ export function EventModalEnhanced({
       
       <div 
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-        style={{ animation: 'fadeIn 0.2s ease-out forwards' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             handleClose();
@@ -337,74 +336,26 @@ export function EventModalEnhanced({
         }}
       >
       <div 
-        className="w-full max-w-6xl max-h-[96vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl"
-        style={{ animation: 'fadeInUp 0.3s ease-out forwards' }}
+        className="w-[80vw] h-[85vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Современный заголовок с кнопками */}
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
-          <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 shadow-lg shadow-lime-500/30">
-                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    {isEditing ? "Редактировать событие" : "Новое событие"}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">{calendarName || "Новый календарь"}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleClose}
-              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
-              aria-label="Закрыть"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        {/* Компактный заголовок */}
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white flex-shrink-0">
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-slate-900">
+                {isEditing ? "Редактировать событие" : "Новое событие"}
+              </h2>
+              <span className="text-sm text-slate-500">•</span>
+              <span className="text-sm text-slate-500">{calendarName || "Новый календарь"}</span>
             </div>
-            
-            {/* Кнопка для перехода по ссылке на онлайн встречу */}
-            {editingEvent?.room_online_meeting_url && (
-              <div className="mb-4">
-                <a
-                  href={editingEvent.room_online_meeting_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-600 hover:to-indigo-700"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  Присоединиться к онлайн встрече
-                </a>
-              </div>
-            )}
-            
-            {/* Кнопки действий - перемещены вверх */}
-            <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
-              {canManageEvents && onDeleteSeries && (
-                <button
-                  type="button"
-                  onClick={onDeleteSeries}
-                  disabled={isSubmitting}
-                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Удалить серию
-                </button>
-              )}
+            <div className="flex items-center gap-2">
               {canManageEvents && onDelete && (
                 <button
                   type="button"
                   onClick={onDelete}
                   disabled={isSubmitting}
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
                 >
                   Удалить
                 </button>
@@ -412,381 +363,344 @@ export function EventModalEnhanced({
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="rounded-lg p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Закрыть"
               >
-                Отмена
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-              {canManageEvents && (
-                <button
-                  type="submit"
-                  form="event-form"
-                  disabled={isSubmitting}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-lime-500/30 transition hover:from-lime-600 hover:to-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting
-                    ? isEditing
-                      ? "Сохраняем…"
-                      : "Создаём…"
-                    : isEditing
-                      ? "Сохранить"
-                      : "Создать"}
-                </button>
-              )}
             </div>
           </div>
+            
         </div>
 
-        {/* Контент */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(96vh - 280px)" }}>
-          <form id="event-form" onSubmit={onSubmit} className="p-6">
-            {error && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <span>{error}</span>
-                </div>
-              </div>
-            )}
-
-            {isReadOnly && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                <span>У вас нет прав редактировать события в этом календаре</span>
-              </div>
-            )}
-
-            <div className="space-y-6">
-              {/* Основная информация - компактный дизайн */}
-              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-4">
-                <div className="space-y-3">
-                  {/* Название */}
-                  <div>
-                    <label className="block mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700">
-                        Название <span className="text-red-500">*</span>
-                      </span>
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      disabled={isReadOnly}
-                      value={form.title}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, title: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                      placeholder="Например, Стендап команды"
-                    />
-                  </div>
-
-                  {/* Даты - в одну строку */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block mb-1.5">
-                        <span className="text-xs font-medium text-slate-600">
-                          Начало <span className="text-red-500">*</span>
-                        </span>
-                      </label>
-                      <input
-                        required
-                        type="datetime-local"
-                        disabled={isReadOnly}
-                        value={form.starts_at}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, starts_at: e.target.value }))
-                        }
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1.5">
-                        <span className="text-xs font-medium text-slate-600">
-                          Конец <span className="text-red-500">*</span>
-                        </span>
-                      </label>
-                      <input
-                        required
-                        type="datetime-local"
-                        disabled={isReadOnly}
-                        value={form.ends_at}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, ends_at: e.target.value }))
-                        }
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Описание */}
-                  <div>
-                    <label className="block mb-1.5">
-                      <span className="text-xs font-semibold text-slate-700">Описание</span>
-                    </label>
-                    <textarea
-                      value={form.description}
-                      disabled={isReadOnly}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, description: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 resize-none"
-                      rows={2}
-                      placeholder="Дополнительная информация..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Таймлайн и переговорки */}
-              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5">
-                {/* Компактный выбор участников в одну строчку */}
-                <div className="mb-4">
-                  <ParticipantSearch
-                    form={form}
-                    setForm={setForm}
-                    users={users}
-                    usersLoading={usersLoading}
-                    usersError={usersError}
-                    calendarMembers={members}
-                    membersLoading={membersLoading}
-                    readOnly={isReadOnly}
-                    organizations={organizations}
-                    getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                    apiBaseUrl={apiBaseUrl}
-                    currentUserEmail={currentUserEmail}
-                    compact={true}
-                  />
-                </div>
-                
-                {/* Навигация по дням */}
-                <div className="mb-4 flex items-center justify-center">
+        {/* Контент - двухколоночный layout */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            <form id="event-form" onSubmit={onSubmit} className="h-full flex flex-col">
+              {error && (
+                <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                   <div className="flex items-center gap-2">
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span>{error}</span>
+                  </div>
+                </div>
+              )}
+
+              {isReadOnly && (
+                <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <span>У вас нет прав редактировать события в этом календаре</span>
+                </div>
+              )}
+
+              {/* Двухколоночный layout */}
+              <div className="flex-1 grid grid-cols-[400px,1fr] gap-6 p-6">
+                {/* Левая колонка - основная информация */}
+                <div className="space-y-4 overflow-y-auto">
+                  {/* Название и даты */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+                    <div>
+                      <label className="block mb-1.5 text-xs font-semibold text-slate-700">
+                        Название <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        disabled={isReadOnly}
+                        value={form.title}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, title: e.target.value }))
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        placeholder="Название события"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1.5 text-xs font-medium text-slate-600">
+                          Начало <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          required
+                          type="datetime-local"
+                          disabled={isReadOnly}
+                          value={form.starts_at}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, starts_at: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1.5 text-xs font-medium text-slate-600">
+                          Конец <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          required
+                          type="datetime-local"
+                          disabled={isReadOnly}
+                          value={form.ends_at}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, ends_at: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1.5 text-xs font-semibold text-slate-700">Описание</label>
+                      <textarea
+                        value={form.description}
+                        disabled={isReadOnly}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, description: e.target.value }))
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                        rows={3}
+                        placeholder="Описание события..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Участники */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Участники</h3>
+                    <ParticipantSearch
+                      form={form}
+                      setForm={setForm}
+                      users={users}
+                      usersLoading={usersLoading}
+                      usersError={usersError}
+                      calendarMembers={members}
+                      membersLoading={membersLoading}
+                      readOnly={isReadOnly}
+                      organizations={organizations}
+                      getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                      apiBaseUrl={apiBaseUrl}
+                      currentUserEmail={currentUserEmail}
+                      compact={true}
+                    />
+                  </div>
+
+                  {/* Статусы участников (только при редактировании) */}
+                  {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-3">Ответы участников</h3>
+                      <div className="space-y-2">
+                        {editingEvent.participants.map((participant) => {
+                          const isCurrentUser = participant.email === currentUserEmail;
+                          return (
+                            <ParticipantStatusItem
+                              key={participant.user_id}
+                              participant={participant}
+                              eventId={editingEvent.id}
+                              onUpdateStatus={onUpdateParticipantStatus}
+                              canManage={canManageEvents}
+                              isCurrentUser={isCurrentUser}
+                              currentUserEmail={currentUserEmail}
+                              getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Вложения */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Вложения</h3>
+                    <EventAttachments
+                      eventId={editingEvent?.id || null}
+                      attachments={editingEvent?.attachments || []}
+                      authFetch={authFetch}
+                      canManage={canManageEvents}
+                      onAttachmentsChange={onEventUpdated}
+                      pendingFiles={pendingFiles}
+                      onPendingFilesChange={setPendingFiles}
+                    />
+                  </div>
+
+                  {/* Комментарии */}
+                  {editingEvent?.id && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <CommentsSection
+                        eventId={editingEvent.id}
+                        authFetch={authFetch}
+                        currentUserId={editingEvent.participants?.find(p => p.email === currentUserEmail)?.user_id || undefined}
+                        currentUserEmail={currentUserEmail}
+                        users={users}
+                        getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                        organizations={organizations}
+                        apiBaseUrl={apiBaseUrl}
+                      />
+                    </div>
+                  )}
+
+                  {/* Повторения */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowRecurrence(!showRecurrence)}
+                      disabled={recurrenceControlsDisabled}
+                      className={`w-full flex items-center justify-between text-left transition ${
+                        recurrenceControlsDisabled ? "opacity-60 cursor-not-allowed" : "hover:opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={form.recurrence_enabled}
+                          disabled={recurrenceControlsDisabled}
+                          onChange={(e) => {
+                            setForm((prev) => ({ ...prev, recurrence_enabled: e.target.checked }));
+                            if (e.target.checked) setShowRecurrence(true);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-indigo-500 text-indigo-500 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm font-semibold text-slate-900">Повторять событие</span>
+                      </div>
+                      <svg
+                        className={`h-5 w-5 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {showRecurrence && form.recurrence_enabled && (
+                      <div className="mt-3 pt-3 border-t border-slate-200 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="block">
+                            <span className="mb-1.5 block text-xs font-medium text-slate-700">Как часто</span>
+                            <select
+                              disabled={recurrenceControlsDisabled}
+                              value={form.recurrence_frequency}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
+                                }))
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                            >
+                              <option value="daily">Каждый день</option>
+                              <option value="weekly">Каждую неделю</option>
+                              <option value="monthly">Каждый месяц</option>
+                            </select>
+                          </label>
+                          <label className="block">
+                            <span className="mb-1.5 block text-xs font-medium text-slate-700">Интервал</span>
+                            <input
+                              type="number"
+                              min={1}
+                              value={form.recurrence_interval}
+                              disabled={recurrenceControlsDisabled}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  recurrence_interval: Math.max(1, Number(e.target.value)),
+                                }))
+                              }
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Правая колонка - Таймлайн и переговорки */}
+                <div className="flex flex-col space-y-3 overflow-y-auto">
+                  {/* Навигация по дням */}
+                  <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2">
                     <button
                       type="button"
                       onClick={() => handleNavigateDays(-1)}
-                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
                       title="День назад"
                     >
                       ←
                     </button>
-                    <div className="px-6 py-2 text-sm font-semibold text-slate-900 min-w-[180px] text-center bg-gradient-to-r from-slate-50 to-white rounded-lg border border-slate-200 shadow-sm">
-                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <div className="px-3 py-1.5 text-xs font-semibold text-slate-900 min-w-[180px] text-center bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                      {viewDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })}
                     </div>
                     <button
                       type="button"
                       onClick={() => handleNavigateDays(1)}
-                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
                       title="День вперед"
                     >
                       →
                     </button>
                   </div>
-                </div>
-                <ResourcePanel
-                  rooms={rooms}
-                  roomsLoading={roomsLoading}
-                  form={form}
-                  setForm={setForm}
-                  selectedRoom={selectedRoom || null}
-                  selectedDate={viewDate}
-                  roomAvailability={roomAvailability}
-                  loadingAvailability={loadingAvailability}
-                  readOnly={isReadOnly}
-                  members={members}
-                  membersLoading={membersLoading}
-                  users={users}
-                  usersLoading={usersLoading}
-                  usersError={usersError}
-                  authFetch={authFetch}
-                  selectedCalendarId={selectedCalendarId}
-                  isAllDay={false}
-                  onRefreshMembers={onRefreshMembers}
-                  conflicts={conflicts}
-                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                  organizations={organizations}
-                  apiBaseUrl={apiBaseUrl}
-                />
-              </div>
 
-              {/* Статусы участников (только при редактировании) */}
-              {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
-                  <div className="mb-4">
-                    <h3 className="text-base font-semibold text-slate-900">Ответы участников</h3>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {editingEvent.participants.filter((p) => p.response_status === "accepted").length} приняли,{" "}
-                      {editingEvent.participants.filter((p) => p.response_status === "declined").length} отклонили,{" "}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {editingEvent.participants.map((participant) => {
-                      const isCurrentUser = participant.email === currentUserEmail;
-                      return (
-                        <ParticipantStatusItem
-                          key={participant.user_id}
-                          participant={participant}
-                          eventId={editingEvent.id}
-                          onUpdateStatus={onUpdateParticipantStatus}
-                          canManage={canManageEvents}
-                          isCurrentUser={isCurrentUser}
-                          currentUserEmail={currentUserEmail}
-                          getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Вложения */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <EventAttachments
-                  eventId={editingEvent?.id || null}
-                  attachments={editingEvent?.attachments || []}
-                  authFetch={authFetch}
-                  canManage={canManageEvents}
-                  onAttachmentsChange={onEventUpdated}
-                  pendingFiles={pendingFiles}
-                  onPendingFilesChange={setPendingFiles}
-                />
-              </div>
-
-              {/* Комментарии */}
-              {editingEvent?.id && (
-                <CommentsSection
-                  eventId={editingEvent.id}
-                  authFetch={authFetch}
-                  currentUserId={editingEvent.participants?.find(p => p.email === currentUserEmail)?.user_id || undefined}
-                  currentUserEmail={currentUserEmail}
-                  users={users}
-                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                  organizations={organizations}
-                  apiBaseUrl={apiBaseUrl}
-                />
-              )}
-
-              {/* Повторения */}
-              <div className="rounded-lg border border-slate-200 bg-white">
-                <button
-                  type="button"
-                  onClick={() => setShowRecurrence(!showRecurrence)}
-                  disabled={recurrenceControlsDisabled}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-left transition ${
-                    recurrenceControlsDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={form.recurrence_enabled}
-                      disabled={recurrenceControlsDisabled}
-                      onChange={(e) => {
-                        setForm((prev) => ({ ...prev, recurrence_enabled: e.target.checked }));
-                        if (e.target.checked) setShowRecurrence(true);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-4 w-4 rounded border-lime-500 text-lime-500 focus:ring-lime-500"
+                  {/* Таймлайн и переговорки - основной инструмент */}
+                  <div className="flex-1 rounded-lg border border-slate-200 bg-white p-3 min-h-0">
+                    <ResourcePanel
+                      rooms={rooms}
+                      roomsLoading={roomsLoading}
+                      form={form}
+                      setForm={setForm}
+                      selectedRoom={selectedRoom || null}
+                      selectedDate={viewDate}
+                      roomAvailability={roomAvailability}
+                      loadingAvailability={loadingAvailability}
+                      readOnly={isReadOnly}
+                      members={members}
+                      membersLoading={membersLoading}
+                      users={users}
+                      usersLoading={usersLoading}
+                      usersError={usersError}
+                      authFetch={authFetch}
+                      selectedCalendarId={selectedCalendarId}
+                      isAllDay={false}
+                      onRefreshMembers={onRefreshMembers}
+                      conflicts={conflicts}
+                      getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                      organizations={organizations}
+                      apiBaseUrl={apiBaseUrl}
                     />
-                    <span className="text-sm font-semibold text-slate-900">Повторять событие</span>
                   </div>
-                  <svg
-                    className={`h-5 w-5 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {(isSeriesParent || isSeriesChild) && (
-                  <div className="border-t border-slate-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                    {isSeriesParent
-                      ? "Это родительская встреча серии. Чтобы изменить правило повторения, удалите серию и создайте новую."
-                      : "Это отдельное вхождение серии. Изменения применяются только к выбранному дню."}
-                  </div>
-                )}
-
-                {showRecurrence && form.recurrence_enabled && (
-                  <div className="border-t border-slate-200 bg-slate-50 p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">Как часто</span>
-                        <select
-                          disabled={recurrenceControlsDisabled}
-                          value={form.recurrence_frequency}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
-                            }))
-                          }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                        >
-                          <option value="daily">Каждый день</option>
-                          <option value="weekly">Каждую неделю</option>
-                          <option value="monthly">Каждый месяц</option>
-                        </select>
-                      </label>
-                      <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">Интервал</span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={form.recurrence_interval}
-                          disabled={recurrenceControlsDisabled}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              recurrence_interval: Math.max(1, Number(e.target.value)),
-                            }))
-                          }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                        />
-                      </label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">Количество повторов</span>
-                        <input
-                          type="number"
-                          min={1}
-                          disabled={recurrenceControlsDisabled}
-                          value={form.recurrence_count ?? ""}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              recurrence_count: e.target.value ? Number(e.target.value) : undefined,
-                            }))
-                          }
-                          placeholder="Например, 10"
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-1.5 block text-xs font-medium text-slate-700">До даты</span>
-                        <input
-                          type="date"
-                          disabled={recurrenceControlsDisabled}
-                          value={form.recurrence_until}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              recurrence_until: e.target.value,
-                              recurrence_count: e.target.value ? undefined : prev.recurrence_count,
-                            }))
-                          }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                        />
-                      </label>
-                    </div>
-                    <p className="text-xs text-slate-500">Максимум — 180 повторений</p>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
+            </form>
+          </div>
 
-          </form>
+          {/* Footer с кнопками */}
+          <div className="flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              Отмена
+            </button>
+            {canManageEvents && (
+              <button
+                type="submit"
+                form="event-form"
+                disabled={isSubmitting}
+                className="rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting
+                  ? isEditing
+                    ? "Сохраняем…"
+                    : "Создаём…"
+                  : isEditing
+                    ? "Сохранить"
+                    : "Создать"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

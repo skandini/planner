@@ -303,44 +303,52 @@ export function EnhancedTimeline({
   }, [isSelecting, handleMouseMove, handleMouseUp]);
 
   const templateColumns = useMemo(
-    () => `180px repeat(${timeSlots.length}, minmax(10px, 1fr))`,
+    () => `150px repeat(${timeSlots.length}, minmax(8px, 1fr))`,
     [timeSlots.length],
   );
 
   return (
     <div className="space-y-4">
-      {/* Минималистичная легенда */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded bg-gradient-to-r from-slate-300 to-slate-400 shadow-sm" />
-          <span className="text-xs font-medium text-slate-600">Занято</span>
+      {/* Компактная легенда */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded bg-gradient-to-r from-slate-300 to-slate-400" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Занято</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded border-2 border-indigo-400 bg-gradient-to-r from-indigo-50 to-indigo-100" />
-          <span className="text-xs font-medium text-slate-600">Выбрано</span>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded border border-red-300 bg-gradient-to-r from-red-100 to-red-200 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.25)_2px,rgba(220,38,38,0.25)_4px)]" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Недоступно</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded bg-gradient-to-r from-white to-slate-50 border border-slate-200" />
-          <span className="text-xs font-medium text-slate-600">Свободно</span>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded border border-indigo-400 bg-gradient-to-r from-indigo-300 to-purple-300" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Выбрано</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded bg-white border border-slate-200" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Свободно</span>
         </div>
       </div>
 
-      {/* Современный таймлайн */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm" ref={timelineRef}>
-        <div className="min-w-full space-y-2 p-4">
-          {/* Заголовок времени */}
+      {/* Компактный таймлайн */}
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white" ref={timelineRef} style={{ maxHeight: "calc(85vh - 300px)" }}>
+        <div className="min-w-full space-y-1 p-2">
+          {/* Заголовок времени - компактный */}
           <div
-            className="grid gap-1.5"
+            className="grid gap-1"
             style={{ gridTemplateColumns: templateColumns }}
           >
-            <div />
+            <div className="text-[0.65rem] font-semibold text-slate-400 uppercase tracking-wide py-1">Ресурс</div>
             {timeSlots.map((slot) =>
               slot.minute === 0 ? (
-                <div key={slot.index} className="text-center text-xs font-semibold text-slate-500 py-1">
+                <div key={slot.index} className="text-center text-[0.65rem] font-semibold text-slate-500 py-1 border-l border-slate-100">
                   {slot.label}
                 </div>
+              ) : slot.minute === 30 ? (
+                <div key={slot.index} className="text-center text-[0.6rem] text-slate-400 py-0.5 border-l border-slate-50">
+                  :
+                </div>
               ) : (
-                <div key={slot.index} />
+                <div key={slot.index} className="border-l border-slate-50" />
               ),
             )}
           </div>
@@ -353,20 +361,20 @@ export function EnhancedTimeline({
             return (
               <div
                 key={row.id}
-                className={`grid gap-1.5 rounded-xl border transition-all ${
+                className={`grid gap-1 rounded-lg border transition-all ${
                   hasConflict
-                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-sm"
-                    : "border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:shadow-md"
+                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50"
+                    : "border-slate-200 bg-white hover:border-slate-300"
                 }`}
                 style={{ gridTemplateColumns: templateColumns }}
               >
-                {/* Название ресурса */}
-                <div className="flex items-center gap-3 rounded-lg px-3 py-3">
+                {/* Название ресурса - компактное */}
+                <div className="flex items-center gap-1.5 rounded-md px-2 py-1.5">
                   {row.avatarUrl ? (
                     <img
                       src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
                       alt={row.label}
-                      className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-md ring-2 ring-slate-100"
+                      className="h-7 w-7 rounded-full object-cover border border-white shadow-sm"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                         const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
@@ -377,7 +385,7 @@ export function EnhancedTimeline({
                     />
                   ) : null}
                   <div 
-                    className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-md ring-2 ring-slate-100 ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br text-[0.7rem] font-bold text-white shadow-sm ${
                       row.type === "room" 
                         ? "from-blue-500 to-blue-600" 
                         : "from-indigo-500 to-purple-600"
@@ -386,26 +394,24 @@ export function EnhancedTimeline({
                     {row.type === "room" ? "🏢" : row.label[0]?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`text-sm font-semibold truncate ${
-                        hasConflict ? "text-amber-900" : "text-slate-900"
-                      }`}>
-                        {row.label}
-                      </p>
-                      {hasConflict && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-200 text-amber-900 border border-amber-300 flex-shrink-0">
-                          Конфликт
-                        </span>
-                      )}
-                    </div>
+                    <p className={`text-xs font-semibold truncate ${
+                      hasConflict ? "text-amber-900" : "text-slate-900"
+                    }`}>
+                      {row.label}
+                    </p>
                     {row.meta && (
-                      <p className={`text-xs truncate mt-0.5 ${
+                      <p className={`text-[0.65rem] truncate mt-0.5 ${
                         hasConflict ? "text-amber-700" : "text-slate-500"
                       }`}>
                         {row.meta}
                       </p>
                     )}
                   </div>
+                  {hasConflict && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.65rem] font-medium bg-amber-200 text-amber-900 border border-amber-300 flex-shrink-0">
+                      !
+                    </span>
+                  )}
                 </div>
 
                 {/* Слоты времени */}
@@ -418,23 +424,23 @@ export function EnhancedTimeline({
                     return eventStart < slotEnd && eventEnd > slotStart;
                   });
 
-                  let slotClassName = "h-10 rounded-lg transition-all cursor-pointer border ";
+                  let slotClassName = "h-6 rounded transition-all cursor-pointer border ";
                   
                   if (state === "conflict") {
-                    slotClassName += "bg-gradient-to-br from-amber-200 to-orange-200 border-amber-400 shadow-sm animate-pulse";
+                    slotClassName += "bg-amber-200 border-amber-400";
                   } else if (state === "unavailable") {
-                    slotClassName += "bg-gradient-to-br from-red-100 via-red-200 to-red-300 border-red-400 cursor-not-allowed relative overflow-hidden";
-                    slotClassName += " before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(220,38,38,0.3)_4px,rgba(220,38,38,0.3)_8px)]";
+                    slotClassName += "bg-red-100 border-red-300 cursor-not-allowed relative overflow-hidden";
+                    slotClassName += " before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.2)_2px,rgba(220,38,38,0.2)_4px)]";
                   } else if (state === "available") {
-                    slotClassName += "bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300";
+                    slotClassName += "bg-emerald-50 border-emerald-200";
                   } else if (state === "busy") {
-                    slotClassName += "bg-gradient-to-br from-slate-300 to-slate-400 border-slate-500 cursor-not-allowed shadow-inner";
+                    slotClassName += "bg-slate-300 border-slate-500 cursor-not-allowed";
                   } else if (state === "selected") {
-                    slotClassName += "bg-gradient-to-br from-indigo-200 to-purple-200 border-indigo-400 shadow-md ring-2 ring-indigo-300/50";
+                    slotClassName += "bg-indigo-300 border-indigo-500 ring-1 ring-indigo-400/50";
                   } else if (state === "selecting") {
-                    slotClassName += "bg-gradient-to-br from-blue-200 to-cyan-200 border-blue-400 shadow-md ring-2 ring-blue-300/50";
+                    slotClassName += "bg-blue-200 border-blue-400 ring-1 ring-blue-400/50";
                   } else {
-                    slotClassName += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm";
+                    slotClassName += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300";
                   }
 
                   return (
