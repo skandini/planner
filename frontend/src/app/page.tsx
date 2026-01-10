@@ -34,7 +34,6 @@ import { ParticipantStatusItem } from "@/components/participants/ParticipantStat
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventModalEnhanced as EventModal } from "@/components/events/EventModalEnhanced";
 import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
-import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { CalendarMembersManager } from "@/components/calendar/CalendarMembersManager";
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
@@ -43,7 +42,6 @@ import { BirthdayReminder } from "@/components/birthdays/BirthdayReminder";
 import { TicketTracker } from "@/components/support/TicketTracker";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
-import { AvailabilitySlotsManager } from "@/components/availability/AvailabilitySlotsManager";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -115,7 +113,6 @@ export default function Home() {
   const [isEventSubmitting, setIsEventSubmitting] = useState(false);
   const [eventFormError, setEventFormError] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
   const [editingRecurrenceInfo, setEditingRecurrenceInfo] = useState<{
     isSeriesParent: boolean;
     isSeriesChild: boolean;
@@ -159,12 +156,6 @@ export default function Home() {
   const [moveError, setMoveError] = useState<string | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [selectedUserForView, setSelectedUserForView] = useState<string | null>(null);
-  const [userAvailability, setUserAvailability] = useState<EventRecord[]>([]);
-  const [userAvailabilityLoading, setUserAvailabilityLoading] = useState(false);
-  const [userAvailabilityError, setUserAvailabilityError] = useState<string | null>(null);
-  const [showMyAvailability, setShowMyAvailability] = useState(false);
-  const [myAvailabilitySchedule, setMyAvailabilitySchedule] = useState<EventRecord[]>([]);
-  const [myAvailabilityLoading, setMyAvailabilityLoading] = useState(false);
   const [addToCalendarError, setAddToCalendarError] = useState<string | null>(null);
   const [addToCalendarLoading, setAddToCalendarLoading] = useState(false);
 
@@ -781,190 +772,7 @@ export default function Home() {
     setMiniCalendarMonth(newMonth);
   }, [selectedDate]);
 
-  const loadUserAvailability = useCallback(
-    async (userId: string) => {
-      if (!selectedCalendarId || !accessToken) {
-        setUserAvailability([]);
-        setUserAvailabilityError(null);
-        return;
-      }
-      setUserAvailabilityLoading(true);
-      setUserAvailabilityError(null);
-      try {
-        // Создаем диапазон для дня (00:00 - 23:59:59)
-        const dayStart = new Date(selectedDate);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(selectedDate);
-        dayEnd.setHours(23, 59, 59, 999);
-        
-        const fromStr = dayStart.toISOString();
-        const toStr = dayEnd.toISOString();
-        const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${userId}/availability?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
-        const response = await authFetch(url, { cache: "no-store" });
-        if (response.ok) {
-          const data: EventRecord[] = await response.json();
-          setUserAvailability(data);
-          setUserAvailabilityError(null);
-        } else {
-          setUserAvailability([]);
-          const errorData = await response.json().catch(() => ({}));
-          const errorText = errorData.detail || "Не удалось загрузить доступность";
-          setUserAvailabilityError(errorText);
-        }
-      } catch (err) {
-        console.error("Failed to load user availability:", err);
-        setUserAvailability([]);
-        setUserAvailabilityError(
-          err instanceof Error ? err.message : "Не удалось загрузить доступность",
-        );
-      } finally {
-        setUserAvailabilityLoading(false);
-      }
-    },
-    [selectedCalendarId, selectedDate, accessToken, authFetch],
-  );
 
-  useEffect(() => {
-    if (selectedUserForView) {
-      // Загружаем доступность для любого пользователя, не только для членов календаря
-      // Backend позволяет проверять доступность любого пользователя
-      loadUserAvailability(selectedUserForView);
-    } else {
-      setUserAvailability([]);
-      setUserAvailabilityError(null);
-    }
-  }, [selectedUserForView, loadUserAvailability]);
-
-  // Загружаем расписание доступности текущего пользователя для отображения в календаре
-  const loadMyAvailabilitySchedule = useCallback(async () => {
-    if (!selectedCalendarId || !currentUser?.id || !showMyAvailability) {
-      setMyAvailabilitySchedule([]);
-      return;
-    }
-    
-    setMyAvailabilityLoading(true);
-    try {
-      // Определяем диапазон в зависимости от режима просмотра
-      let rangeStart: Date;
-      let rangeEnd: Date;
-      
-      if (viewMode === "month") {
-        // Для месяца - весь месяц
-        rangeStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-        rangeStart.setHours(0, 0, 0, 0);
-        rangeEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-        rangeEnd.setHours(23, 59, 59, 999);
-      } else {
-        // Для недели - неделя
-        rangeStart = new Date(weekStart);
-        rangeStart.setHours(0, 0, 0, 0);
-        rangeEnd = new Date(weekStart);
-        rangeEnd.setDate(rangeEnd.getDate() + 6);
-        rangeEnd.setHours(23, 59, 59, 999);
-      }
-      
-      const fromStr = rangeStart.toISOString();
-      const toStr = rangeEnd.toISOString();
-      
-      // Загружаем расписание доступности
-      const availabilityUrl = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${currentUser.id}/availability?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
-      const availabilityResponse = await authFetch(availabilityUrl, { 
-        cache: "no-store",
-      });
-      
-      let unavailableEvents: EventRecord[] = [];
-      if (availabilityResponse.ok) {
-        const data: EventRecord[] = await availabilityResponse.json();
-        // Фильтруем только события с status="unavailable" (расписание доступности)
-        unavailableEvents = data.filter(event => event.status === "unavailable");
-      } else {
-        console.error("Failed to load availability schedule:", availabilityResponse.status);
-      }
-      
-      // Загружаем забронированные availability slots
-      let bookedSlotsEvents: EventRecord[] = [];
-      try {
-        const { AVAILABILITY_SLOTS_ENDPOINT } = await import("@/lib/constants");
-        const slotsUrl = `${AVAILABILITY_SLOTS_ENDPOINT}?my_slots_only=true&status=booked&from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
-        const slotsResponse = await authFetch(slotsUrl, { cache: "no-store" });
-        
-        if (slotsResponse.ok) {
-          interface AvailabilitySlot {
-            id: string;
-            user_id: string;
-            process_name: string;
-            starts_at: string;
-            ends_at: string;
-            description?: string;
-            status: "available" | "booked" | "cancelled";
-            booked_by_user_name?: string;
-            booked_by_user_email?: string;
-          }
-          
-          const slots: AvailabilitySlot[] = await slotsResponse.json();
-          
-          // Преобразуем забронированные слоты в формат EventRecord
-          bookedSlotsEvents = slots.map(slot => ({
-            id: slot.id,
-            calendar_id: selectedCalendarId,
-            room_id: null,
-            title: `Забронирован слот: ${slot.process_name}${slot.booked_by_user_name ? ` (${slot.booked_by_user_name})` : ''}`,
-            description: slot.description || `Забронированный слот для процесса "${slot.process_name}"${slot.booked_by_user_name ? ` пользователем ${slot.booked_by_user_name}` : ''}`,
-            location: null,
-            timezone: "Europe/Moscow",
-            starts_at: slot.starts_at,
-            ends_at: slot.ends_at,
-            all_day: false,
-            status: "booked_slot", // Специальный статус для забронированных слотов
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            participants: [],
-            recurrence_rule: null,
-            recurrence_parent_id: null,
-            attachments: [],
-            department_color: null,
-            room_online_meeting_url: null,
-          }));
-        }
-      } catch (slotsErr) {
-        console.error("Failed to load booked availability slots:", slotsErr);
-        // Не критично, продолжаем без них
-      }
-      
-      // Объединяем расписание доступности и забронированные слоты
-      setMyAvailabilitySchedule([...unavailableEvents, ...bookedSlotsEvents]);
-    } catch (err) {
-      console.error("Failed to load my availability schedule:", err);
-      setMyAvailabilitySchedule([]);
-    } finally {
-      setMyAvailabilityLoading(false);
-    }
-  }, [selectedCalendarId, currentUser?.id, showMyAvailability, selectedDate, viewMode, weekStart, authFetch]);
-
-  // Debounce для загрузки расписания доступности, чтобы не делать запросы слишком часто
-  const debouncedLoadMyAvailabilityScheduleRef = useRef<NodeJS.Timeout | null>(null);
-  
-  useEffect(() => {
-    // Очищаем предыдущий таймаут
-    if (debouncedLoadMyAvailabilityScheduleRef.current) {
-      clearTimeout(debouncedLoadMyAvailabilityScheduleRef.current);
-    }
-    
-    if (showMyAvailability && selectedCalendarId && currentUser?.id) {
-      // Debounce загрузку на 500ms
-      debouncedLoadMyAvailabilityScheduleRef.current = setTimeout(() => {
-        loadMyAvailabilitySchedule();
-      }, 500);
-    } else {
-      setMyAvailabilitySchedule([]);
-    }
-    
-    return () => {
-      if (debouncedLoadMyAvailabilityScheduleRef.current) {
-        clearTimeout(debouncedLoadMyAvailabilityScheduleRef.current);
-      }
-    };
-  }, [showMyAvailability, selectedCalendarId, currentUser?.id, selectedDate, viewMode, weekStart, loadMyAvailabilitySchedule]);
 
   const ensureMembership = useCallback(
     async (userId: string) => {
@@ -1111,7 +919,6 @@ export default function Home() {
     setEventFormError(null);
     setEditingRecurrenceInfo(null);
     setPendingFiles([]);
-    setBookingSlotId(null);
   }, []);
 
   const handleEventSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1277,26 +1084,6 @@ export default function Home() {
       // Используем функцию closeEventModal для гарантированного закрытия
       closeEventModal();
       
-      // Если это бронирование слота, автоматически бронируем слот
-      if (bookingSlotId && !editingEventId) {
-        try {
-          const { AVAILABILITY_SLOTS_ENDPOINT } = await import("@/lib/constants");
-          await authFetch(`${AVAILABILITY_SLOTS_ENDPOINT}${bookingSlotId}/book`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              calendar_id: selectedCalendarId,
-              title: payload.title as string,
-              description: (payload.description as string) || undefined,
-              participant_ids: (payload.participant_ids as string[]) || [],
-            }),
-          });
-          setBookingSlotId(null);
-        } catch (err) {
-          console.error("Failed to book slot:", err);
-          // Не прерываем создание события, если бронирование слота не удалось
-        }
-      }
       
       // Заменяем оптимистичное событие на реальное
       if (optimisticEvent) {
@@ -1551,10 +1338,6 @@ export default function Home() {
   const availableViewModes = useMemo(() => {
     const allModes: ViewMode[] = ["day", "week", "month"];
     
-    // Добавляем "availability-slots" только если есть доступ
-    if (currentUser?.access_availability_slots) {
-      allModes.push("availability-slots");
-    }
     
     // Добавляем "org" только если есть доступ к оргструктуре
     if (currentUser?.access_org_structure) {
@@ -1807,13 +1590,6 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     );
-                  case "availability-slots":
-                    return (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h6m-6 4h6m-2 4h2" />
-                      </svg>
-                    );
                   default:
                     return null;
                 }
@@ -1827,7 +1603,6 @@ export default function Home() {
                   case "org": return "Оргструктура";
                   case "support": return "Техподдержка";
                   case "admin": return "Админ";
-                  case "availability-slots": return "Предложения слотов";
                   default: return mode;
                 }
               };
@@ -2485,20 +2260,6 @@ export default function Home() {
         </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {/* Переключатель показа расписания доступности */}
-                  {selectedCalendar && (viewMode === "month" || viewMode === "week") && (
-                    <label className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition">
-                      <input
-                        type="checkbox"
-                        checked={showMyAvailability}
-                        onChange={(e) => setShowMyAvailability(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
-                      />
-                      <span className="text-xs font-medium text-slate-700 whitespace-nowrap">
-                        Показать мою доступность
-                      </span>
-                    </label>
-                  )}
                   <button
                     type="button"
                     onClick={() => setIsNotificationCenterOpen(true)}
@@ -2566,8 +2327,8 @@ export default function Home() {
               >
             <DayView
               day={selectedDate}
-              events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
-              loading={eventsLoading || myAvailabilityLoading}
+              events={events}
+              loading={eventsLoading}
               accent={selectedCalendar.color}
               onEventClick={(event) => {
                 if (event.status === "unavailable" || event.status === "available" || event.status === "booked_slot") {
@@ -2604,8 +2365,8 @@ export default function Home() {
               >
             <WeekView
               days={weekDays}
-              events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
-              loading={eventsLoading || myAvailabilityLoading}
+              events={events}
+              loading={eventsLoading}
               accent={selectedCalendar.color}
               onEventClick={(event) => {
                 // Не открываем модальное окно для событий расписания доступности
@@ -2648,8 +2409,8 @@ export default function Home() {
                 setSelectedDate(date);
                 setViewMode("week");
               }}
-              events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
-              loading={eventsLoading || myAvailabilityLoading}
+              events={events}
+              loading={eventsLoading}
               accent={selectedCalendar.color}
               onEventClick={(event) => {
                 // Не открываем модальное окно для событий расписания доступности
@@ -2692,56 +2453,6 @@ export default function Home() {
               currentUser={currentUser || undefined}
               onClose={() => setViewMode("week")}
             />
-          )}
-          {viewMode === "availability-slots" && (
-            <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
-              <AvailabilitySlotsManager
-                authFetch={authFetch}
-                currentUserId={currentUser?.id}
-		selectedCalendarId={selectedCalendarId ?? undefined}             
-                onSlotBooked={() => {
-                  loadEvents();
-                }}
-                onClose={() => setViewMode("week")}
-                onOpenEventModal={(slot) => {
-                  const startDate = new Date(slot.starts_at);
-                  const endDate = new Date(slot.ends_at);
-                  setBookingSlotId(slot.id);
-                  
-                  // Добавляем участников: текущий пользователь и владелец слота
-                  const participantIds: string[] = [];
-                  if (currentUser?.id) {
-                    participantIds.push(currentUser.id);
-                  }
-                  if (slot.user_id && slot.user_id !== currentUser?.id) {
-                    participantIds.push(slot.user_id);
-                  }
-                  
-                  // Устанавливаем форму с правильным временем и участниками
-                  setEventForm({
-                    title: slot.process_name,
-                    description: slot.description || "",
-                    location: "",
-                    room_id: null,
-                    starts_at: toTimeZoneString(startDate, 'Europe/Moscow'),
-                    ends_at: toTimeZoneString(endDate, 'Europe/Moscow'),
-                    participant_ids: participantIds,
-                    recurrence_enabled: false,
-                    recurrence_frequency: "weekly",
-                    recurrence_interval: 1,
-                    recurrence_count: undefined,
-                    recurrence_until: "",
-                  });
-                  
-                  setEditingEventId(null);
-                  setEditingRecurrenceInfo(null);
-                  setIsEventModalOpen(true);
-                  setEventFormError(null);
-                  loadRooms(); // Перезагружаем переговорки для проверки доступности
-                }}
-                hasAccessToStatistics={currentUser?.access_availability_slots === true}
-              />
-            </div>
           )}
         </section>
         </main>
@@ -2933,43 +2644,6 @@ export default function Home() {
               loadCalendarMembers();
               loadCalendars();
             }}
-          />
-        )}
-        {selectedUserForView && (
-          <UserAvailabilityView
-            userId={selectedUserForView}
-            user={users.find((u) => u.id === selectedUserForView) || null}
-            availability={userAvailability}
-            loading={userAvailabilityLoading}
-            error={userAvailabilityError}
-            selectedDate={selectedDate}
-            onClose={() => {
-              setSelectedUserForView(null);
-              setAddToCalendarError(null);
-            }}
-            onAddToCalendar={async () => {
-              if (selectedCalendarId && selectedUserForView) {
-                setAddToCalendarLoading(true);
-                setAddToCalendarError(null);
-                try {
-                  await ensureMembership(selectedUserForView);
-                  await loadCalendarMembers();
-                  // Перезагружаем доступность после добавления
-                  setTimeout(() => {
-                    loadUserAvailability(selectedUserForView);
-                  }, 500);
-                } catch (err) {
-                  setAddToCalendarError(
-                    err instanceof Error ? err.message : "Не удалось добавить пользователя",
-                  );
-                } finally {
-                  setAddToCalendarLoading(false);
-                }
-              }
-            }}
-            addToCalendarError={addToCalendarError}
-            addToCalendarLoading={addToCalendarLoading}
-            isMember={members.some((m) => m.user_id === selectedUserForView)}
           />
         )}
       </div>

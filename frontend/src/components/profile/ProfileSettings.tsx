@@ -5,7 +5,6 @@ import type { AuthenticatedFetch } from "@/types/common.types";
 import type { UserProfile } from "@/types/user.types";
 import type { DepartmentWithChildren } from "@/types/department.types";
 import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
-import { AvailabilityScheduleSettings } from "./AvailabilityScheduleSettings";
 
 interface Organization {
   id: string;
@@ -48,7 +47,7 @@ export function ProfileSettings({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "availability">("profile");
+  const [activeTab, setActiveTab] = useState<"profile">("profile");
 
   useEffect(() => {
     if (isOpen) {
@@ -322,17 +321,6 @@ export function ProfileSettings({
                     >
                       Профиль
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("availability")}
-                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                        activeTab === "availability"
-                          ? "border-indigo-500 text-indigo-600"
-                          : "border-transparent text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      Доступность
-                    </button>
                   </div>
                 </div>
                 <button
@@ -367,27 +355,12 @@ export function ProfileSettings({
                   </button>
                 </div>
               )}
-              {activeTab === "availability" && (
-                <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                  >
-                    Закрыть
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Контент */}
           <div className="overflow-y-auto" style={{ maxHeight: "calc(90vh - 280px)" }}>
-            {activeTab === "availability" ? (
-              <div className="p-6">
-                <AvailabilityScheduleSettings authFetch={authFetch} onUpdate={onUpdate} />
-              </div>
-            ) : loading ? (
+            {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>

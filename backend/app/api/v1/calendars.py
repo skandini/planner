@@ -5,7 +5,7 @@ from typing import List
 from uuid import UUID, uuid5, NAMESPACE_URL
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import is_, select as sql_select
+from sqlalchemy import select as sql_select
 from sqlmodel import and_, or_, select
 
 from app.api.deps import get_current_user
@@ -598,14 +598,8 @@ def get_user_availability(
     from app.models import EventParticipant
 
     # События, где пользователь является участником
-    # ИСКЛЮЧАЕМ события, где пользователь отклонил участие (declined)
     participant_events_subquery = select(EventParticipant.event_id).where(
-        EventParticipant.user_id == user_id,
-        # Исключаем отклоненные события - они не считаются занятостью
-        or_(
-            EventParticipant.response_status != "declined",
-            is_(EventParticipant.response_status, None)
-        )
+        EventParticipant.user_id == user_id
     )
 
     # Личные календари пользователя
