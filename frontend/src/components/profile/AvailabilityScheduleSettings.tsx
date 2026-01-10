@@ -133,7 +133,7 @@ export function AvailabilityScheduleSettings({
   const updateTimeSlot = (
     day: keyof AvailabilitySchedule,
     index: number,
-    field: "start" | "end" | "label",
+    field: "label",
     value: string
   ) => {
     setSchedule((prev) => ({
