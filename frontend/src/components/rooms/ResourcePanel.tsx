@@ -402,18 +402,21 @@ export function ResourcePanel({
   }, [conflicts]);
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Ресурсы</h3>
+        <h3 className="text-base font-semibold text-slate-900">Ресурсы</h3>
         {form.room_id && selectedRoom && (
-          <span className="text-xs text-slate-600">🏢 {selectedRoom.name}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 border border-blue-200">
+            <span>🏢</span>
+            <span>{selectedRoom.name}</span>
+          </span>
         )}
       </div>
 
       {roomsLoading ? (
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500"></div>
-          Загрузка...
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-sm text-slate-500">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500"></div>
+          Загрузка переговорок...
         </div>
       ) : (
         <select
@@ -425,7 +428,7 @@ export function ResourcePanel({
               room_id: e.target.value || null,
             }))
           }
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 hover:border-slate-300"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-300 shadow-sm"
         >
           <option value="" className="bg-white text-slate-900">
             Без переговорки
@@ -459,7 +462,17 @@ export function ResourcePanel({
         isAllDay={isAllDay}
         errorMessage={participantAvailabilityError}
         conflictMap={conflictMap}
+        getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+        users={users}
+        organizations={organizations}
+        departments={allDepartments}
         apiBaseUrl={apiBaseUrl}
+        onRemoveParticipant={(participantId) => {
+          setForm((prev) => ({
+            ...prev,
+            participant_ids: prev.participant_ids.filter((id) => id !== participantId),
+          }));
+        }}
         onTimeRangeSelect={(start, end) => {
           // Форматируем даты для формы (в московском времени)
           const formatDateTime = (date: Date) => {
