@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface DayViewProps {
@@ -48,6 +48,7 @@ export function DayView({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const MOSCOW_TIMEZONE = 'Europe/Moscow';
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -56,6 +57,11 @@ export function DayView({
     
     return () => clearInterval(interval);
   }, []);
+  
+  // Получаем компоненты текущего времени в московском часовом поясе
+  const currentTimeInMoscow = useMemo(() => {
+    return getTimeInTimeZone(currentTime, MOSCOW_TIMEZONE);
+  }, [currentTime]);
   
   
   const [hoveredEvent, setHoveredEvent] = useState<{
@@ -152,11 +158,15 @@ export function DayView({
     const eventStart = parseUTC(event.starts_at);
     const eventEnd = parseUTC(event.ends_at);
     
+    // Конвертируем время события в московское время
+    const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+    const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
+    
     const dayStart = new Date(day);
     dayStart.setHours(0, 0, 0, 0);
     
-    const startMinutes = (eventStart.getHours() * 60) + eventStart.getMinutes();
-    const endMinutes = (eventEnd.getHours() * 60) + eventEnd.getMinutes();
+    const startMinutes = (eventStartMoscow.hour * 60) + eventStartMoscow.minute;
+    const endMinutes = (eventEndMoscow.hour * 60) + eventEndMoscow.minute;
     const duration = endMinutes - startMinutes;
     
     const topPx = (startMinutes / 60) * HOUR_HEIGHT;
@@ -240,31 +250,26 @@ export function DayView({
   
   useEffect(() => {
     if (isToday && scrollContainerRef.current) {
-      const now = new Date();
-      const currentHour = now.getHours();
+      const currentHour = currentTimeInMoscow.hour;
       const scrollPosition = (currentHour * HOUR_HEIGHT) - 200;
       scrollContainerRef.current.scrollTop = Math.max(0, scrollPosition);
     }
-  }, [isToday, HOUR_HEIGHT]);
+  }, [isToday, HOUR_HEIGHT, currentTimeInMoscow]);
   
   const formatTime = useCallback((date: Date) => {
-    return new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return formatTimeInTimeZone(date, MOSCOW_TIMEZONE);
   }, []);
   
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
-    const now = currentTime;
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
+    const hours = currentTimeInMoscow.hour;
+    const minutes = currentTimeInMoscow.minute;
+    const seconds = currentTimeInMoscow.second;
     const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT) + (seconds / 3600 * HOUR_HEIGHT);
     
     return position;
-  }, [isToday, currentTime, HOUR_HEIGHT]);
+  }, [isToday, currentTimeInMoscow, HOUR_HEIGHT]);
   
   const dayName = useMemo(() => {
     return new Intl.DateTimeFormat('ru-RU', {
@@ -291,23 +296,32 @@ export function DayView({
           <div className="relative" style={{ minHeight: `${DAY_HEIGHT}px` }}>
             {/* Time grid */}
             <div className="absolute inset-0">
-              {hours.map((hour) => (
-                <div
-                  key={hour}
-                  className="border-t border-slate-100"
-                  style={{ height: `${HOUR_HEIGHT}px` }}
-                >
-                  <div className="flex h-full">
-                    <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
-                      {hour.toString().padStart(2, '0')}:00
+              {hours.map((hour) => {
+                // Форматируем час в московском времени
+                const dayStart = new Date(day);
+                dayStart.setHours(0, 0, 0, 0);
+                const hourDate = new Date(dayStart);
+                hourDate.setHours(hour, 0, 0, 0);
+                const hourLabel = formatTimeInTimeZone(hourDate, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' });
+                
+                return (
+                  <div
+                    key={hour}
+                    className="border-t border-slate-100"
+                    style={{ height: `${HOUR_HEIGHT}px` }}
+                  >
+                    <div className="flex h-full">
+                      <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
+                        {hourLabel}
+                      </div>
+                      <div 
+                        className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => handleTimeSlotClick(hour, 0)}
+                      />
                     </div>
-                    <div 
-                      className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
-                      onClick={() => handleTimeSlotClick(hour, 0)}
-                    />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Current time indicator */}
