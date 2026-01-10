@@ -2486,8 +2486,8 @@ export default function Home() {
                     )}
                     <span className="text-xs text-slate-500">
                 {viewMode === "week"
-                        ? `${formatDate(weekStart, { day: "numeric", month: "short" })} – ${formatDate(addDays(weekStart, 6), { day: "numeric", month: "short" })}`
-                        : formatDate(selectedDate, { month: "short", year: "numeric" })}
+                        ? `${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(weekStart)} – ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(addDays(weekStart, 6))}`
+                        : new Intl.DateTimeFormat("ru-RU", { month: "short", year: "numeric", timeZone: MOSCOW_TIMEZONE }).format(selectedDate)}
                     </span>
         </div>
                 </div>
