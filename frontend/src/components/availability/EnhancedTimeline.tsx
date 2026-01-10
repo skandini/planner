@@ -310,71 +310,69 @@ export function EnhancedTimeline({
   return (
     <div className="space-y-4">
       {/* Компактная легенда */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded bg-gradient-to-r from-slate-300 to-slate-400" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Занято</span>
+          <div className="h-2.5 w-2.5 rounded bg-slate-400 border border-slate-500" />
+          <span className="text-[0.65rem] font-medium text-slate-700">Занято</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border border-red-300 bg-gradient-to-r from-red-100 to-red-200 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.25)_2px,rgba(220,38,38,0.25)_4px)]" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Недоступно</span>
+          <div className="h-2.5 w-2.5 rounded border border-red-400 bg-red-200 relative overflow-hidden before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.3)_2px,rgba(220,38,38,0.3)_4px)]" />
+          <span className="text-[0.65rem] font-medium text-slate-700">Недоступно</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border border-indigo-400 bg-gradient-to-r from-indigo-300 to-purple-300" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Выбрано</span>
+          <div className="h-2.5 w-2.5 rounded border-2 border-indigo-500 bg-indigo-300" />
+          <span className="text-[0.65rem] font-medium text-slate-700">Выбрано</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded bg-white border border-slate-200" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Свободно</span>
+          <div className="h-2.5 w-2.5 rounded bg-white border border-slate-300" />
+          <span className="text-[0.65rem] font-medium text-slate-700">Свободно</span>
         </div>
       </div>
 
-      {/* Компактный таймлайн */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white" ref={timelineRef} style={{ maxHeight: "calc(85vh - 300px)" }}>
-        <div className="min-w-full space-y-1 p-2">
-          {/* Заголовок времени - компактный */}
+      {/* Компактный таймлайн - ровная сетка как в основном календаре */}
+      <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white shadow-sm" ref={timelineRef} style={{ maxHeight: "calc(85vh - 300px)" }}>
+        <div className="min-w-full">
+          {/* Заголовок времени - ровная сетка */}
           <div
-            className="grid gap-1"
+            className="grid border-b-2 border-slate-300 bg-gradient-to-b from-slate-50 to-white"
             style={{ gridTemplateColumns: templateColumns }}
           >
-            <div className="text-[0.65rem] font-semibold text-slate-400 uppercase tracking-wide py-1">Ресурс</div>
-            {timeSlots.map((slot) =>
+            <div className="px-3 py-2.5 text-xs font-semibold text-slate-700 uppercase tracking-wide border-r-2 border-slate-300">Ресурс</div>
+            {timeSlots.map((slot, idx) =>
               slot.minute === 0 ? (
-                <div key={slot.index} className="text-center text-[0.65rem] font-semibold text-slate-500 py-1 border-l border-slate-100">
+                <div key={slot.index} className={`text-center text-xs font-semibold text-slate-600 py-2.5 border-r-2 ${idx === timeSlots.length - 1 ? '' : 'border-slate-300'}`}>
                   {slot.label}
                 </div>
-              ) : slot.minute === 30 ? (
-                <div key={slot.index} className="text-center text-[0.6rem] text-slate-400 py-0.5 border-l border-slate-50">
-                  :
-                </div>
               ) : (
-                <div key={slot.index} className="border-l border-slate-50" />
+                <div key={slot.index} className={`border-r ${idx === timeSlots.length - 1 ? '' : 'border-slate-200'}`} />
               ),
             )}
           </div>
 
-          {/* Строки ресурсов */}
-          {resourceRows.map((row) => {
+          {/* Строки ресурсов - ровная сетка как таблица */}
+          {resourceRows.map((row, rowIdx) => {
             const rowConflictSlots = conflictMap?.get(row.id) ?? [];
             const hasConflict = rowConflictSlots.length > 0;
             
             return (
               <div
                 key={row.id}
-                className={`grid gap-1 rounded-lg border transition-all ${
+                className={`grid border-b border-slate-200 transition-colors ${
                   hasConflict
-                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50"
-                    : "border-slate-200 bg-white hover:border-slate-300"
+                    ? "bg-amber-50/30 hover:bg-amber-50/50"
+                    : rowIdx % 2 === 0
+                      ? "bg-white hover:bg-slate-50/50"
+                      : "bg-slate-50/30 hover:bg-slate-50/50"
                 }`}
                 style={{ gridTemplateColumns: templateColumns }}
               >
                 {/* Название ресурса - компактное */}
-                <div className="flex items-center gap-1.5 rounded-md px-2 py-1.5">
+                <div className="flex items-center gap-2 px-3 py-2.5 border-r-2 border-slate-300">
                   {row.avatarUrl ? (
                     <img
                       src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
                       alt={row.label}
-                      className="h-7 w-7 rounded-full object-cover border border-white shadow-sm"
+                      className="h-6 w-6 rounded-full object-cover border border-slate-200 shadow-sm flex-shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                         const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
@@ -385,7 +383,7 @@ export function EnhancedTimeline({
                     />
                   ) : null}
                   <div 
-                    className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br text-[0.7rem] font-bold text-white shadow-sm ${
+                    className={`h-6 w-6 rounded-full flex items-center justify-center text-[0.65rem] font-bold text-white shadow-sm flex-shrink-0 bg-gradient-to-br ${
                       row.type === "room" 
                         ? "from-blue-500 to-blue-600" 
                         : "from-indigo-500 to-purple-600"
@@ -394,13 +392,13 @@ export function EnhancedTimeline({
                     {row.type === "room" ? "🏢" : row.label[0]?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-semibold truncate ${
+                    <p className={`text-xs font-semibold truncate leading-tight ${
                       hasConflict ? "text-amber-900" : "text-slate-900"
                     }`}>
                       {row.label}
                     </p>
                     {row.meta && (
-                      <p className={`text-[0.65rem] truncate mt-0.5 ${
+                      <p className={`text-[0.65rem] truncate mt-0.5 leading-tight ${
                         hasConflict ? "text-amber-700" : "text-slate-500"
                       }`}>
                         {row.meta}
@@ -408,14 +406,14 @@ export function EnhancedTimeline({
                     )}
                   </div>
                   {hasConflict && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.65rem] font-medium bg-amber-200 text-amber-900 border border-amber-300 flex-shrink-0">
+                    <span className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[0.65rem] font-bold bg-amber-400 text-amber-900 border border-amber-500 flex-shrink-0" title="Конфликт">
                       !
                     </span>
                   )}
                 </div>
 
-                {/* Слоты времени */}
-                {timeSlots.map((slot) => {
+                {/* Слоты времени - ровная сетка как таблица */}
+                {timeSlots.map((slot, slotIdx) => {
                   const state = getSlotState(row, slot.index);
                   const { slotStart, slotEnd } = buildSlotTimes(slot.index);
                   const eventInSlot = row.availability.find((event) => {
@@ -424,23 +422,28 @@ export function EnhancedTimeline({
                     return eventStart < slotEnd && eventEnd > slotStart;
                   });
 
-                  let slotClassName = "h-6 rounded transition-all cursor-pointer border ";
+                  let slotClassName = "h-8 border-r border-slate-200 transition-colors cursor-pointer ";
                   
                   if (state === "conflict") {
                     slotClassName += "bg-amber-200 border-amber-400";
                   } else if (state === "unavailable") {
                     slotClassName += "bg-red-100 border-red-300 cursor-not-allowed relative overflow-hidden";
-                    slotClassName += " before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.2)_2px,rgba(220,38,38,0.2)_4px)]";
+                    slotClassName += " before:absolute before:inset-0 before:bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(220,38,38,0.25)_2px,rgba(220,38,38,0.25)_4px)]";
                   } else if (state === "available") {
                     slotClassName += "bg-emerald-50 border-emerald-200";
                   } else if (state === "busy") {
-                    slotClassName += "bg-slate-300 border-slate-500 cursor-not-allowed";
+                    slotClassName += "bg-slate-400 border-slate-500 cursor-not-allowed";
                   } else if (state === "selected") {
-                    slotClassName += "bg-indigo-300 border-indigo-500 ring-1 ring-indigo-400/50";
+                    slotClassName += "bg-indigo-400 border-indigo-600 ring-1 ring-indigo-500/50";
                   } else if (state === "selecting") {
-                    slotClassName += "bg-blue-200 border-blue-400 ring-1 ring-blue-400/50";
+                    slotClassName += "bg-blue-300 border-blue-500 ring-1 ring-blue-400/50";
                   } else {
-                    slotClassName += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300";
+                    slotClassName += "bg-white hover:bg-slate-100 border-slate-200";
+                  }
+                  
+                  // Последний слот - без правой границы
+                  if (slotIdx === timeSlots.length - 1) {
+                    slotClassName = slotClassName.replace(/border-r[^\s]*/g, '');
                   }
 
                   return (

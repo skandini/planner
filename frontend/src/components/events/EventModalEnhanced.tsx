@@ -11,7 +11,7 @@ import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventAttachments } from "@/components/events/EventAttachments";
 import { CommentsSection } from "@/components/events/CommentsSection";
-import { toUTCDateISO } from "@/lib/utils/dateUtils";
+import { toUTCDateISO, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT, ROOM_ENDPOINT } from "@/lib/constants";
 
 interface EventModalEnhancedProps {
@@ -135,14 +135,27 @@ export function EventModalEnhanced({
   const recurrenceControlsDisabled = isReadOnly || isSeriesParent || isSeriesChild;
 
   const selectedRoom = rooms.find((r) => r.id === form.room_id);
-  const selectedDate = form.starts_at
-    ? new Date(form.starts_at.split("T")[0])
-    : new Date();
   
-  // Дата для просмотра в таймлайне (может отличаться от selectedDate)
+  // Получаем дату из формы, интерпретируя её как московское время
+  // form.starts_at в формате "YYYY-MM-DDTHH:mm" интерпретируется как московское время
+  // Создаем дату с явным указанием московского времени (UTC+3)
+  const getDateFromForm = useCallback((dateStr: string | null): Date => {
+    if (!dateStr) return new Date();
+    // Парсим дату из строки "YYYY-MM-DDTHH:mm"
+    const [datePart] = dateStr.split('T');
+    if (!datePart) return new Date();
+    const [year, month, day] = datePart.split('-').map(Number);
+    // Создаем дату в московском времени (UTC+3) - используем полдень для избежания проблем с DST
+    const moscowDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00+03:00`;
+    return new Date(moscowDateStr);
+  }, []);
+  
+  const selectedDate = form.starts_at ? getDateFromForm(form.starts_at) : new Date();
+  
+  // Дата для просмотра в таймлайне - инициализируем из формы
   const [viewDate, setViewDate] = useState<Date>(() => {
     if (form.starts_at) {
-      return new Date(form.starts_at.split("T")[0]);
+      return getDateFromForm(form.starts_at);
     }
     return new Date();
   });
@@ -156,29 +169,34 @@ export function EventModalEnhanced({
     });
   }, []);
   
-  // Синхронизируем viewDate с selectedDate только при первой загрузке
+  // Синхронизируем viewDate с формой при открытии модального окна
   const [initialDateSet, setInitialDateSet] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   
   useEffect(() => {
     if (form.starts_at && !initialDateSet) {
-      const newDate = new Date(form.starts_at.split("T")[0]);
-      setViewDate(newDate);
+      const dateFromForm = getDateFromForm(form.starts_at);
+      setViewDate(dateFromForm);
       setInitialDateSet(true);
     }
-  }, [form.starts_at, initialDateSet]);
+  }, [form.starts_at, initialDateSet, getDateFromForm]);
   
   // Обновляем даты в форме при изменении viewDate (после навигации)
   useEffect(() => {
     if (isNavigating && form.starts_at && form.ends_at) {
-      const startTime = form.starts_at.split("T")[1];
-      const endTime = form.ends_at.split("T")[1];
-      const newStart = `${viewDate.toISOString().split("T")[0]}T${startTime}`;
-      const newEnd = `${viewDate.toISOString().split("T")[0]}T${endTime}`;
+      // Получаем компоненты viewDate в московском времени
+      const viewDateMoscow = getTimeInTimeZone(viewDate, MOSCOW_TIMEZONE);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const dateStr = `${viewDateMoscow.year}-${pad(viewDateMoscow.month + 1)}-${pad(viewDateMoscow.day)}`;
+      
+      // Сохраняем время из формы
+      const startTime = form.starts_at.split("T")[1] || "09:00";
+      const endTime = form.ends_at.split("T")[1] || "10:00";
+      
       setForm((prev) => ({
         ...prev,
-        starts_at: newStart,
-        ends_at: newEnd,
+        starts_at: `${dateStr}T${startTime}`,
+        ends_at: `${dateStr}T${endTime}`,
       }));
       setIsNavigating(false);
     }

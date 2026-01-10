@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, parseUTC, formatTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { addDays, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
 interface MonthViewProps {
@@ -172,12 +172,25 @@ export function MonthView({
     events.forEach((event) => {
       const start = parseUTC(event.starts_at);
       const end = parseUTC(event.ends_at);
+      
+      // Получаем компоненты времени события в московском времени
+      const eventStartMoscow = getTimeInTimeZone(start, MOSCOW_TIMEZONE);
+      const eventEndMoscow = getTimeInTimeZone(end, MOSCOW_TIMEZONE);
+      
       days.forEach((day) => {
-        // Создаём границы дня в локальном времени
-        const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
-        const dayEnd = addDays(dayStart, 1);
-        // События уже в локальном времени (parseUTC конвертирует UTC в локальное)
-        if (start < dayEnd && end > dayStart) {
+        // Получаем компоненты дня в московском времени
+        const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
+        const nextDayMoscow = getTimeInTimeZone(addDays(day, 1), MOSCOW_TIMEZONE);
+        
+        // Сравниваем даты напрямую по компонентам
+        const eventStartKey = eventStartMoscow.year * 10000 + eventStartMoscow.month * 100 + eventStartMoscow.day;
+        const eventEndKey = eventEndMoscow.year * 10000 + eventEndMoscow.month * 100 + eventEndMoscow.day;
+        const dayKey = dayMoscow.year * 10000 + dayMoscow.month * 100 + dayMoscow.day;
+        const nextDayKey = nextDayMoscow.year * 10000 + nextDayMoscow.month * 100 + nextDayMoscow.day;
+        
+        // Событие попадает в день, если его начало до следующего дня и конец после начала текущего дня
+        if (eventStartKey < nextDayKey && eventEndKey >= dayKey) {
+          const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
           const key = dayStart.toDateString();
           const list = record.get(key);
           if (list) {

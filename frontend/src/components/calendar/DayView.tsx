@@ -143,9 +143,18 @@ export function DayView({
   const dayEvents = useMemo(() => {
     return events.filter((event) => {
       const eventStart = parseUTC(event.starts_at);
-      return eventStart.toDateString() === dayKey;
+      // Получаем компоненты даты события в московском времени
+      const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+      // Получаем компоненты дня в московском времени
+      const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
+      // Сравниваем даты напрямую по компонентам
+      return (
+        eventStartMoscow.year === dayMoscow.year &&
+        eventStartMoscow.month === dayMoscow.month &&
+        eventStartMoscow.day === dayMoscow.day
+      );
     });
-  }, [events, dayKey]);
+  }, [events, day, dayKey]);
   
   const getEventPosition = useCallback((event: EventRecord) => {
     const eventStart = parseUTC(event.starts_at);

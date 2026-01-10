@@ -252,12 +252,28 @@ export function WeekView({
           const eventEndMoscow = getTimeInTimeZone(end, MOSCOW_TIMEZONE);
           
           // Проверяем, попадает ли событие в день по московскому времени
-          const eventStartDate = new Date(eventStartMoscow.year, eventStartMoscow.month, eventStartMoscow.day);
-          const eventEndDate = new Date(eventEndMoscow.year, eventEndMoscow.month, eventEndMoscow.day);
-          const dayDate = new Date(dayStartMoscow.year, dayStartMoscow.month, dayStartMoscow.day);
-          const nextDayDate = new Date(dayEndMoscow.year, dayEndMoscow.month, dayEndMoscow.day);
+          // Используем прямое сравнение компонентов даты, чтобы избежать проблем с часовыми поясами
+          const eventStartYear = eventStartMoscow.year;
+          const eventStartMonth = eventStartMoscow.month;
+          const eventStartDay = eventStartMoscow.day;
+          const eventEndYear = eventEndMoscow.year;
+          const eventEndMonth = eventEndMoscow.month;
+          const eventEndDay = eventEndMoscow.day;
+          const dayYear = dayStartMoscow.year;
+          const dayMonth = dayStartMoscow.month;
+          const dayDay = dayStartMoscow.day;
+          const nextDayYear = dayEndMoscow.year;
+          const nextDayMonth = dayEndMoscow.month;
+          const nextDayDay = dayEndMoscow.day;
           
-          return eventStartDate < nextDayDate && eventEndDate >= dayDate;
+          // Создаем ключи дат для сравнения: YYYYMMDD
+          const eventStartKey = eventStartYear * 10000 + eventStartMonth * 100 + eventStartDay;
+          const eventEndKey = eventEndYear * 10000 + eventEndMonth * 100 + eventEndDay;
+          const dayKey = dayYear * 10000 + dayMonth * 100 + dayDay;
+          const nextDayKey = nextDayYear * 10000 + nextDayMonth * 100 + nextDayDay;
+          
+          // Событие попадает в день, если его начало до следующего дня и конец после начала текущего дня
+          return eventStartKey < nextDayKey && eventEndKey >= dayKey;
         });
 
         return {
