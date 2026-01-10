@@ -245,15 +245,38 @@ export function ResourcePanel({
               }
               
               const data: EventRecord[] = await response.json();
-              console.log(`[Availability] Loaded ${data.length} events for ${participant.label} (${participant.user_id})`);
-              if (data.length > 0) {
-                console.log(`[Availability] Events for ${participant.label}:`, data.map(e => ({
+              
+              // Фильтруем события, где участник отклонил приглашение (response_status === "declined")
+              // Такие события не должны влиять на доступность участника
+              const filteredData = data.filter((event) => {
+                // Если у события нет участников, оставляем его (может быть событие без участников)
+                if (!event.participants || event.participants.length === 0) {
+                  return true;
+                }
+                
+                // Ищем участника в списке участников события
+                const participantInEvent = event.participants.find(
+                  (p) => p.user_id === participant.user_id
+                );
+                
+                // Если участник не найден в событии, оставляем событие (может быть событие другого типа)
+                if (!participantInEvent) {
+                  return true;
+                }
+                
+                // Исключаем события, где участник отклонил приглашение
+                return participantInEvent.response_status !== "declined";
+              });
+              
+              console.log(`[Availability] Loaded ${data.length} events for ${participant.label} (${participant.user_id}), filtered to ${filteredData.length} (excluded ${data.length - filteredData.length} declined)`);
+              if (filteredData.length > 0) {
+                console.log(`[Availability] Events for ${participant.label}:`, filteredData.map(e => ({
                   title: e.title,
                   starts_at: e.starts_at,
                   ends_at: e.ends_at,
                 })));
               }
-              return [participant.user_id, data] as const;
+              return [participant.user_id, filteredData] as const;
             } catch (err) {
               // Логируем ошибки при загрузке доступности
               const errorMessage = err instanceof Error ? err.message : String(err);
