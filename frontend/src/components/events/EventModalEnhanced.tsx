@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { EventDraft, EventRecord, ConflictEntry } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
 import type { UserProfile } from "@/types/user.types";
@@ -181,12 +181,26 @@ export function EventModalEnhanced({
   
   const selectedDate = form.starts_at ? getDateFromForm(form.starts_at) : new Date();
   
-  // Дата для просмотра в таймлайне - инициализируем из формы
+  // Дата для просмотра в таймлайне - инициализируем из editingEvent или формы
+  // Используем editingEvent.starts_at напрямую для правильной инициализации
   const [viewDate, setViewDate] = useState<Date>(() => {
+    // Если есть editingEvent, используем его starts_at напрямую (UTC) и конвертируем в московское время
+    if (editingEvent?.starts_at) {
+      const startUTC = parseUTC(editingEvent.starts_at);
+      const moscow = getTimeInTimeZone(startUTC, MOSCOW_TIMEZONE);
+      // Создаем Date в московском времени для дня события
+      const moscowDateStr = `${moscow.year}-${String(moscow.month + 1).padStart(2, '0')}-${String(moscow.day).padStart(2, '0')}T12:00:00+03:00`;
+      return new Date(moscowDateStr);
+    }
+    // Если нет editingEvent, но есть form.starts_at, используем его
     if (form.starts_at) {
       return getDateFromForm(form.starts_at);
     }
-    return new Date();
+    // Иначе - текущая дата
+    const now = new Date();
+    const nowMoscow = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+    const moscowDateStr = `${nowMoscow.year}-${String(nowMoscow.month + 1).padStart(2, '0')}-${String(nowMoscow.day).padStart(2, '0')}T12:00:00+03:00`;
+    return new Date(moscowDateStr);
   });
   
   // Навигация по дням
@@ -198,17 +212,27 @@ export function EventModalEnhanced({
     });
   }, []);
   
-  // Синхронизируем viewDate с формой при открытии модального окна
-  const [initialDateSet, setInitialDateSet] = useState(false);
+  // Флаг для отслеживания навигации (чтобы не обновлять форму при программном изменении viewDate)
   const [isNavigating, setIsNavigating] = useState(false);
+  // Отслеживаем editingEventId для определения смены события
+  const prevEditingEventIdRef = useRef<string | null>(editingEvent?.id || null);
   
+  // Синхронизируем viewDate при открытии нового события
   useEffect(() => {
-    if (form.starts_at && !initialDateSet) {
+    // Если изменился editingEvent, обновляем viewDate из него
+    if (editingEvent?.starts_at && editingEvent.id !== prevEditingEventIdRef.current && !isNavigating) {
+      const startUTC = parseUTC(editingEvent.starts_at);
+      const moscow = getTimeInTimeZone(startUTC, MOSCOW_TIMEZONE);
+      const moscowDateStr = `${moscow.year}-${String(moscow.month + 1).padStart(2, '0')}-${String(moscow.day).padStart(2, '0')}T12:00:00+03:00`;
+      setViewDate(new Date(moscowDateStr));
+      prevEditingEventIdRef.current = editingEvent.id;
+    } else if (!editingEvent && form.starts_at && !isNavigating) {
+      // Если нет editingEvent (новое событие), используем form.starts_at
       const dateFromForm = getDateFromForm(form.starts_at);
       setViewDate(dateFromForm);
-      setInitialDateSet(true);
+      prevEditingEventIdRef.current = null;
     }
-  }, [form.starts_at, initialDateSet, getDateFromForm]);
+  }, [editingEvent, form.starts_at, isNavigating, getDateFromForm]);
   
   // Обновляем даты в форме при изменении viewDate (после навигации)
   useEffect(() => {
