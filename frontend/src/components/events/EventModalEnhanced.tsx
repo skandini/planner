@@ -137,17 +137,46 @@ export function EventModalEnhanced({
   const selectedRoom = rooms.find((r) => r.id === form.room_id);
   
   // Получаем дату из формы, интерпретируя её как московское время
-  // form.starts_at в формате "YYYY-MM-DDTHH:mm" интерпретируется как московское время
-  // Создаем дату с явным указанием московского времени (UTC+3)
+  // form.starts_at в формате "YYYY-MM-DDTHH:mm" содержит дату и время в московском времени
+  // Создаем Date объект правильно, используя строку с явным указанием московского времени
   const getDateFromForm = useCallback((dateStr: string | null): Date => {
-    if (!dateStr) return new Date();
-    // Парсим дату из строки "YYYY-MM-DDTHH:mm"
-    const [datePart] = dateStr.split('T');
-    if (!datePart) return new Date();
+    if (!dateStr) {
+      // Если нет даты, создаем текущую дату в московском времени
+      const now = new Date();
+      const nowMoscow = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+      // Создаем дату в московском времени (UTC+3) - полдень для избежания проблем
+      const moscowDateStr = `${nowMoscow.year}-${String(nowMoscow.month + 1).padStart(2, '0')}-${String(nowMoscow.day).padStart(2, '0')}T12:00:00+03:00`;
+      return new Date(moscowDateStr);
+    }
+    
+    // Парсим дату из строки "YYYY-MM-DDTHH:mm" - это московское время
+    const [datePart, timePart] = dateStr.split('T');
+    if (!datePart) {
+      const now = new Date();
+      const nowMoscow = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+      const moscowDateStr = `${nowMoscow.year}-${String(nowMoscow.month + 1).padStart(2, '0')}-${String(nowMoscow.day).padStart(2, '0')}T12:00:00+03:00`;
+      return new Date(moscowDateStr);
+    }
+    
     const [year, month, day] = datePart.split('-').map(Number);
-    // Создаем дату в московском времени (UTC+3) - используем полдень для избежания проблем с DST
-    const moscowDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00+03:00`;
-    return new Date(moscowDateStr);
+    const [hour = 12, minute = 0] = timePart ? timePart.split(':').map(Number) : [12, 0];
+    
+    // Создаем дату с явным указанием московского времени (UTC+3)
+    // Используем полдень для даты, чтобы избежать проблем с переходом дня
+    // Это важно: мы создаем дату именно для дня, а не для конкретного времени
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const moscowDateStr = `${year}-${pad(month)}-${pad(day)}T12:00:00+03:00`;
+    const date = new Date(moscowDateStr);
+    
+    // Проверяем, что дата создана правильно - компоненты должны совпадать
+    const checkMoscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+    if (checkMoscow.year === year && checkMoscow.month === month - 1 && checkMoscow.day === day) {
+      return date;
+    }
+    
+    // Если не совпало (маловероятно), создаем через UTC напрямую
+    // hour - 3 может быть отрицательным, поэтому используем полдень
+    return new Date(Date.UTC(year, month - 1, day, 9, 0, 0)); // 12:00 МСК = 09:00 UTC
   }, []);
   
   const selectedDate = form.starts_at ? getDateFromForm(form.starts_at) : new Date();
