@@ -289,12 +289,32 @@ export function WeekView({
     if (!columnEl) {
       return;
     }
+    
+    // Получаем колонку дня для правильной даты
+    const dayColumn = dayColumns[columnIndex];
+    if (!dayColumn) {
+      return;
+    }
+    
     const rect = columnEl.getBoundingClientRect();
+    // Вычисляем позицию в минутах от начала дня (0:00-23:59) в московском времени
     let minutes = ((e.clientY - rect.top) / rect.height) * MINUTES_IN_DAY;
     minutes = Math.max(0, Math.min(MINUTES_IN_DAY, minutes));
-    let newStartMinutes = minutes - dragInfo.current.offsetMinutes;
-    newStartMinutes = Math.max(0, Math.min(MINUTES_IN_DAY, newStartMinutes));
-    const newStart = new Date(dayStart.getTime() + newStartMinutes * 60000);
+    // Округляем до 5 минут для привязки
+    minutes = Math.round(minutes / 5) * 5;
+    
+    // Получаем компоненты дня в московском времени из dayColumn.date
+    const dayMoscow = getTimeInTimeZone(dayColumn.date, MOSCOW_TIMEZONE);
+    
+    // Вычисляем новые час и минуту в московском времени
+    const newHour = Math.floor(minutes / 60);
+    const newMinute = minutes % 60;
+    
+    // Создаем новую дату в московском времени
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(newHour)}:${pad(newMinute)}+03:00`;
+    const newStart = new Date(newStartStr);
+    
     onEventMove(dragInfo.current.event, newStart);
     dragInfo.current = null;
     draggingRef.current = false;

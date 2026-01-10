@@ -205,23 +205,26 @@ export function DayView({
     
     const rect = e.currentTarget.getBoundingClientRect();
     const dropY = e.clientY - rect.top;
-    const dropHour = Math.floor(dropY / HOUR_HEIGHT);
-    const dropMinute = Math.floor((dropY % HOUR_HEIGHT) / HOUR_HEIGHT * 60);
     
-    const { event, offsetMinutes } = dragInfo.current;
-    const eventStart = parseUTC(event.starts_at);
-    const newStart = new Date(eventStart);
-    newStart.setHours(dropHour, dropMinute, 0, 0);
+    // Вычисляем минуты от начала дня в московском времени
+    const dropMinutes = (dropY / HOUR_HEIGHT) * 60;
+    // Округляем до 5 минут для привязки
+    const roundedMinutes = Math.round(dropMinutes / 5) * 5;
+    const dropHour = Math.floor(roundedMinutes / 60);
+    const dropMinute = roundedMinutes % 60;
     
-    const originalOffset = offsetMinutes;
-    const newOffset = (dropHour * 60 + dropMinute) - ((eventStart.getHours() * 60) + eventStart.getMinutes());
-    const adjustedStart = new Date(eventStart);
-    adjustedStart.setMinutes(adjustedStart.getMinutes() + newOffset - originalOffset);
+    // Получаем компоненты дня в московском времени
+    const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
     
-    onEventMove(event, adjustedStart);
+    // Создаем новую дату в московском времени
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(dropHour)}:${pad(dropMinute)}+03:00`;
+    const newStart = new Date(newStartStr);
+    
+    onEventMove(dragInfo.current.event, newStart);
     dragInfo.current = null;
     draggingRef.current = false;
-  }, [onEventMove, HOUR_HEIGHT]);
+  }, [onEventMove, HOUR_HEIGHT, day]);
   
   const handleTimeSlotClick = useCallback((hour: number, minute: number = 0) => {
     if (!onTimeSlotClick) return;
