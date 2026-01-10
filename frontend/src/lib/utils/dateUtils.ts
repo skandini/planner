@@ -76,24 +76,81 @@ export const toLocalString = (date: Date): string => {
   return `${y}-${m}-${d}T${h}:${min}`;
 };
 
-// Простая функция: конвертирует локальное время из datetime-local в UTC ISO
+// Простая функция: конвертирует московское время из datetime-local в UTC ISO
 export const toUTCString = (localStr: string): string => {
   // datetime-local input возвращает строку в формате "YYYY-MM-DDTHH:mm"
-  // Когда мы создаём new Date() из такой строки БЕЗ указания timezone,
-  // браузер интерпретирует её как локальное время
+  // Мы интерпретируем её как московское время (Europe/Moscow, UTC+3)
+  // и конвертируем в UTC для отправки на сервер
   
-  // Простое решение: создаём Date из строки напрямую
-  // Браузер автоматически интерпретирует "YYYY-MM-DDTHH:mm" как локальное время
-  const localDate = new Date(localStr);
+  const [datePart, timePart] = localStr.split('T');
+  if (!datePart || !timePart) {
+    throw new Error(`Invalid date format: ${localStr}`);
+  }
   
-  if (isNaN(localDate.getTime())) {
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  
+  // Создаём дату, интерпретируя строку как московское время (UTC+3)
+  const moscowDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+03:00`;
+  
+  const date = new Date(moscowDateStr);
+  
+  if (isNaN(date.getTime())) {
     throw new Error(`Invalid date: ${localStr}`);
   }
   
-  // toISOString() автоматически конвертирует локальное время в UTC
-  return localDate.toISOString();
+  return date.toISOString();
 };
 
 export const toUTCDateISO = (date: Date) =>
   new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
+
+// Константа для московского времени
+export const MOSCOW_TIMEZONE = 'Europe/Moscow';
+
+// Получает компоненты времени в указанном часовом поясе
+export const getTimeInTimeZone = (date: Date, timeZone: string) => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+  const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+  
+  return { year, month, day, hour, minute, second };
+};
+
+// Форматирует время в указанном часовом поясе
+export const formatTimeInTimeZone = (date: Date, timeZone: string, options?: Intl.DateTimeFormatOptions): string => {
+  return new Intl.DateTimeFormat('ru-RU', {
+    ...options,
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(options?.second && { second: '2-digit' }),
+  }).format(date);
+};
+
+// Конвертирует UTC Date в строку для datetime-local в указанном часовом поясе
+export const toTimeZoneString = (date: Date, timeZone: string): string => {
+  const { year, month, day, hour, minute } = getTimeInTimeZone(date, timeZone);
+  const y = year;
+  const m = String(month + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  const h = String(hour).padStart(2, "0");
+  const min = String(minute).padStart(2, "0");
+  return `${y}-${m}-${d}T${h}:${min}`;
+};
 

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewProps {
@@ -195,14 +195,13 @@ export function WeekView({
   useEffect(() => {
     if (scrollContainerRef.current) {
       const now = new Date();
+      const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
       const todayKey = new Date().toDateString();
       const isTodayInView = days.some(day => day.toDateString() === todayKey);
       
       if (isTodayInView) {
-        // Прокручиваем к текущему времени с небольшим отступом сверху
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+        // Прокручиваем к текущему времени в московском часовом поясе
+        const minutesFromStart = (moscowTime.hour * 60) + moscowTime.minute;
         const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
         // Отступ 100px сверху, чтобы линия была видна
         scrollContainerRef.current.scrollTop = Math.max(0, topPx - 100);
@@ -346,10 +345,26 @@ export function WeekView({
         const dayStart = new Date(date);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = addDays(dayStart, 1);
+        
+        // Получаем компоненты дня в московском времени для фильтрации
+        const dayStartMoscow = getTimeInTimeZone(dayStart, MOSCOW_TIMEZONE);
+        const dayEndMoscow = getTimeInTimeZone(dayEnd, MOSCOW_TIMEZONE);
+        
         const dayEvents = events.filter((event) => {
           const start = parseUTC(event.starts_at);
           const end = parseUTC(event.ends_at);
-          return start < dayEnd && end > dayStart;
+          
+          // Получаем компоненты времени события в московском времени
+          const eventStartMoscow = getTimeInTimeZone(start, MOSCOW_TIMEZONE);
+          const eventEndMoscow = getTimeInTimeZone(end, MOSCOW_TIMEZONE);
+          
+          // Проверяем, попадает ли событие в день по московскому времени
+          const eventStartDate = new Date(eventStartMoscow.year, eventStartMoscow.month, eventStartMoscow.day);
+          const eventEndDate = new Date(eventEndMoscow.year, eventEndMoscow.month, eventEndMoscow.day);
+          const dayDate = new Date(dayStartMoscow.year, dayStartMoscow.month, dayStartMoscow.day);
+          const nextDayDate = new Date(dayEndMoscow.year, dayEndMoscow.month, dayEndMoscow.day);
+          
+          return eventStartDate < nextDayDate && eventEndDate >= dayDate;
         });
 
         return {
@@ -522,9 +537,8 @@ export function WeekView({
                 {/* Красная линия текущего времени - показываем только для сегодняшнего дня */}
                 {isToday && (() => {
                   const now = currentTime;
-                  const todayStart = new Date(now);
-                  todayStart.setHours(0, 0, 0, 0);
-                  const minutesFromStart = (now.getTime() - todayStart.getTime()) / 60000;
+                  const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+                  const minutesFromStart = (moscowTime.hour * 60) + moscowTime.minute;
                   const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
                   
                   // Показываем линию только если она в пределах видимой области (0-23:59)
@@ -564,17 +578,26 @@ export function WeekView({
                 {dayEvents.map((event) => {
                   const eventStart = parseUTC(event.starts_at);
                   const eventEnd = parseUTC(event.ends_at);
-                  const displayStart = eventStart < dayStart ? dayStart : eventStart;
-                  const displayEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
-                  const minutesFromStart =
-                    (displayStart.getTime() - dayStart.getTime()) / 60000;
+                  
+                  // Получаем компоненты времени события в московском времени
+                  const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+                  const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
+                  
+                  // Рассчитываем позицию на основе московского времени
+                  const startMinutes = (eventStartMoscow.hour * 60) + eventStartMoscow.minute;
+                  const endMinutes = (eventEndMoscow.hour * 60) + eventEndMoscow.minute;
+                  
+                  // Ограничиваем отображение границами дня (0:00 - 23:59) в московском времени
+                  const displayStartMinutes = Math.max(0, startMinutes);
+                  const displayEndMinutes = Math.min(MINUTES_IN_DAY, endMinutes);
+                  
                   // Реальная длительность события в минутах (до округления)
-                  const realDurationMinutes = (displayEnd.getTime() - displayStart.getTime()) / 60000;
+                  const realDurationMinutes = endMinutes - startMinutes;
                   const isShortEvent = realDurationMinutes < 30; // Событие меньше 30 минут
                   // Минимальная высота для отображения - 30 минут
-                  const durationMinutes = Math.max(realDurationMinutes, 30);
-                  const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
-                  const heightPx = (durationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  const displayDurationMinutes = Math.max(displayEndMinutes - displayStartMinutes, 30);
+                  const topPx = (displayStartMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  const heightPx = (displayDurationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
                   
                   // Проверяем статус текущего пользователя для события
@@ -684,12 +707,9 @@ export function WeekView({
                             {new Intl.DateTimeFormat("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
-                            }).format(eventStart)}{" "}
+                            {formatTimeInTimeZone(eventStart, MOSCOW_TIMEZONE)}{" "}
                             —{" "}
-                            {new Intl.DateTimeFormat("ru-RU", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }).format(eventEnd)}
+                            {formatTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE)}
                           </p>
                           {event.room_id && (
                             <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 truncate">
@@ -822,15 +842,9 @@ export function WeekView({
           <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
             <p className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2 break-words">{hoveredEvent.event.title}</p>
             <p className="text-xs text-slate-500">
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.starts_at))}{" "}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), MOSCOW_TIMEZONE)}{" "}
               —{" "}
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.ends_at))}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
             </p>
           </div>
           

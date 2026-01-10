@@ -53,6 +53,8 @@ import {
   formatDate,
   parseUTC,
   toLocalString,
+  toTimeZoneString,
+  MOSCOW_TIMEZONE,
   toUTCString,
   toUTCDateISO,
 } from "@/lib/utils/dateUtils";
@@ -1037,8 +1039,9 @@ export default function Home() {
     if (event) {
       const start = parseUTC(event.starts_at);
       const end = parseUTC(event.ends_at);
-      const startsAtLocal = toLocalString(start);
-      const endsAtLocal = toLocalString(end);
+      // Конвертируем в московское время для отображения в форме
+      const startsAtLocal = toTimeZoneString(start, MOSCOW_TIMEZONE);
+      const endsAtLocal = toTimeZoneString(end, MOSCOW_TIMEZONE);
       const recurrenceRule = event.recurrence_rule || null;
       const recurrenceUntil = recurrenceRule?.until
         ? new Date(recurrenceRule.until).toISOString().split("T")[0]
@@ -1083,8 +1086,8 @@ export default function Home() {
         description: "",
         location: "",
         room_id: null,
-        starts_at: toLocalString(start),
-        ends_at: toLocalString(end),
+        starts_at: toTimeZoneString(start, MOSCOW_TIMEZONE),
+        ends_at: toTimeZoneString(end, MOSCOW_TIMEZONE),
         participant_ids: currentUser?.id ? [currentUser.id] : [], // Автор добавляется по умолчанию
         recurrence_enabled: false,
         recurrence_frequency: "weekly",
@@ -1662,7 +1665,7 @@ export default function Home() {
             {/* Правая часть - Статистика и действия */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {/* Часы времени */}
-              {currentUser?.show_local_time !== false && (
+              {false && (
                 <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
                   <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1673,7 +1676,7 @@ export default function Home() {
                   </div>
                 </div>
               )}
-              {currentUser?.show_moscow_time !== false && (
+              {true && (
                 <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
                   <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2693,7 +2696,7 @@ export default function Home() {
               <AvailabilitySlotsManager
                 authFetch={authFetch}
                 currentUserId={currentUser?.id}
-                selectedCalendarId={selectedCalendarId}
+                selectedCalendarId={selectedCalendarId ?? undefined}
                 onSlotBooked={() => {
                   loadEvents();
                 }}

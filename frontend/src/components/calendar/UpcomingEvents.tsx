@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
-import { parseUTC, formatDate } from "@/lib/utils/dateUtils";
+import { parseUTC, formatDate, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 
 interface UpcomingEventsProps {
   events: EventRecord[];
@@ -81,21 +81,24 @@ export function UpcomingEvents({
       }
     }
     
-    const timeStr = new Intl.DateTimeFormat("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(start);
+    // Конвертируем время в московское для отображения
+    const moscowTime = getTimeInTimeZone(start, MOSCOW_TIMEZONE);
+    const timeStr = formatTimeInTimeZone(start, MOSCOW_TIMEZONE);
     
-    const today = new Date();
-    const tomorrow = new Date(today);
+    // Сравниваем даты в московском времени
+    const now = new Date();
+    const todayMoscow = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+    const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowMoscow = getTimeInTimeZone(tomorrow, MOSCOW_TIMEZONE);
     
-    if (start.toDateString() === today.toDateString()) {
+    if (moscowTime.year === todayMoscow.year && moscowTime.month === todayMoscow.month && moscowTime.day === todayMoscow.day) {
       return `Сегодня, ${timeStr}`;
-    } else if (start.toDateString() === tomorrow.toDateString()) {
+    } else if (moscowTime.year === tomorrowMoscow.year && moscowTime.month === tomorrowMoscow.month && moscowTime.day === tomorrowMoscow.day) {
       return `Завтра, ${timeStr}`;
     } else {
-      return `${formatDate(start, "dd.MM")}, ${timeStr}`;
+      const dateStr = `${String(moscowTime.day).padStart(2, '0')}.${String(moscowTime.month + 1).padStart(2, '0')}`;
+      return `${dateStr}, ${timeStr}`;
     }
   };
 

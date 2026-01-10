@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, parseUTC } from "@/lib/utils/dateUtils";
+import { addDays, parseUTC, formatTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
 interface MonthViewProps {
@@ -343,17 +343,14 @@ export function MonthView({
               {hoveredEvent.event.title}
             </h3>
             <p className="mt-1 text-xs text-slate-600">
-              {new Intl.DateTimeFormat("ru-RU", {
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), MOSCOW_TIMEZONE, {
                 day: "numeric",
                 month: "long",
                 hour: "2-digit",
                 minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.starts_at))}{" "}
+              })}{" "}
               —{" "}
-              {new Intl.DateTimeFormat("ru-RU", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(parseUTC(hoveredEvent.event.ends_at))}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
             </p>
           </div>
           

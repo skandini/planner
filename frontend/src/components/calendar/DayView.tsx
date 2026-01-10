@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface DayViewProps {
@@ -151,14 +151,15 @@ export function DayView({
     const eventStart = parseUTC(event.starts_at);
     const eventEnd = parseUTC(event.ends_at);
     
-    const eventStartMoscow = new Date(eventStart.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    const eventEndMoscow = new Date(eventEnd.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+    // Получаем компоненты времени в московском часовом поясе
+    const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+    const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
     
-    const dayStart = new Date(day);
-    dayStart.setHours(0, 0, 0, 0);
+    // Получаем компоненты дня в московском часовом поясе
+    const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
     
-    const startMinutes = (eventStartMoscow.getHours() * 60) + eventStartMoscow.getMinutes();
-    const endMinutes = (eventEndMoscow.getHours() * 60) + eventEndMoscow.getMinutes();
+    const startMinutes = (eventStartMoscow.hour * 60) + eventStartMoscow.minute;
+    const endMinutes = (eventEndMoscow.hour * 60) + eventEndMoscow.minute;
     const duration = endMinutes - startMinutes;
     
     const topPx = (startMinutes / 60) * HOUR_HEIGHT;
@@ -237,28 +238,22 @@ export function DayView({
   useEffect(() => {
     if (isToday && scrollContainerRef.current) {
       const now = new Date();
-      const currentHour = now.getHours();
-      const scrollPosition = (currentHour * HOUR_HEIGHT) - 200;
+      const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+      const scrollPosition = (moscowTime.hour * HOUR_HEIGHT) - 200;
       scrollContainerRef.current.scrollTop = Math.max(0, scrollPosition);
     }
   }, [isToday, HOUR_HEIGHT]);
   
   const formatTime = useCallback((date: Date) => {
-    return new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Moscow',
-    }).format(date);
+    return formatTimeInTimeZone(date, MOSCOW_TIMEZONE);
   }, []);
   
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
     const now = new Date();
-    const moscowNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    const hours = moscowNow.getHours();
-    const minutes = moscowNow.getMinutes();
-    const position = (hours * HOUR_HEIGHT) + (minutes / 60 * HOUR_HEIGHT);
+    const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+    const position = (moscowTime.hour * HOUR_HEIGHT) + (moscowTime.minute / 60 * HOUR_HEIGHT);
     
     return position;
   }, [isToday, currentTime, HOUR_HEIGHT]);
