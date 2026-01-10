@@ -3,13 +3,13 @@ export const startOfWeek = (date: Date) => {
   // Это гарантирует правильное определение дня недели независимо от часового пояса браузера
   const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: MOSCOW_TIMEZONE,
-    weekday: 'short', // 'Mon', 'Tue', 'Wed', etc.
+    weekday: 'long', // 'Monday', 'Tuesday', etc. - более надежно чем 'short'
   });
   
   const weekdayStr = weekdayFormatter.format(date);
   // Маппинг дня недели на число (0 = воскресенье, 1 = понедельник, ..., 6 = суббота)
   const weekdayMap: Record<string, number> = {
-    'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
+    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6
   };
   const day = weekdayMap[weekdayStr] ?? 0;
   
@@ -20,44 +20,50 @@ export const startOfWeek = (date: Date) => {
   // И так далее
   const diff = (day === 0 ? -6 : 1) - day;
   
-  // Получаем компоненты даты в московском времени для создания даты начала недели
+  // Получаем компоненты даты в московском времени
   const moscowComponents = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
   
-  // Вычисляем дату начала недели используя компоненты даты
-  // Используем алгоритм для вычисления даты начала недели
+  // Вычисляем дату начала недели используя компоненты даты в московском времени
+  // Используем простой подход: создаем дату в московском времени с явным указанием часового пояса
   const pad = (n: number) => String(n).padStart(2, '0');
   
-  // Создаем дату в московском времени, применяя diff к дню
-  // Используем UTC для создания даты, чтобы избежать проблем с часовыми поясами
-  // year, month (0-based), day в московском времени
-  const startDay = moscowComponents.day + diff;
-  // Если startDay меньше 1 или больше 31, нужно скорректировать месяц
-  // Но для простоты используем Date.UTC для создания правильной даты
-  // Сначала создаем дату с нужным днем в московском времени
-  const moscowWeekStartDate = new Date(Date.UTC(
-    moscowComponents.year,
-    moscowComponents.month,
-    moscowComponents.day + diff,
-    9, // 12:00 МСК = 09:00 UTC
-    0,
-    0
-  ));
+  // Вычисляем день начала недели
+  let startDay = moscowComponents.day + diff;
+  let startMonth = moscowComponents.month;
+  let startYear = moscowComponents.year;
   
-  // Проверяем, что дата правильная - компоненты должны совпадать
-  const checkComponents = getTimeInTimeZone(moscowWeekStartDate, MOSCOW_TIMEZONE);
-  const expectedDay = moscowComponents.day + diff;
-  
-  // Если день не совпадает (из-за перехода месяца), корректируем
-  if (checkComponents.day !== expectedDay && expectedDay >= 1 && expectedDay <= 31) {
-    // Используем прямое создание через строку с московским временем
-    const moscowWeekStartStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(Math.max(1, Math.min(31, expectedDay)))}T12:00:00+03:00`;
-    const result = new Date(moscowWeekStartStr);
-    result.setHours(0, 0, 0, 0);
-    return result;
+  // Обрабатываем переход через границы месяца/года
+  if (startDay < 1) {
+    // Переход к предыдущему месяцу
+    startMonth -= 1;
+    if (startMonth < 0) {
+      startMonth = 11;
+      startYear -= 1;
+    }
+    // Получаем количество дней в предыдущем месяце (используя UTC для надежности)
+    const daysInPrevMonth = new Date(Date.UTC(startYear, startMonth + 1, 0)).getUTCDate();
+    startDay = daysInPrevMonth + startDay;
+  } else {
+    // Проверяем, не выходим ли за границы текущего месяца
+    const daysInMonth = new Date(Date.UTC(startYear, startMonth + 1, 0)).getUTCDate();
+    if (startDay > daysInMonth) {
+      // Переход к следующему месяцу
+      startDay = startDay - daysInMonth;
+      startMonth += 1;
+      if (startMonth > 11) {
+        startMonth = 0;
+        startYear += 1;
+      }
+    }
   }
   
-  moscowWeekStartDate.setUTCHours(0, 0, 0, 0);
-  return moscowWeekStartDate;
+  // Создаем дату начала недели в московском времени (UTC+3)
+  // Используем полдень для избежания проблем с переходом дня
+  const moscowWeekStartStr = `${startYear}-${pad(startMonth + 1)}-${pad(startDay)}T12:00:00+03:00`;
+  const result = new Date(moscowWeekStartStr);
+  result.setHours(0, 0, 0, 0);
+  
+  return result;
 };
 
 export const addDays = (date: Date, amount: number) => {
