@@ -48,10 +48,12 @@ export function AvailabilityScheduleSettings({
     saturday: [],
     sunday: [],
   });
-  const [timezone, setTimezone] = useState("UTC");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Часовой пояс всегда московский (Europe/Moscow, UTC+3)
+  const timezone = "Europe/Moscow";
 
   useEffect(() => {
     loadSchedule();
@@ -77,7 +79,7 @@ export function AvailabilityScheduleSettings({
         saturday: loadedSchedule.saturday || [],
         sunday: loadedSchedule.sunday || [],
       });
-      setTimezone(data.timezone || "UTC");
+      // Время всегда интерпретируется как московское
     } catch (err) {
       console.error("Failed to load availability schedule:", err);
       setError(err instanceof Error ? err.message : "Ошибка загрузки расписания");
@@ -95,7 +97,7 @@ export function AvailabilityScheduleSettings({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           schedule,
-          timezone,
+          timezone: "Europe/Moscow", // Всегда московское время
         }),
       });
 
@@ -158,29 +160,18 @@ export function AvailabilityScheduleSettings({
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Часовой пояс
-        </label>
-        <select
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
-        >
-          <option value="UTC">UTC</option>
-          <option value="Europe/Moscow">Москва (MSK)</option>
-          <option value="Europe/Kiev">Киев (EET)</option>
-          <option value="Asia/Almaty">Алматы (ALMT)</option>
-        </select>
-      </div>
-
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
-          Расписание доступности по дням недели
-        </h3>
-        <p className="text-xs text-slate-500 mb-4">
-          Укажите время, когда вам можно назначать встречи. Если день не указан, встречи в этот день назначать нельзя.
-        </p>
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-1">
+            Расписание доступности по дням недели
+          </h3>
+          <p className="text-xs text-slate-500 mb-2">
+            Укажите время, когда вам можно назначать встречи. Если день не указан, встречи в этот день назначать нельзя.
+          </p>
+          <p className="text-xs text-indigo-600 font-medium">
+            ⏰ Время указано в московском часовом поясе (МСК, UTC+3)
+          </p>
+        </div>
 
         {DAYS_OF_WEEK.map((day) => (
           <div
@@ -226,24 +217,14 @@ export function AvailabilityScheduleSettings({
                   >
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2 flex-1">
-                        <label className="text-xs text-slate-600">С</label>
-                        <input
-                          type="time"
-                          value={slot.start}
-                          onChange={(e) =>
-                            updateTimeSlot(day.key, index, "start", e.target.value)
-                          }
-                          className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
-                        />
-                        <label className="text-xs text-slate-600">До</label>
-                        <input
-                          type="time"
-                          value={slot.end}
-                          onChange={(e) =>
-                            updateTimeSlot(day.key, index, "end", e.target.value)
-                          }
-                          className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
-                        />
+                        <span className="text-xs font-medium text-slate-700">С</span>
+                        <span className="text-sm font-semibold text-slate-900 px-2 py-1 bg-slate-50 rounded border border-slate-200 min-w-[70px] text-center">
+                          {slot.start}
+                        </span>
+                        <span className="text-xs font-medium text-slate-700">До</span>
+                        <span className="text-sm font-semibold text-slate-900 px-2 py-1 bg-slate-50 rounded border border-slate-200 min-w-[70px] text-center">
+                          {slot.end}
+                        </span>
                       </div>
                       <button
                         type="button"
