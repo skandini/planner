@@ -609,25 +609,23 @@ export function WeekView({
                   const eventStartUTC = parseUTC(event.starts_at);
                   const eventEndUTC = parseUTC(event.ends_at);
                   
-                  // Конвертируем время событий в московское время
+                  // Конвертируем время событий в московское время для отображения
                   const eventStartMoscow = getTimeInTimeZone(eventStartUTC, MOSCOW_TIMEZONE);
                   const eventEndMoscow = getTimeInTimeZone(eventEndUTC, MOSCOW_TIMEZONE);
                   
-                  // Создаем Date объекты для начала и конца события в московском времени (для сравнения с dayStart/dayEnd)
-                  const eventStart = new Date(eventStartMoscow.year, eventStartMoscow.month, eventStartMoscow.day, eventStartMoscow.hour, eventStartMoscow.minute, eventStartMoscow.second);
-                  const eventEnd = new Date(eventEndMoscow.year, eventEndMoscow.month, eventEndMoscow.day, eventEndMoscow.hour, eventEndMoscow.minute, eventEndMoscow.second);
+                  // Рассчитываем позицию на основе московского времени (в минутах от начала дня)
+                  const startMinutes = eventStartMoscow.hour * 60 + eventStartMoscow.minute;
+                  const endMinutes = eventEndMoscow.hour * 60 + eventEndMoscow.minute;
+                  const durationMinutes = endMinutes - startMinutes;
                   
-                  const displayStart = eventStart < dayStart ? dayStart : eventStart;
-                  const displayEnd = eventEnd > dayEnd ? dayEnd : eventEnd;
-                  const minutesFromStart =
-                    (displayStart.getTime() - dayStart.getTime()) / 60000;
-                  // Реальная длительность события в минутах (до округления)
-                  const realDurationMinutes = (displayEnd.getTime() - displayStart.getTime()) / 60000;
-                  const isShortEvent = realDurationMinutes < 30; // Событие меньше 30 минут
-                  // Минимальная высота для отображения - 30 минут
-                  const durationMinutes = Math.max(realDurationMinutes, 30);
-                  const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
-                  const heightPx = (durationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  // Ограничиваем отображение границами дня (0:00 - 23:59) в московском времени
+                  const displayStartMinutes = Math.max(0, startMinutes);
+                  const displayEndMinutes = Math.min(MINUTES_IN_DAY, endMinutes);
+                  const displayDurationMinutes = Math.max(displayEndMinutes - displayStartMinutes, 30);
+                  
+                  const isShortEvent = durationMinutes < 30;
+                  const topPx = (displayStartMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  const heightPx = (displayDurationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
                   
                   // Проверяем статус текущего пользователя для события
