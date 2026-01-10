@@ -271,6 +271,133 @@ export function WeekView({
     [days, events, todayKey],
   );
 
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    eventRecord: EventRecord,
+  ) => {
+    if (!onEventMove || eventRecord.all_day) {
+      e.preventDefault();
+      return;
+    }
+    draggingRef.current = true;
+    const bounds = e.currentTarget.getBoundingClientRect();
+    const offsetPx = e.clientY - bounds.top;
+    const offsetMinutes = Math.min(
+      Math.max((offsetPx / DAY_HEIGHT) * MINUTES_IN_DAY, 0),
+      MINUTES_IN_DAY,
+    );
+    dragInfo.current = { event: eventRecord, offsetMinutes };
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", eventRecord.id);
+
+    // Кастомный drag-превью: создаём клон карточки и используем как drag image,
+    // чтобы не показывался текстовый ghost.
+    const preview = e.currentTarget.cloneNode(true) as HTMLElement;
+    preview.style.position = "absolute";
+    preview.style.top = "-1000px";
+    preview.style.left = "-1000px";
+    preview.style.width = `${bounds.width}px`;
+    preview.style.height = `${bounds.height}px`;
+    preview.style.opacity = "0.85";
+    preview.style.pointerEvents = "none";
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, e.clientX - bounds.left, offsetPx);
+    // Удаляем превью чуть позже, чтобы drag image успело примениться
+    setTimeout(() => {
+      document.body.removeChild(preview);
+    }, 0);
+  };
+
+  const handleDragEnd = () => {
+    dragInfo.current = null;
+    setTimeout(() => {
+      draggingRef.current = false;
+    }, 0);
+  };
+
+  const handleDrop = useCallback((
+    e: React.DragEvent<HTMLDivElement>,
+    dayStart: Date,
+    columnIndex: number,
+  ) => {
+    if (!dragInfo.current || !onEventMove) {
+      return;
+    }
+    e.preventDefault();
+    const columnEl = columnRefs.current[columnIndex];
+    if (!columnEl) {
+      return;
+    }
+    
+    // Получаем колонку дня для правильной даты
+    const dayColumn = dayColumns[columnIndex];
+    if (!dayColumn) {
+      return;
+    }
+    
+    const rect = columnEl.getBoundingClientRect();
+    // Вычисляем позицию в минутах от начала дня (0:00-23:59) в московском времени
+    let minutes = ((e.clientY - rect.top) / rect.height) * MINUTES_IN_DAY;
+    minutes = Math.max(0, Math.min(MINUTES_IN_DAY, minutes));
+    // Округляем до 5 минут для привязки
+    minutes = Math.round(minutes / 5) * 5;
+    
+    // Получаем компоненты дня в московском времени из dayColumn.date
+    const dayMoscow = getTimeInTimeZone(dayColumn.date, MOSCOW_TIMEZONE);
+    
+    // Вычисляем новые час и минуту в московском времени
+    const newHour = Math.floor(minutes / 60);
+    const newMinute = minutes % 60;
+    
+    // Создаем новую дату в московском времени
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(newHour)}:${pad(newMinute)}+03:00`;
+    const newStart = new Date(newStartStr);
+    
+    onEventMove(dragInfo.current.event, newStart);
+    dragInfo.current = null;
+    draggingRef.current = false;
+  }, [dayColumns, onEventMove]);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (dragInfo.current) {
+      e.preventDefault();
+    }
+  };
+
+  const handleCardClick = (eventRecord: EventRecord) => {
+    if (draggingRef.current) {
+      return;
+    }
+    onEventClick(eventRecord);
+  };
+
+  const handleMouseDown = (
+    e: React.MouseEvent<HTMLDivElement>,
+    columnIndex: number,
+    _dayStart: Date,
+  ) => {
+    if (!onTimeSlotClick || draggingRef.current || e.button !== 0) {
+      return;
+    }
+    // Проверяем, что клик не на событии
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-event-card]')) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const startY = e.clientY - rect.top;
+    
+    setSelection({
+      columnIndex,
+      startY,
+      endY: startY,
+      isActive: true,
+    });
+  };
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!selection?.isActive || !onTimeSlotClick) {
       return;
