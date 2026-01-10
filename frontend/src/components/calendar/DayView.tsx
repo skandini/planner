@@ -226,11 +226,18 @@ export function DayView({
   const handleTimeSlotClick = useCallback((hour: number, minute: number = 0) => {
     if (!onTimeSlotClick) return;
     
-    const startTime = new Date(day);
-    startTime.setHours(hour, minute, 0, 0);
+    // Получаем компоненты дня в московском времени
+    const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
     
-    const endTime = new Date(startTime);
-    endTime.setHours(hour + 1, 0, 0, 0);
+    // Создаем время, интерпретируя его как московское время
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const startDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(hour)}:${pad(minute)}`;
+    const endHour = (hour + 1) % 24;
+    const endDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(endHour)}:00`;
+    
+    // Конвертируем московское время в Date объекты (интерпретируем как московское и конвертируем в UTC)
+    const startTime = new Date(`${startDateStr}+03:00`);
+    const endTime = new Date(`${endDateStr}+03:00`);
     
     onTimeSlotClick(day, startTime, endTime);
   }, [day, onTimeSlotClick]);

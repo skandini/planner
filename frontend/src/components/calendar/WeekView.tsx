@@ -423,21 +423,23 @@ export function WeekView({
     const roundedStartMinutes = Math.floor(startMinutes / 15) * 15; // Округляем до 15 минут
     const roundedEndMinutes = Math.ceil(endMinutes / 15) * 15;
 
-    const startTime = new Date(dayColumn.dayStart);
-    startTime.setHours(
-      Math.floor(roundedStartMinutes / 60),
-      roundedStartMinutes % 60,
-      0,
-      0,
-    );
-
-    const endTime = new Date(dayColumn.dayStart);
-    endTime.setHours(
-      Math.floor(roundedEndMinutes / 60),
-      roundedEndMinutes % 60,
-      0,
-      0,
-    );
+    // Получаем компоненты дня в московском времени
+    const dayMoscow = getTimeInTimeZone(dayColumn.dayStart, MOSCOW_TIMEZONE);
+    
+    // Создаем время, интерпретируя его как московское время
+    const startHour = Math.floor(roundedStartMinutes / 60);
+    const startMinute = roundedStartMinutes % 60;
+    const endHour = Math.floor(roundedEndMinutes / 60);
+    const endMinute = roundedEndMinutes % 60;
+    
+    // Создаем строку в формате "YYYY-MM-DDTHH:mm" для московского времени
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const startDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(startHour)}:${pad(startMinute)}`;
+    const endDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(endHour)}:${pad(endMinute)}`;
+    
+    // Конвертируем московское время в Date объекты (интерпретируем как московское и конвертируем в UTC)
+    const startTime = new Date(`${startDateStr}+03:00`);
+    const endTime = new Date(`${endDateStr}+03:00`);
 
     onTimeSlotClick(dayColumn.dayStart, startTime, endTime);
     setSelection(null);

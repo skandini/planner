@@ -57,6 +57,7 @@ import {
   MOSCOW_TIMEZONE,
   toUTCString,
   toUTCDateISO,
+  getTimeInTimeZone,
 } from "@/lib/utils/dateUtils";
 import {
   API_BASE_URL,
@@ -1069,17 +1070,25 @@ export default function Home() {
         isSeriesChild: Boolean(event.recurrence_parent_id && !recurrenceRule),
       });
     } else {
-      const date = initialDate || selectedDate;
-      const start = startTime || (() => {
-        const s = new Date(date);
-        s.setHours(9, 0, 0, 0);
-        return s;
-      })();
-      const end = endTime || (() => {
-        const e = new Date(start);
-        e.setHours(10, 0, 0, 0);
-        return e;
-      })();
+      // startTime и endTime уже созданы в московском времени в WeekView/DayView
+      // Если они не переданы, создаем их как московское время
+      let start: Date;
+      let end: Date;
+      
+      if (startTime && endTime) {
+        // Используем переданные времена (уже в московском времени)
+        start = startTime;
+        end = endTime;
+      } else {
+        // Создаем время по умолчанию в московском времени
+        const date = initialDate || selectedDate;
+        const dateMoscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const startStr = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T09:00+03:00`;
+        const endStr = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T10:00+03:00`;
+        start = new Date(startStr);
+        end = new Date(endStr);
+      }
 
       setEventForm({
         title: "",
