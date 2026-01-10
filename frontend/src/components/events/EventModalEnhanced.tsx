@@ -11,7 +11,7 @@ import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventAttachments } from "@/components/events/EventAttachments";
 import { CommentsSection } from "@/components/events/CommentsSection";
-import { toUTCDateISO, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { toUTCDateISO, getTimeInTimeZone, parseUTC, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT, ROOM_ENDPOINT } from "@/lib/constants";
 
 interface EventModalEnhancedProps {
