@@ -7,7 +7,6 @@ import type { Room } from "@/types/room.types";
 import type { UserProfile, ParticipantProfile } from "@/types/user.types";
 import type { TimelineRowData } from "@/types/common.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
-import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
 import { inputToDate, toLocalString, toTimeZoneString } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
 
@@ -442,53 +441,12 @@ export function ResourcePanel({
         )}
       </div>
 
-      {/* Таймлайн - основной элемент */}
-      <EnhancedTimeline
-        key={`timeline-${form.participant_ids.join(',')}-${conflicts.length}`}
-        rows={timelineRows}
-        referenceDate={selectedDate}
-        selectedStart={form.starts_at}
-        selectedEnd={form.ends_at}
-        isAllDay={isAllDay}
-        errorMessage={participantAvailabilityError}
-        conflictMap={conflictMap}
-        getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-        users={users}
-        organizations={organizations}
-        departments={allDepartments}
-        apiBaseUrl={apiBaseUrl}
-        onRemoveParticipant={(participantId) => {
-          setForm((prev) => ({
-            ...prev,
-            participant_ids: prev.participant_ids.filter((id) => id !== participantId),
-          }));
-        }}
-        onTimeRangeSelect={(start, end) => {
-          // start и end уже в UTC, конвертируем их в московское время для отображения в форме
-          // Важно: сохраняем дату из selectedDate (viewDate), чтобы не менять день при клике на слот
-          const localStart = toTimeZoneString(start, 'Europe/Moscow');
-          const localEnd = toTimeZoneString(end, 'Europe/Moscow');
-          
-          // Получаем дату из selectedDate в правильном формате (локальное время)
-          const selectedDateLocal = new Date(selectedDate);
-          selectedDateLocal.setHours(0, 0, 0, 0);
-          const selectedDateStr = `${selectedDateLocal.getFullYear()}-${String(selectedDateLocal.getMonth() + 1).padStart(2, "0")}-${String(selectedDateLocal.getDate()).padStart(2, "0")}`;
-          
-          // Извлекаем только время из конвертированных значений
-          const startTime = localStart.split("T")[1];
-          const endTime = localEnd.split("T")[1];
-          
-          // Всегда используем дату из selectedDate, чтобы избежать проблем с конвертацией
-          const finalStart = `${selectedDateStr}T${startTime}`;
-          const finalEnd = `${selectedDateStr}T${endTime}`;
-          
-          setForm((prev) => ({
-            ...prev,
-            starts_at: finalStart,
-            ends_at: finalEnd,
-          }));
-        }}
-      />
+      {/* Информация о ресурсах */}
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <p className="text-sm text-slate-600">
+          Выберите время начала и окончания события в форме выше.
+        </p>
+      </div>
 
     </div>
   );

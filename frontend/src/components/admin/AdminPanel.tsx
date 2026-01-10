@@ -39,7 +39,6 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
     department_id: "",
     access_org_structure: true,
     access_tickets: true,
-    access_availability_slots: false,
   });
 
   const flattenedDepartments = useMemo(() => departments, [departments]);
@@ -107,7 +106,6 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
         department_id: form.department_id || null,
         access_org_structure: form.access_org_structure,
         access_tickets: form.access_tickets,
-        access_availability_slots: form.access_availability_slots,
       };
       const url = bootstrapMode
         ? `${API_BASE_URL}/users/bootstrap-admin`
@@ -149,7 +147,6 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       if (changes.role) payload.role = changes.role;
       if (typeof changes.access_org_structure === "boolean") payload.access_org_structure = changes.access_org_structure;
       if (typeof changes.access_tickets === "boolean") payload.access_tickets = changes.access_tickets;
-      if (typeof changes.access_availability_slots === "boolean") payload.access_availability_slots = changes.access_availability_slots;
       if (changes.department_id !== undefined) payload.department_id = changes.department_id;
 
       const res = await authFetch(`${USERS_ENDPOINT}${user.id}`, {
@@ -376,14 +373,6 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
               />
               Доступ к тикетам
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.access_availability_slots}
-                onChange={(e) => setForm({ ...form, access_availability_slots: e.target.checked })}
-              />
-              Доступ к предложениям слотов
-            </label>
           </div>
         </div>
         <div className="mt-3">
@@ -464,15 +453,6 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                           onChange={(e) => handleUpdate(u, { access_tickets: e.target.checked })}
                         />
                         Тикеты
-                      </label>
-                      <label className="inline-flex items-center gap-2 text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={u.access_availability_slots === true}
-                          disabled={savingId === u.id}
-                          onChange={(e) => handleUpdate(u, { access_availability_slots: e.target.checked })}
-                        />
-                        Предложения слотов
                       </label>
                     </div>
                   </td>
