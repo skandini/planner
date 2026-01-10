@@ -506,13 +506,17 @@ export function WeekView({
             className={`border-l border-slate-200 p-2 bg-slate-50 ${isToday ? "bg-lime-50" : ""}`}
           >
             <p className="uppercase text-[0.65rem] tracking-[0.3em] text-slate-400">
-              {formatDate(date, { weekday: "short" })}
+              {new Intl.DateTimeFormat("ru-RU", { 
+                weekday: "short",
+                timeZone: MOSCOW_TIMEZONE 
+              }).format(date)}
             </p>
             <div className="mt-0.5 flex items-baseline gap-1.5">
               <p className="text-base font-semibold">
                 {new Intl.DateTimeFormat("ru-RU", {
                   day: "numeric",
                   month: "short",
+                  timeZone: MOSCOW_TIMEZONE,
                 }).format(date)}
               </p>
               {isToday && (
