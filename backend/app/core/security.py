@@ -11,39 +11,43 @@ os.environ.setdefault("PASSLIB_BCRYPT_STRICT", "0")
 try:
     # Импортируем модуль passlib.handlers.bcrypt
     import passlib.handlers.bcrypt as bcrypt_module
-    import types
     
     # Патчим функцию detect_wrap_bug - это статический метод класса
     def _patched_detect_wrap_bug(ident):
         # Всегда возвращаем False, чтобы пропустить проверку с длинным паролем
         return False
     
-    # Применяем патч - заменяем функцию в модуле
+    # Применяем патч на всех возможных уровнях
+    # 1. Патчим функцию в модуле
     bcrypt_module.detect_wrap_bug = _patched_detect_wrap_bug
     
-    # Патчим все классы bcrypt в модуле - более агрессивный подход
+    # 2. Патчим через __dict__ модуля
+    if hasattr(bcrypt_module, '__dict__'):
+        bcrypt_module.__dict__['detect_wrap_bug'] = _patched_detect_wrap_bug
+    
+    # 3. Патчим все классы bcrypt в модуле
     for name in dir(bcrypt_module):
         try:
-            obj = getattr(bcrypt_module, name)
-            # Если это класс и у него есть detect_wrap_bug
+            obj = getattr(bcrypt_module, name, None)
+            if obj is None:
+                continue
+                
+            # Если это класс
             if isinstance(obj, type):
                 # Патчим через __dict__ класса
-                if hasattr(obj, '__dict__') and 'detect_wrap_bug' in obj.__dict__:
+                if hasattr(obj, '__dict__'):
                     obj.__dict__['detect_wrap_bug'] = staticmethod(_patched_detect_wrap_bug)
                 # Также патчим через setattr
-                if hasattr(obj, 'detect_wrap_bug'):
-                    setattr(obj, 'detect_wrap_bug', staticmethod(_patched_detect_wrap_bug))
+                setattr(obj, 'detect_wrap_bug', staticmethod(_patched_detect_wrap_bug))
+                
+                # Патчим все классы в MRO (Method Resolution Order)
+                for cls in obj.__mro__:
+                    if hasattr(cls, '__dict__'):
+                        cls.__dict__['detect_wrap_bug'] = staticmethod(_patched_detect_wrap_bug)
+                    setattr(cls, 'detect_wrap_bug', staticmethod(_patched_detect_wrap_bug))
         except Exception:
             # Игнорируем ошибки при патчинге отдельных атрибутов
             pass
-    
-    # Патчим функцию напрямую в модуле
-    if hasattr(bcrypt_module, 'detect_wrap_bug'):
-        bcrypt_module.detect_wrap_bug = _patched_detect_wrap_bug
-    
-    # Также патчим через __dict__ модуля
-    if hasattr(bcrypt_module, '__dict__'):
-        bcrypt_module.__dict__['detect_wrap_bug'] = _patched_detect_wrap_bug
         
 except Exception as e:
     # Если патч не удался, логируем и продолжаем
