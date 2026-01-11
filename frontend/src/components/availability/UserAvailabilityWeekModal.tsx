@@ -20,7 +20,7 @@ interface UserAvailabilityWeekModalProps {
   onWeekChange?: (weekStart: Date) => void;
 }
 
-const HOUR_HEIGHT = 48; // Уменьшено для более компактного отображения
+const HOUR_HEIGHT = 60;
 const DAY_HEIGHT = 24 * HOUR_HEIGHT;
 const MINUTES_IN_DAY = 24 * 60;
 
@@ -140,22 +140,22 @@ export function UserAvailabilityWeekModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white p-6 flex-shrink-0">
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-xl font-semibold text-slate-900">
               {user?.full_name || user?.email || "Пользователь"}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">{user?.email}</p>
+            <p className="text-sm text-slate-500 mt-1">{user?.email}</p>
           </div>
 
           {!isMember && (
-            <div className="mr-3">
+            <div className="mr-4">
               {addToCalendarError && (
-                <p className="text-xs text-red-600 mb-1">{addToCalendarError}</p>
+                <p className="text-xs text-red-600 mb-2">{addToCalendarError}</p>
               )}
               <button
                 type="button"
                 onClick={onAddToCalendar}
                 disabled={addToCalendarLoading}
-                className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {addToCalendarLoading ? "Добавляем..." : "Добавить в календарь"}
               </button>
@@ -165,34 +165,34 @@ export function UserAvailabilityWeekModal({
           <button
             type="button"
             onClick={onClose}
-            className="ml-3 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+            className="ml-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
             aria-label="Закрыть"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Week Navigation */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 flex-shrink-0">
           <button
             type="button"
             onClick={() => navigateWeek("prev")}
-            className="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
           >
-            ← Пред.
+            ← Предыдущая неделя
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={goToToday}
-              className="rounded-lg px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
             >
               Сегодня
             </button>
-            <span className="text-xs font-semibold text-slate-900">
+            <span className="text-sm font-semibold text-slate-900">
               {formatDate(weekDays[0], { day: "numeric", month: "long" })} — {formatDate(weekDays[6], { day: "numeric", month: "long", year: "numeric" })}
             </span>
           </div>
@@ -200,56 +200,56 @@ export function UserAvailabilityWeekModal({
           <button
             type="button"
             onClick={() => navigateWeek("next")}
-            className="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
           >
-            След. →
+            Следующая неделя →
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-3">
+        <div className="flex-1 overflow-auto p-6">
           {error && !error.includes("not a member") && (
-            <div className="mb-2 rounded-lg border border-red-200 bg-red-50 p-2">
-              <p className="text-xs text-red-700">{error}</p>
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
           {!isMember && !error && !loading && (
-            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 p-2">
-              <p className="text-xs text-amber-800">
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm text-amber-800">
                 Чтобы увидеть доступность пользователя, добавьте его в календарь
               </p>
             </div>
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-sm text-slate-500">Загружаем доступность...</p>
+            <div className="flex items-center justify-center h-96">
+              <p className="text-slate-500">Загружаем доступность...</p>
             </div>
           ) : (error && error.includes("not a member")) || (!isMember && !loading) ? (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-sm text-slate-500">Доступность недоступна</p>
+            <div className="flex items-center justify-center h-96">
+              <p className="text-slate-500">Доступность недоступна</p>
             </div>
           ) : (
             <div className="relative">
               {/* Days Header */}
-              <div className="sticky top-0 z-10 bg-white border-b border-slate-200 mb-1">
-                <div className="grid grid-cols-8 gap-1">
-                  <div className="p-1"></div>
+              <div className="sticky top-0 z-10 bg-white border-b border-slate-200 mb-2">
+                <div className="grid grid-cols-8 gap-2">
+                  <div className="p-2"></div>
                   {weekDays.map((day) => {
                     const dayKey = day.toDateString();
                     const today = isToday(day);
                     return (
                       <div
                         key={dayKey}
-                        className={`p-2 rounded text-center ${
+                        className={`p-3 rounded-lg text-center ${
                           today ? "bg-lime-100 border-2 border-lime-500" : "bg-slate-50"
                         }`}
                       >
-                        <div className="text-[0.65rem] font-semibold uppercase text-slate-500 mb-0.5">
+                        <div className="text-xs font-semibold uppercase text-slate-500 mb-1">
                           {["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"][day.getDay()]}
                         </div>
-                        <div className={`text-sm font-bold ${today ? "text-lime-700" : "text-slate-900"}`}>
+                        <div className={`text-lg font-bold ${today ? "text-lime-700" : "text-slate-900"}`}>
                           {day.getDate()}
                         </div>
                       </div>
@@ -259,15 +259,15 @@ export function UserAvailabilityWeekModal({
               </div>
 
               {/* Time Grid */}
-              <div className="grid grid-cols-8 gap-1">
+              <div className="grid grid-cols-8 gap-2">
                 {/* Time Column */}
                 <div className="flex flex-col">
                   {hours.map((hour) => (
                     <div
                       key={hour}
-                      className="h-[48px] border-b border-slate-100 flex items-start justify-end pr-1.5 pt-0.5"
+                      className="h-[60px] border-b border-slate-100 flex items-start justify-end pr-2 pt-1"
                     >
-                      <span className="text-[0.65rem] text-slate-500">{String(hour).padStart(2, "0")}:00</span>
+                      <span className="text-xs text-slate-500">{String(hour).padStart(2, "0")}:00</span>
                     </div>
                   ))}
                 </div>
@@ -279,14 +279,14 @@ export function UserAvailabilityWeekModal({
                   const today = isToday(day);
 
                   return (
-                    <div key={dayKey} className="relative border border-slate-200 rounded overflow-hidden">
+                    <div key={dayKey} className="relative border border-slate-200 rounded-lg overflow-hidden">
                       <div className="absolute inset-0">
                         {/* Hour Lines */}
                         {hours.map((hour) => (
                           <div
                             key={hour}
                             className="absolute left-0 right-0 border-b border-slate-100"
-                            style={{ top: `${hour * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+                            style={{ top: `${hour * HOUR_HEIGHT}px` }}
                           />
                         ))}
 
