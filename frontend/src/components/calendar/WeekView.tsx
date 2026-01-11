@@ -756,9 +756,16 @@ export function WeekView({
                       }}
                     >
                       <div className="flex items-start justify-between gap-1">
-                        <p className={`text-xs font-semibold leading-tight truncate flex-1 ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
-                          {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                            {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
+                          </p>
+                          {isAvailable && event.description && event.description !== event.title && (
+                            <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
                         {/* Индикаторы вложений и комментариев */}
                         {!isUnavailable && !isAvailable && !isBookedSlot && (
                           <div className="flex items-center gap-0.5 flex-shrink-0">
