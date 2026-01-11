@@ -1891,94 +1891,34 @@ export default function Home() {
 
               {(() => {
 
-                const getDaysInMonth = (date: Date) => {
-                  const year = date.getFullYear();
-                  const month = date.getMonth();
-                  const firstDay = new Date(year, month, 1);
-                  const lastDay = new Date(year, month + 1, 0);
-                  const daysInMonth = lastDay.getDate();
-                  const startingDayOfWeek = firstDay.getDay();
-                  
-                  const days: Array<{ date: Date; isCurrentMonth: boolean; hasEvents: boolean; eventCount: number }> = [];
-                  
-                  // Функция для нормализации даты (только год, месяц, день)
-                  const normalizeDate = (d: Date): string => {
-                    const year = d.getFullYear();
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                  };
-                  
-                  // Добавляем дни предыдущего месяца для заполнения первой недели
-                  const prevMonth = new Date(year, month - 1, 0);
-                  const daysInPrevMonth = prevMonth.getDate();
-                  for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-                    const date = new Date(year, month - 1, daysInPrevMonth - i);
-                    const dateStr = normalizeDate(date);
-                    const dayEvents = events.filter(e => {
-                      // Пропускаем события расписания доступности (unavailable, available)
-                      if (e.status === "unavailable" || e.status === "available") {
-                        return false;
-                      }
-                      const eventDate = new Date(e.starts_at);
-                      const eventDateStr = normalizeDate(eventDate);
-                      return eventDateStr === dateStr;
-                    });
-                    days.push({
-                      date,
-                      isCurrentMonth: false,
-                      hasEvents: dayEvents.length > 0,
-                      eventCount: dayEvents.length,
-                    });
-                  }
-                  
-                  // Добавляем дни текущего месяца
-                  for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(year, month, day);
-                    const dateStr = normalizeDate(date);
-                    const dayEvents = events.filter(e => {
-                      // Пропускаем события расписания доступности (unavailable, available)
-                      if (e.status === "unavailable" || e.status === "available") {
-                        return false;
-                      }
-                      const eventDate = new Date(e.starts_at);
-                      const eventDateStr = normalizeDate(eventDate);
-                      return eventDateStr === dateStr;
-                    });
-                    days.push({
-                      date,
-                      isCurrentMonth: true,
-                      hasEvents: dayEvents.length > 0,
-                      eventCount: dayEvents.length,
-                    });
-                  }
-                  
-                  // Добавляем дни следующего месяца для заполнения последней недели
-                  const remainingDays = 42 - days.length; // 6 недель * 7 дней
-                  for (let day = 1; day <= remainingDays; day++) {
-                    const date = new Date(year, month + 1, day);
-                    const dateStr = normalizeDate(date);
-                    const dayEvents = events.filter(e => {
-                      // Пропускаем события расписания доступности (unavailable, available)
-                      if (e.status === "unavailable" || e.status === "available") {
-                        return false;
-                      }
-                      const eventDate = new Date(e.starts_at);
-                      const eventDateStr = normalizeDate(eventDate);
-                      return eventDateStr === dateStr;
-                    });
-                    days.push({
-                      date,
-                      isCurrentMonth: false,
-                      hasEvents: dayEvents.length > 0,
-                      eventCount: dayEvents.length,
-                    });
-                  }
-                  
-                  return days;
+                // Функция для нормализации даты (только год, месяц, день)
+                const normalizeDate = (d: Date): string => {
+                  const year = d.getFullYear();
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
                 };
 
-                const miniCalendarDays = getDaysInMonth(miniCalendarMonth);
+                // Используем getMonthGridDays для правильного выравнивания дней недели
+                const gridDays = getMonthGridDays(miniCalendarMonth);
+                const miniCalendarDays = gridDays.map((day) => {
+                  const dateStr = normalizeDate(day);
+                  const dayEvents = events.filter(e => {
+                    // Пропускаем события расписания доступности (unavailable, available)
+                    if (e.status === "unavailable" || e.status === "available") {
+                      return false;
+                    }
+                    const eventDate = new Date(e.starts_at);
+                    const eventDateStr = normalizeDate(eventDate);
+                    return eventDateStr === dateStr;
+                  });
+                  return {
+                    date: day,
+                    isCurrentMonth: day.getMonth() === miniCalendarMonth.getMonth(),
+                    hasEvents: dayEvents.length > 0,
+                    eventCount: dayEvents.length,
+                  };
+                });
                 const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
                 const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
                 const today = new Date();
@@ -2052,8 +1992,8 @@ export default function Home() {
                     {/* Дни месяца */}
                     <div className="grid grid-cols-7 gap-1">
                       {miniCalendarDays.map((day, index) => {
-                        const dayDate = new Date(day.date);
-                        dayDate.setHours(0, 0, 0, 0);
+                        // Используем дату напрямую, так как она уже создана правильно в московском времени
+                        const dayDate = day.date;
                         const dayIsToday = isToday(dayDate);
                         const dayIsSelected = isSelected(dayDate);
 
