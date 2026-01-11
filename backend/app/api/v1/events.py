@@ -7,10 +7,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import and_, delete, or_, select
+from sqlalchemy import func
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, Event, EventAttachment, EventParticipant, User, UserAvailabilitySchedule
+from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, User, UserAvailabilitySchedule
 from app.schemas import (
     EventCreate,
     EventRead,
@@ -188,12 +189,20 @@ def _serialize_event_with_participants(
         if room and room.online_meeting_url:
             room_online_meeting_url = room.online_meeting_url
     
+    # Get comment count
+    comment_count_stmt = select(func.count(EventComment.id)).where(
+        EventComment.event_id == event.id,
+        EventComment.is_deleted == False
+    )
+    comment_count = session.exec(comment_count_stmt).one() or 0
+    
     return EventRead.model_validate(event).model_copy(
         update={
             "participants": participants,
             "attachments": attachments,
             "department_color": department_color,
             "room_online_meeting_url": room_online_meeting_url,
+            "comments_count": comment_count,
         }
     )
 
@@ -641,6 +650,19 @@ def list_events(
                 attachments_map[att.event_id] = []
             attachments_map[att.event_id].append(EventAttachmentRead.model_validate(att))
 
+    # Предзагружаем количество комментариев для всех событий одним запросом
+    comments_count_map = {}
+    if event_ids:
+        comment_counts_stmt = select(
+            EventComment.event_id,
+            func.count(EventComment.id).label("count")
+        ).where(
+            EventComment.event_id.in_(event_ids),
+            EventComment.is_deleted == False
+        ).group_by(EventComment.event_id)
+        comment_counts_result = session.exec(comment_counts_stmt).all()
+        comments_count_map = {event_id: count for event_id, count in comment_counts_result}
+
     # Предзагружаем комнаты для всех событий одним запросом
     from app.models import Room
     room_ids = {event.room_id for event in events if event.room_id}
@@ -705,6 +727,8 @@ def list_events(
             if room.online_meeting_url:
                 room_online_meeting_url = room.online_meeting_url
         
+        comment_count = comments_count_map.get(event.id, 0)
+        
         serialized.append(
             EventRead.model_validate(event).model_copy(
                 update={
@@ -712,6 +736,7 @@ def list_events(
                     "attachments": attachments,
                     "department_color": department_color,
                     "room_online_meeting_url": room_online_meeting_url,
+                    "comments_count": comment_count,
                 }
             )
         )

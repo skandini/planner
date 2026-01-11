@@ -77,6 +77,7 @@ class EventRead(EventBase):
     attachments: Optional[List["EventAttachmentRead"]] = None
     department_color: Optional[str] = None  # Color from the first participant's department
     room_online_meeting_url: Optional[str] = None  # Online meeting URL from the room
+    comments_count: int = 0  # Количество комментариев к событию
 
     model_config = ConfigDict(from_attributes=True)
 

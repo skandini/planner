@@ -32,6 +32,7 @@ export type EventRecord = {
   attachments?: EventAttachment[];
   department_color?: string | null;
   room_online_meeting_url?: string | null;
+  comments_count?: number; // Количество комментариев к событию
 };
 
 export type ConflictEvent = {

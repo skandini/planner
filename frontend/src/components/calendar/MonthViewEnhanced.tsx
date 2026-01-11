@@ -196,14 +196,21 @@ export function MonthViewEnhanced({
                           <p className="font-semibold text-slate-900 truncate leading-tight flex-1">
                             {event.title}
                           </p>
-                          {/* Индикаторы вложений */}
-                          {event.attachments && event.attachments.length > 0 && (
-                            <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center flex-shrink-0" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
-                              <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
+                          {/* Индикаторы вложений и комментариев */}
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            {event.attachments && event.attachments.length > 0 && (
+                              <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                                <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                            {event.comments_count && event.comments_count > 0 && (
+                              <div className="w-3 h-3 rounded-full bg-red-500/80 flex items-center justify-center" title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
+                                <span className="text-[0.65rem] font-semibold text-white leading-none">{event.comments_count}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {hasRoom && (
