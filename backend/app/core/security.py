@@ -48,6 +48,33 @@ try:
         except Exception:
             # Игнорируем ошибки при патчинге отдельных атрибутов
             pass
+    
+    # 4. Патчим _bcrypt.hashpw напрямую для обрезки паролей
+    try:
+        import bcrypt as _bcrypt_module
+        _original_hashpw = _bcrypt_module.hashpw
+        
+        def _patched_hashpw(secret, salt):
+            # Обрезаем пароль до 72 байт перед передачей в bcrypt
+            if isinstance(secret, bytes):
+                if len(secret) > 72:
+                    secret = secret[:72]
+            elif isinstance(secret, str):
+                secret_bytes = secret.encode('utf-8')
+                if len(secret_bytes) > 72:
+                    truncated = secret_bytes[:72]
+                    while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
+                        truncated = truncated[:-1]
+                    secret = truncated if truncated else secret_bytes[:72]
+            return _original_hashpw(secret, salt)
+        
+        _bcrypt_module.hashpw = _patched_hashpw
+        # Также патчим в passlib.handlers.bcrypt, если он использует свой импорт
+        if hasattr(bcrypt_module, '_bcrypt'):
+            bcrypt_module._bcrypt.hashpw = _patched_hashpw
+    except Exception:
+        # Если не удалось патчить _bcrypt, продолжаем без этого
+        pass
         
 except Exception as e:
     # Если патч не удался, логируем и продолжаем
