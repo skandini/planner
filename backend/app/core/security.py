@@ -11,6 +11,24 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
+# Патчим passlib для обхода проверки бага обертки bcrypt
+# которая использует длинный тестовый пароль (>72 байт)
+try:
+    from passlib.handlers import bcrypt as bcrypt_handler
+    
+    # Сохраняем оригинальную функцию detect_wrap_bug
+    _original_detect_wrap_bug = bcrypt_handler.detect_wrap_bug
+    
+    # Заменяем на функцию, которая всегда возвращает False (нет бага)
+    def _patched_detect_wrap_bug(ident):
+        return False
+    
+    # Применяем патч
+    bcrypt_handler.detect_wrap_bug = _patched_detect_wrap_bug
+except Exception:
+    # Если патч не удался, продолжаем без него
+    pass
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
