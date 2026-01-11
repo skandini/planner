@@ -1,0 +1,19 @@
+[Unit]
+Description=Planner Celery Worker
+After=network.target redis-server.service planner-backend.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/planner/backend
+Environment="PATH=/opt/planner/backend/.venv/bin"
+ExecStart=/opt/planner/backend/.venv/bin/celery -A app.celery_app worker --loglevel=info --concurrency=2 --max-tasks-per-child=500
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
