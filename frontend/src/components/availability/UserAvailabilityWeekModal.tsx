@@ -311,8 +311,9 @@ export function UserAvailabilityWeekModal({
                           let eventEndMinutes = eventEndMoscow.hour * 60 + eventEndMoscow.minute;
 
                           // Проверяем, попадает ли событие в текущий день (по московскому времени)
-                          const eventStartDayKey = `${eventStartMoscow.year}-${eventStartMoscow.month}-${eventStartMoscow.day}`;
-                          const dayKey = `${dayMoscow.year}-${dayMoscow.month}-${dayMoscow.day}`;
+                          // month в getTimeInTimeZone возвращает 0-11, поэтому добавляем 1 для сравнения
+                          const eventStartDayKey = `${eventStartMoscow.year}-${eventStartMoscow.month + 1}-${eventStartMoscow.day}`;
+                          const dayKey = `${dayMoscow.year}-${dayMoscow.month + 1}-${dayMoscow.day}`;
                           
                           // Если событие начинается в другом дне, показываем с начала дня
                           if (eventStartDayKey !== dayKey) {
@@ -320,15 +321,16 @@ export function UserAvailabilityWeekModal({
                           }
 
                           // Если событие заканчивается в другом дне, показываем до конца дня
-                          const eventEndDayKey = `${eventEndMoscow.year}-${eventEndMoscow.month}-${eventEndMoscow.day}`;
+                          const eventEndDayKey = `${eventEndMoscow.year}-${eventEndMoscow.month + 1}-${eventEndMoscow.day}`;
                           if (eventEndDayKey !== dayKey) {
                             eventEndMinutes = MINUTES_IN_DAY;
                           }
 
                           const startMinutes = Math.max(0, Math.min(MINUTES_IN_DAY, eventStartMinutes));
                           const endMinutes = Math.max(startMinutes, Math.min(MINUTES_IN_DAY, eventEndMinutes));
+                          const durationMinutes = endMinutes - startMinutes;
                           const topPx = (startMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
-                          const heightPx = ((endMinutes - startMinutes) / MINUTES_IN_DAY) * DAY_HEIGHT;
+                          const heightPx = (durationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
 
                           if (heightPx <= 0) {
                             return null;
