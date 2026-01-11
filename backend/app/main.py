@@ -14,12 +14,12 @@ from app.db import init_db
 def create_application() -> FastAPI:
     app = FastAPI(title=settings.PROJECT_NAME, version="0.1.0")
 
-    # CORS middleware - максимально простой и надежный
+    # CORS middleware - настроен для безопасности
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Разрешаем все origins для упрощения
+        allow_origins=settings.cors_origins_list,  # Разрешенные домены из конфигурации
         allow_credentials=True,
-        allow_methods=["*"],  # Разрешаем все методы
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],  # Разрешаем все заголовки
         expose_headers=["*"],
     )

@@ -19,11 +19,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "local"
     # Храним БД в корне проекта, чтобы при запуске из любого каталога использовать один файл
     DATABASE_URL: str = "sqlite:///../calendar.db"
-    SECRET_KEY: str = "changeme"
+    SECRET_KEY: str = "changeme"  # Должен быть установлен через переменную окружения в .env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     JWT_ALGORITHM: str = "HS256"
-    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+    BACKEND_CORS_ORIGINS: str = "https://calendar.corestone.ru,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
     
     # Redis configuration
     REDIS_URL: str = "redis://localhost:6379/0"
