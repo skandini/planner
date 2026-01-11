@@ -102,16 +102,16 @@ if __name__ == "__main__":
     params = get_db_params()
     print(f"\nDATABASE_URL из .env: {params['full_url'].split('@')[-1] if '@' in params['full_url'] else params['full_url']}")
     
-    # Проверяем текущую версию
-    current_version = check_current_version()
-    
-    if current_version:
-        print(f"\nДля исправления миграций выполните:")
-        print(f"  python check_migration_version.py --update")
-        print(f"\nИли вручную через psql:")
-        print(f"  psql -h {params['host']} -U {params['user']} -d {params['database']} -c \"UPDATE alembic_version SET version_num = '20309e2890d1';\"")
-    
     # Если передан аргумент --update, обновляем версию
     if len(sys.argv) > 1 and sys.argv[1] == '--update':
         update_version()
+    else:
+        # Проверяем текущую версию
+        current_version = check_current_version()
+        
+        if current_version:
+            print(f"\nДля исправления миграций выполните:")
+            print(f"  python check_migration_version.py --update")
+            print(f"\nИли вручную через psql:")
+            print(f"  psql -h {params['host']} -U {params['user']} -d {params['database']} -c \"UPDATE alembic_version SET version_num = '20309e2890d1';\"")
 
