@@ -20,12 +20,12 @@ from app.schemas import (
     RecurrenceRule,
 )
 from app.schemas.event_attachment import EventAttachmentRead
-from app.services.notifications import (
-    notify_event_cancelled,
-    notify_event_invited,
-    notify_event_updated,
-    notify_participant_response,
-    schedule_reminders_for_event,
+from app.services.notifications import schedule_reminders_for_event
+from app.tasks.notifications import (
+    notify_event_cancelled_task,
+    notify_event_invited_task,
+    notify_event_updated_task,
+    notify_participant_response_task,
 )
 
 router = APIRouter()
@@ -853,19 +853,16 @@ def create_event(
             if participant_ids:
                 _attach_participants(session, child_event.id, participant_ids)
 
-    # Create notifications for participants
+    # Create notifications for participants (асинхронно через Celery)
     if participant_ids:
         inviter_name = current_user.full_name or current_user.email
-        notified_count = 0
         for participant_id in participant_ids:
             if participant_id != current_user.id:  # Don't notify yourself
-                notify_event_invited(
-                    session=session,
-                    user_id=participant_id,
-                    event=event,
+                notify_event_invited_task.delay(
+                    user_id=str(participant_id),
+                    event_id=str(event.id),
                     inviter_name=inviter_name,
                 )
-                notified_count += 1
 
     # Schedule reminders
     schedule_reminders_for_event(session, event)
@@ -992,15 +989,14 @@ def update_event(
 
     session.add(event)
     
-    # Notify participants about update
+    # Notify participants about update (асинхронно через Celery)
     participant_ids = _get_event_participant_ids(session, event_id)
     updater_name = current_user.full_name or current_user.email
     for participant_id in participant_ids:
         if participant_id != current_user.id:  # Don't notify yourself
-            notify_event_updated(
-                session=session,
-                user_id=participant_id,
-                event=event,
+            notify_event_updated_task.delay(
+                user_id=str(participant_id),
+                event_id=str(event_id),
                 updater_name=updater_name,
             )
     
@@ -1033,12 +1029,11 @@ def update_event(
                 response_status="needs_action",
             )
             session.add(participant)
-            # Отправляем уведомление новым участникам
+            # Отправляем уведомление новым участникам (асинхронно через Celery)
             if user_id != current_user.id:
-                notify_event_invited(
-                    session=session,
-                    user_id=user_id,
-                    event=event,
+                notify_event_invited_task.delay(
+                    user_id=str(user_id),
+                    event_id=str(event_id),
                     inviter_name=updater_name,
                 )
         
@@ -1101,18 +1096,18 @@ def update_participant_status(
         session.add(participant)
         session.commit()
 
-        # Уведомляем организатора события об изменении статуса участника
+        # Уведомляем организатора события об изменении статуса участника (асинхронно через Celery)
         calendar = session.get(Calendar, event.calendar_id)
         if calendar and calendar.owner_id:
             if calendar.owner_id != current_user.id:
                 try:
-                    notify_participant_response(
-                        session=session,
-                        user_id=calendar.owner_id,
-                        event=event,
-                        participant_name=current_user.full_name or current_user.email,
+                    participant_name = current_user.full_name or current_user.email
+                    notify_participant_response_task.delay(
+                        calendar_owner_id=str(calendar.owner_id),
+                        event_id=str(event_id),
+                        participant_name=participant_name,
+                        response_status=payload.response_status,
                         old_status=old_status,
-                        new_status=payload.response_status,
                     )
                 except Exception as e:
                     # Логируем ошибку уведомления, но не прерываем обновление статуса
@@ -1178,13 +1173,12 @@ def delete_event(
             )
         ).all()
         if series_ids:
-            # Notify participants
+            # Notify participants (асинхронно через Celery)
             for participant_id in participant_ids:
                 if participant_id != current_user.id:
-                    notify_event_cancelled(
-                        session=session,
-                        user_id=participant_id,
-                        event=event,
+                    notify_event_cancelled_task.delay(
+                        user_id=str(participant_id),
+                        event_id=str(event.id),
                         canceller_name=canceller_name,
                     )
             session.exec(
@@ -1196,13 +1190,12 @@ def delete_event(
         else:
             session.delete(event)
     else:
-        # Notify participants
+        # Notify participants (асинхронно через Celery)
         for participant_id in participant_ids:
             if participant_id != current_user.id:
-                notify_event_cancelled(
-                    session=session,
-                    user_id=participant_id,
-                    event=event,
+                notify_event_cancelled_task.delay(
+                    user_id=str(participant_id),
+                    event_id=str(event_id),
                     canceller_name=canceller_name,
                 )
         session.exec(
