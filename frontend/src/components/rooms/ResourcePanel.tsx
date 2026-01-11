@@ -427,18 +427,8 @@ export function ResourcePanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Переговорка</h3>
-        {form.room_id && selectedRoom && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 border border-indigo-200">
-            <span>🏢</span>
-            <span>{selectedRoom.name}</span>
-          </span>
-        )}
-      </div>
-
       {roomsLoading ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-xs text-slate-500">
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
           <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500"></div>
           Загрузка...
         </div>

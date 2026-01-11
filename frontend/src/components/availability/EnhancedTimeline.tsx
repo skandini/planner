@@ -423,18 +423,19 @@ export function EnhancedTimeline({
 
   return (
     <div className="space-y-4">
-      {/* Упрощенная легенда - только два состояния */}
+      {/* Легенда с тремя состояниями */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
         <div className="flex items-center gap-1.5">
-          <div 
-            className="h-2.5 w-2.5 rounded border" 
-            style={{ backgroundColor: accentColor, borderColor: accentColor }}
-          />
+          <div className="h-2.5 w-2.5 rounded border border-red-600 bg-red-500" />
           <span className="text-[0.65rem] font-medium text-slate-700">Занято</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded bg-white border border-slate-300" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Доступно</span>
+          <div className="h-2.5 w-2.5 rounded border border-gray-400 bg-gray-300" />
+          <span className="text-[0.65rem] font-medium text-slate-700">Свободно</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded border border-blue-600 bg-blue-500" />
+          <span className="text-[0.65rem] font-medium text-slate-700">Выбрано</span>
         </div>
       </div>
 
@@ -471,7 +472,7 @@ export function EnhancedTimeline({
             return (
               <div
                 key={row.id}
-                className={`grid gap-2 rounded-lg border transition-all shadow-sm ${
+                className={`grid rounded-lg border transition-all shadow-sm ${
                   hasConflict
                     ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50"
                     : "border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:border-slate-300 hover:shadow-md"
@@ -543,6 +544,10 @@ export function EnhancedTimeline({
                     const slotMoscow = getTimeInTimeZone(slotStart, MOSCOW_TIMEZONE);
                     const slotTimeLabel = `${String(slotMoscow.hour).padStart(2, "0")}:${String(slotMoscow.minute).padStart(2, "0")}`;
 
+                    // Проверяем, попадает ли слот в выбранный диапазон
+                    const isSelected = selectionRange.start && selectionRange.end && 
+                      slotStart >= selectionRange.start && slotEnd <= selectionRange.end;
+
                     // Формируем tooltip для события с временем в московском времени
                     let tooltipText = "";
                     if (eventInSlot) {
@@ -554,18 +559,21 @@ export function EnhancedTimeline({
                       const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
                       tooltipText = `${eventInSlot.title} (${eventStartTime} - ${eventEndTime})`;
                     } else {
-                      tooltipText = state === "busy" ? "Занято" : "Доступно - кликните для выбора времени";
+                      tooltipText = state === "busy" ? "Занято" : isSelected ? "Выбрано" : "Доступно - кликните для выбора времени";
                     }
 
-                  // Упрощенная цветовая схема - только два состояния
-                  let slotClassName = "h-8 rounded-md transition-all border shadow-sm ";
+                  // Цветовая схема: занятое - красным, свободное - серым, выбранное - голубым
+                  let slotClassName = "h-8 transition-all border ";
                   
                   if (state === "busy") {
-                    // Занято - используем цвет календаря (accent color)
-                    slotClassName += "cursor-not-allowed opacity-80";
+                    // Занято - красный цвет
+                    slotClassName += "bg-red-500 border-red-600 cursor-not-allowed";
+                  } else if (isSelected) {
+                    // Выбранное - голубой цвет
+                    slotClassName += "bg-blue-500 border-blue-600 cursor-pointer";
                   } else {
-                    // Доступно - белый фон
-                    slotClassName += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md cursor-pointer";
+                    // Свободное - серый цвет
+                    slotClassName += "bg-gray-300 border-gray-400 hover:bg-gray-400 cursor-pointer";
                   }
 
                   return (
@@ -581,7 +589,6 @@ export function EnhancedTimeline({
                           handleSlotMouseDown(slot.index, e);
                         }
                       }}
-                      style={state === "busy" ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
                       title={tooltipText}
                     />
                   );
