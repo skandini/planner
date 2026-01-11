@@ -755,9 +755,23 @@ export function WeekView({
                           : undefined,
                       }}
                     >
-                      <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
-                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
-                      </p>
+                      <div className="flex items-start justify-between gap-1">
+                        <p className={`text-xs font-semibold leading-tight truncate flex-1 ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                          {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
+                        </p>
+                        {/* Индикаторы вложений и комментариев */}
+                        {!isUnavailable && !isAvailable && !isBookedSlot && (
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            {event.attachments && event.attachments.length > 0 && (
+                              <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                                <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {isAvailable && event.description && event.description !== event.title && (
                         <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
                           {event.description}

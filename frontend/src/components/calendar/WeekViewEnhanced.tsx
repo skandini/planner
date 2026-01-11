@@ -435,9 +435,19 @@ export function WeekViewEnhanced({
                     >
                       <div className="h-full p-2 flex flex-col justify-between">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-900 leading-tight truncate mb-0.5">
-                            {event.title}
-                          </p>
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-xs font-bold text-slate-900 leading-tight truncate mb-0.5 flex-1">
+                              {event.title}
+                            </p>
+                            {/* Индикаторы вложений */}
+                            {event.attachments && event.attachments.length > 0 && (
+                              <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center flex-shrink-0" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                                <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                           <p className="text-[0.65rem] font-medium text-slate-600 leading-tight">
                             {new Intl.DateTimeFormat("ru-RU", {
                               hour: "2-digit",

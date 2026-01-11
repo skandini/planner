@@ -309,9 +309,19 @@ export function MonthView({
                                 : event.department_color || accent
                         }}
                       />
-                      <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : isAvailable ? "text-green-700 font-medium" : isBookedSlot ? "text-orange-700 font-medium" : "text-slate-700"}`}>
-                        {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
-                      </span>
+                      <div className="flex items-center justify-between gap-1 flex-1 min-w-0">
+                        <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : isAvailable ? "text-green-700 font-medium" : isBookedSlot ? "text-orange-700 font-medium" : "text-slate-700"}`}>
+                          {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
+                        </span>
+                        {/* Индикаторы вложений */}
+                        {!isUnavailable && !isAvailable && !isBookedSlot && event.attachments && event.attachments.length > 0 && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500/80 flex items-center justify-center flex-shrink-0" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                            <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
                       {isAvailable && event.description && event.description !== event.title && (
                         <span className="text-[0.6rem] text-green-600 truncate">
                           {event.description}
