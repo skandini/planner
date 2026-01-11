@@ -64,16 +64,40 @@ def _truncate_password(password: str) -> str:
     Обрезает пароль до 72 байт для совместимости с bcrypt.
     bcrypt имеет ограничение на длину пароля в 72 байта.
     """
+    if not password:
+        return password
+    
     password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        # Обрезаем до 72 байт
-        truncated = password_bytes[:72]
-        # Удаляем неполные UTF-8 последовательности в конце
-        # UTF-8 байты начинающиеся с 10xxxxxx (0x80-0xBF) являются продолжением
+    if len(password_bytes) <= 72:
+        return password
+    
+    # Обрезаем до 72 байт
+    truncated = password_bytes[:72]
+    
+    # Удаляем неполные UTF-8 последовательности в конце
+    # UTF-8 байты начинающиеся с 10xxxxxx (0x80-0xBF) являются продолжением
+    while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
+        truncated = truncated[:-1]
+        # Если удалили все байты, возвращаем пустую строку
+        if not truncated:
+            return ""
+    
+    # Декодируем с заменой невалидных символов
+    try:
+        password = truncated.decode('utf-8', errors='replace')
+    except Exception:
+        # Если не удалось декодировать, используем только ASCII символы
+        password = truncated.decode('ascii', errors='ignore')
+    
+    # Финальная проверка - убеждаемся, что результат не длиннее 72 байт
+    final_bytes = password.encode('utf-8')
+    if len(final_bytes) > 72:
+        # Если все еще длиннее, обрезаем еще раз
+        truncated = final_bytes[:72]
         while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
             truncated = truncated[:-1]
-        # Декодируем с заменой невалидных символов
         password = truncated.decode('utf-8', errors='replace')
+    
     return password
 
 
@@ -82,7 +106,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Обрезаем пароль до 72 байт, если он длиннее
     plain_password = _truncate_password(plain_password)
     
-    # Дополнительная проверка - убеждаемся, что пароль не длиннее 72 байт
+    # Финальная проверка - гарантируем, что пароль не длиннее 72 байт
     password_bytes = plain_password.encode('utf-8')
     if len(password_bytes) > 72:
         # Агрессивная обрезка до 72 байт
@@ -90,24 +114,37 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         # Удаляем неполные UTF-8 последовательности
         while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
             truncated = truncated[:-1]
-        plain_password = truncated.decode('utf-8', errors='replace')
+        if truncated:
+            plain_password = truncated.decode('utf-8', errors='replace')
+        else:
+            # Если после обрезки ничего не осталось, возвращаем False
+            return False
+    
+    # Еще одна финальная проверка перед вызовом bcrypt
+    final_check = plain_password.encode('utf-8')
+    if len(final_check) > 72:
+        # Если все еще длиннее, обрезаем до 72 байт напрямую
+        plain_password = final_check[:72].decode('utf-8', errors='replace')
     
     try:
         return pwd_context.verify(plain_password, hashed_password)
-    except Exception as e:
+    except (ValueError, Exception) as e:
         # Перехватываем любые исключения, связанные с длиной пароля
         error_str = str(e).lower()
-        if "72" in error_str or "bytes" in error_str or "truncate" in error_str:
+        if "72" in error_str or "bytes" in error_str or "truncate" in error_str or "longer" in error_str:
             # Если все еще ошибка, пробуем еще более агрессивную обрезку
             password_bytes = plain_password.encode('utf-8')
             if len(password_bytes) > 72:
-                # Просто обрезаем до 72 байт без проверки UTF-8
+                # Просто обрезаем до 72 байт
                 truncated = password_bytes[:72]
                 # Удаляем все байты продолжения UTF-8
                 while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
                     truncated = truncated[:-1]
-                plain_password = truncated.decode('utf-8', errors='replace')
-                return pwd_context.verify(plain_password, hashed_password)
+                if truncated:
+                    plain_password = truncated.decode('utf-8', errors='replace')
+                    return pwd_context.verify(plain_password, hashed_password)
+                else:
+                    return False
         # Если ошибка не связана с длиной пароля, пробрасываем дальше
         raise
 
