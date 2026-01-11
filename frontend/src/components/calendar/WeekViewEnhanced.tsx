@@ -448,7 +448,7 @@ export function WeekViewEnhanced({
                                   </svg>
                                 </div>
                               )}
-                              {event.comments_count && event.comments_count > 0 && (
+                              {event.comments_count !== undefined && event.comments_count > 0 && (
                                 <div className="w-3 h-3 rounded-full bg-red-500/80 flex items-center justify-center" title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
                                   <span className="text-[0.65rem] font-semibold text-white leading-none">{event.comments_count}</span>
                                 </div>
