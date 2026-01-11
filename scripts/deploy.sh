@@ -57,7 +57,7 @@ update_code() {
     git fetch origin
     
     # Переключение на нужную ветку (можно изменить)
-    BRANCH=${1:-"refactor/split-page-tsx"}
+    BRANCH=${1:-"testmain-copy"}
     git checkout "$BRANCH"
     git pull origin "$BRANCH"
     
@@ -189,7 +189,7 @@ main() {
             full_deploy
             ;;
         update)
-            update "${2:-refactor/split-page-tsx}"
+            update "${2:-testmain-copy}"
             ;;
         rollback)
             rollback
