@@ -161,3 +161,22 @@ export const toTimeZoneString = (date: Date, timeZone: string): string => {
   return `${y}-${m}-${d}T${h}:${min}`;
 };
 
+// Константа московского часового пояса
+export const MOSCOW_TIMEZONE = 'Europe/Moscow';
+
+// Добавляет дни к дате с учетом московского часового пояса
+export const addDaysInMoscow = (date: Date, days: number): Date => {
+  const moscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  
+  // Создаем новую дату в московском времени
+  const newDate = new Date(
+    `${moscow.year}-${pad(moscow.month + 1)}-${pad(moscow.day)}T${pad(moscow.hour)}:${pad(moscow.minute)}:${pad(moscow.second)}+03:00`
+  );
+  
+  // Добавляем дни
+  newDate.setDate(newDate.getDate() + days);
+  
+  return newDate;
+};
+
