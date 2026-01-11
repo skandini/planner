@@ -471,14 +471,16 @@ export function DayView({
         </div>
       </div>
       
-      {/* Event tooltip */}
+      {/* Всплывающее окно с деталями события - аналогично WeekView */}
       {hoveredEvent && (
         <div
-          className="fixed z-50 bg-white rounded-lg shadow-xl border border-slate-200 p-4 max-w-sm"
+          className="fixed z-50 rounded-xl border border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)] p-4 pointer-events-auto overflow-hidden flex flex-col"
           style={{
             top: `${hoveredEvent.position.top}px`,
             left: `${hoveredEvent.position.left}px`,
-            pointerEvents: 'none',
+            width: "320px",
+            maxHeight: "500px",
+            maxWidth: "calc(100vw - 20px)",
           }}
           onMouseEnter={() => {
             if (hoverTimeoutRef.current) {
@@ -487,34 +489,186 @@ export function DayView({
           }}
           onMouseLeave={handleEventMouseLeave}
         >
-          <h3 className="font-semibold text-slate-900 mb-2 truncate">
-            {hoveredEvent.event.title}
-          </h3>
-          {hoveredEvent.event.description && (
-            <p className="text-sm text-slate-600 mb-2 line-clamp-2">
-              {hoveredEvent.event.description}
+          {/* Заголовок события */}
+          <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
+            <p className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2 break-words">{hoveredEvent.event.title}</p>
+            <p className="text-xs text-slate-500">
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), MOSCOW_TIMEZONE)}{" "}
+              —{" "}
+              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
             </p>
-          )}
-          <div className="text-xs text-slate-500 mb-2">
-            {formatTime(parseUTC(hoveredEvent.event.starts_at))} - {formatTime(parseUTC(hoveredEvent.event.ends_at))}
           </div>
-          {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 && (
-            <div className="text-xs text-slate-600 mb-2">
-              <span className="font-medium">Участники:</span> {hoveredEvent.event.participants.slice(0, 3).map(p => p.full_name || p.email).join(', ')}
-              {hoveredEvent.event.participants.length > 3 && ` +${hoveredEvent.event.participants.length - 3}`}
+          
+          {/* Описание события */}
+          {hoveredEvent.event.description && hoveredEvent.event.description.trim().length > 0 && (
+            <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">Описание</p>
+              <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 break-words">
+                {hoveredEvent.event.description}
+              </p>
             </div>
           )}
+          
+          {/* Переговорка */}
+          {hoveredEvent.event.room_id && (
+            <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">Переговорка</p>
+              <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2">
+                <span className="text-lg flex-shrink-0">🏢</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-slate-900 truncate">
+                    {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.name || "Переговорка"}
+                  </p>
+                  {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.location && (
+                    <p className="text-[0.65rem] text-slate-500 mt-0.5 truncate">
+                      {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.location}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Кнопка для перехода по ссылке на онлайн встречу */}
           {hoveredEvent.event.room_online_meeting_url && (
             <a
               href={hoveredEvent.event.room_online_meeting_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block mt-2 px-3 py-1.5 bg-lime-500 text-white text-xs font-semibold rounded-lg hover:bg-lime-400 transition-colors"
               onClick={(e) => e.stopPropagation()}
+              className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition hover:from-blue-600 hover:to-indigo-700 flex-shrink-0"
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
               Присоединиться к встрече
             </a>
           )}
+          
+          {/* Участники */}
+          {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 ? (
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="mb-2 flex-shrink-0">
+                <p className="text-xs font-semibold text-slate-700 mb-2">
+                  Участники ({hoveredEvent.event.participants.length})
+                </p>
+                {/* Аватарки участников в кружочках - показываем максимум 12 */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {hoveredEvent.event.participants.slice(0, 12).map((participant) => {
+                    const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
+                    const avatarUrl = user?.avatar_url;
+                    const displayName = participant.full_name || participant.email.split("@")[0];
+                    const initials = displayName.charAt(0).toUpperCase();
+                    
+                    return (
+                      <div
+                        key={participant.user_id || participant.email}
+                        className="relative group/avatar"
+                        title={displayName}
+                      >
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
+                            alt={displayName}
+                            className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                              if (fallback) fallback.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer ${avatarUrl ? 'hidden' : ''}`}>
+                          <span className="text-[0.65rem] font-semibold text-white">
+                            {initials}
+                          </span>
+                        </div>
+                        {/* Статус участника (цветная точка) */}
+                        <div
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                            participant.response_status === "accepted"
+                              ? "bg-lime-500"
+                              : participant.response_status === "declined"
+                              ? "bg-red-500"
+                              : "bg-amber-500"
+                          }`}
+                          title={
+                            participant.response_status === "accepted"
+                              ? "Принял"
+                              : participant.response_status === "declined"
+                              ? "Отклонил"
+                              : "Ожидает ответа"
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                  {hoveredEvent.event.participants.length > 12 ? (
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm">
+                      <span className="text-[0.65rem] font-semibold text-slate-600">
+                        +{hoveredEvent.event.participants.length - 12}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
+                {hoveredEvent.event.participants.slice(0, 8).map((participant) => {
+                  const statusLabels: Record<string, string> = {
+                    accepted: "Принял",
+                    declined: "Отклонил",
+                    pending: "Нет ответа",
+                    needs_action: "Нет ответа",
+                  };
+                  const statusColors: Record<string, string> = {
+                    accepted: "bg-lime-100 text-lime-700 border-lime-300",
+                    declined: "bg-red-100 text-red-700 border-red-300",
+                    pending: "bg-slate-100 text-slate-600 border-slate-300",
+                    needs_action: "bg-slate-100 text-slate-600 border-slate-300",
+                  };
+                  const status = participant.response_status || "pending";
+                  const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
+                  
+                  return (
+                    <div
+                      key={participant.user_id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {participant.full_name || participant.email}
+                          </p>
+                          {orgAbbr ? (
+                            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.6rem] font-semibold text-slate-700 flex-shrink-0">
+                              {orgAbbr}
+                            </span>
+                          ) : null}
+                        </div>
+                        {participant.full_name ? (
+                          <p className="text-[0.65rem] text-slate-500 truncate">
+                            {participant.email}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold flex-shrink-0 ${
+                          statusColors[status] || statusColors.pending
+                        }`}
+                      >
+                        {statusLabels[status] || statusLabels.pending}
+                      </span>
+                    </div>
+                  );
+                })}
+                {hoveredEvent.event.participants.length > 8 ? (
+                  <p className="text-[0.65rem] text-slate-500 text-center pt-1">
+                    и ещё {hoveredEvent.event.participants.length - 8} участников
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </>
