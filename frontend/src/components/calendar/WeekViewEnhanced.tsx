@@ -158,7 +158,12 @@ export function WeekViewEnhanced({
 
     e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
-    const startY = e.clientY - rect.top;
+    const currentY = e.clientY - rect.top;
+    
+    // Привязка к 5-минутным интервалам
+    const minutes = (currentY / DAY_HEIGHT) * MINUTES_IN_DAY;
+    const snappedMinutes = Math.round(minutes / 5) * 5;
+    const startY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
     
     setSelection({ columnIndex, startY, endY: startY, isActive: true });
   };
@@ -193,8 +198,14 @@ export function WeekViewEnhanced({
     const rect = columnEl.getBoundingClientRect();
     const currentY = e.clientY - rect.top;
     const clampedY = Math.max(0, Math.min(DAY_HEIGHT, currentY));
-    setSelection((prev) => prev ? { ...prev, endY: clampedY } : null);
-  }, [selection, DAY_HEIGHT, onTimeSlotClick]);
+    
+    // Привязка к 5-минутным интервалам
+    const minutes = (clampedY / DAY_HEIGHT) * MINUTES_IN_DAY;
+    const snappedMinutes = Math.round(minutes / 5) * 5;
+    const snappedY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+    
+    setSelection((prev) => prev ? { ...prev, endY: snappedY } : null);
+  }, [selection, DAY_HEIGHT, onTimeSlotClick, MINUTES_IN_DAY]);
 
   const handleMouseUp = useCallback(() => {
     if (!selection?.isActive || !onTimeSlotClick) return;
@@ -213,8 +224,9 @@ export function WeekViewEnhanced({
     const startMinutes = (startY / DAY_HEIGHT) * MINUTES_IN_DAY;
     const endMinutes = startMinutes + (actualHeight / DAY_HEIGHT) * MINUTES_IN_DAY;
 
-    const roundedStartMinutes = Math.floor(startMinutes / 15) * 15;
-    const roundedEndMinutes = Math.ceil(endMinutes / 15) * 15;
+    // Привязка к 5-минутным интервалам
+    const roundedStartMinutes = Math.floor(startMinutes / 5) * 5;
+    const roundedEndMinutes = Math.ceil(endMinutes / 5) * 5;
 
     const startTime = new Date(dayColumn.dayStart);
     startTime.setHours(Math.floor(roundedStartMinutes / 60), roundedStartMinutes % 60, 0, 0);

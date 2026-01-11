@@ -2203,63 +2203,6 @@ export default function Home() {
             </ul>
           </section>
 
-          {/* Статистика */}
-          <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <h2 className="text-sm font-bold text-slate-900">Статистика</h2>
-            </div>
-            <div className="space-y-2">
-              {(() => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const todayEventsCount = events.filter(e => {
-                  const eventDate = new Date(e.starts_at);
-                  return eventDate >= today && eventDate < tomorrow;
-                }).length;
-                
-                const weekStart = new Date(today);
-                weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-                const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekEnd.getDate() + 7);
-                const weekEventsCount = events.filter(e => {
-                  const eventDate = new Date(e.starts_at);
-                  return eventDate >= weekStart && eventDate < weekEnd;
-                }).length;
-                
-                return (
-                  <>
-                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-lime-500"></div>
-                        <span className="text-xs font-medium text-slate-700">Сегодня</span>
-                      </div>
-                      <span className="text-xs font-bold text-slate-900">{todayEventsCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                        <span className="text-xs font-medium text-slate-700">На неделе</span>
-                      </div>
-                      <span className="text-xs font-bold text-slate-900">{weekEventsCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                        <span className="text-xs font-medium text-slate-700">Всего событий</span>
-                      </div>
-                      <span className="text-xs font-bold text-slate-900">{events.length}</span>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </section>
-
           {/* Блок с ближайшими событиями */}
           <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
