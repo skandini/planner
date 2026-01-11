@@ -1618,18 +1618,12 @@ export default function Home() {
           <p className="text-sm text-slate-500">
             Используйте корпоративный аккаунт, чтобы просматривать календари и управлять событиями.
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4">
             <Link
               href="/login"
-              className="flex-1 rounded-2xl bg-lime-500 px-4 py-3 text-center font-semibold text-white transition hover:bg-lime-400"
+              className="block rounded-2xl bg-lime-500 px-4 py-3 text-center font-semibold text-white transition hover:bg-lime-400"
             >
               Войти
-            </Link>
-            <Link
-              href="/register"
-              className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-center font-semibold text-slate-600 transition hover:bg-slate-100"
-            >
-              Создать аккаунт
             </Link>
           </div>
         </div>
