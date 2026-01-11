@@ -1784,9 +1784,9 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-3 lg:flex-row overflow-hidden min-h-0 relative">
+        <main className="flex flex-1 flex-col gap-3 lg:flex-row overflow-hidden min-h-0 relative group/main">
           {/* Правая панель с иконками для переключения режимов */}
-          <div className="fixed right-4 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2">
+          <div className="fixed right-4 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2 opacity-0 group-hover/main:opacity-100 transition-opacity duration-200 hover:opacity-100">
             {availableViewModes.map((mode) => {
               const isActive = viewMode === mode;
               const getIcon = () => {

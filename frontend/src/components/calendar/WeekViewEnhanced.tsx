@@ -435,12 +435,12 @@ export function WeekViewEnhanced({
                     >
                       <div className="h-full p-2 flex flex-col justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="group flex items-start justify-between gap-1">
+                          <div className="flex items-start justify-between gap-1">
                             <p className="text-xs font-bold text-slate-900 leading-tight truncate mb-0.5 flex-1">
                               {event.title}
                             </p>
                             {/* Индикаторы вложений и комментариев */}
-                            <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
                               {event.attachments && event.attachments.length > 0 && (
                                 <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
                                   <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">

@@ -309,13 +309,13 @@ export function MonthView({
                                 : event.department_color || accent
                         }}
                       />
-                      <div className="group flex items-center justify-between gap-1 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 flex-1 min-w-0">
                         <span className={`truncate ${isUnavailable ? "text-slate-600 font-medium" : isAvailable ? "text-green-700 font-medium" : isBookedSlot ? "text-orange-700 font-medium" : "text-slate-700"}`}>
                           {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                         </span>
                         {/* Индикаторы вложений и комментариев */}
                         {!isUnavailable && !isAvailable && !isBookedSlot && (
-                          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
                             {event.attachments && event.attachments.length > 0 && (
                               <div className="w-2.5 h-2.5 rounded-full bg-blue-500/80 flex items-center justify-center" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
                                 <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
