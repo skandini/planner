@@ -2848,7 +2848,7 @@ export default function Home() {
                 });
 
                 const response = await authFetch(
-                  `${EVENT_ENDPOINT}${eventId}/participants/${userId}`,
+                  `${EVENT_ENDPOINT}${eventId}/participants/${userId}/status`,
                   {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -2856,8 +2856,26 @@ export default function Home() {
                   },
                 );
                 if (!response.ok) {
-                  throw new Error("Не удалось обновить статус");
+                  let errorMessage = "Не удалось обновить статус";
+                  try {
+                    const errorData = await response.json();
+                    if (errorData?.detail) {
+                      errorMessage = errorData.detail;
+                    } else if (errorData?.message) {
+                      errorMessage = errorData.message;
+                    }
+                  } catch {
+                    // Если не удалось распарсить JSON, используем текст ответа
+                    const errorText = await response.text().catch(() => "");
+                    if (errorText) {
+                      errorMessage = errorText;
+                    }
+                  }
+                  throw new Error(errorMessage);
                 }
+                
+                // Очищаем ошибку при успешном обновлении
+                setEventFormError(null);
                 
                 // Обновляем данные с сервера для синхронизации
                 await loadEvents();
