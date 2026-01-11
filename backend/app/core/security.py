@@ -80,20 +80,35 @@ def _truncate_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     # bcrypt имеет ограничение на длину пароля в 72 байта
     # Обрезаем пароль до 72 байт, если он длиннее
+    plain_password = _truncate_password(plain_password)
+    
+    # Дополнительная проверка - убеждаемся, что пароль не длиннее 72 байт
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Агрессивная обрезка до 72 байт
+        truncated = password_bytes[:72]
+        # Удаляем неполные UTF-8 последовательности
+        while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
+            truncated = truncated[:-1]
+        plain_password = truncated.decode('utf-8', errors='replace')
+    
     try:
-        plain_password = _truncate_password(plain_password)
         return pwd_context.verify(plain_password, hashed_password)
-    except ValueError as e:
-        # Если все еще возникает ошибка с длиной пароля, пробуем еще раз с обрезанным
-        if "72" in str(e) or "bytes" in str(e).lower():
-            # Пароль уже обрезан, но если все еще ошибка, пробуем еще раз
+    except Exception as e:
+        # Перехватываем любые исключения, связанные с длиной пароля
+        error_str = str(e).lower()
+        if "72" in error_str or "bytes" in error_str or "truncate" in error_str:
+            # Если все еще ошибка, пробуем еще более агрессивную обрезку
             password_bytes = plain_password.encode('utf-8')
             if len(password_bytes) > 72:
+                # Просто обрезаем до 72 байт без проверки UTF-8
                 truncated = password_bytes[:72]
+                # Удаляем все байты продолжения UTF-8
                 while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
                     truncated = truncated[:-1]
                 plain_password = truncated.decode('utf-8', errors='replace')
                 return pwd_context.verify(plain_password, hashed_password)
+        # Если ошибка не связана с длиной пароля, пробрасываем дальше
         raise
 
 
