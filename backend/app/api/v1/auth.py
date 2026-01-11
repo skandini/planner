@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlmodel import select
 
 from app.core.security import (
@@ -29,7 +29,11 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
-def register_user(payload: UserCreate, session: SessionDep) -> User:
+def register_user(
+    request: Request,
+    payload: UserCreate,
+    session: SessionDep,
+) -> User:
     email = payload.email.lower()
     existing = session.exec(select(User).where(User.email == email)).one_or_none()
     if existing:
