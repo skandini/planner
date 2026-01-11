@@ -281,7 +281,7 @@ export function AvailabilitySlotsTable({
     if (slot.booked_by_user_name) {
       // Извлекаем фамилию (первое слово)
       const parts = slot.booked_by_user_name.trim().split(/\s+/);
-      return parts[0] || slot.booked_by_user_email.split("@")[0];
+      return parts[0] || (slot.booked_by_user_email ? slot.booked_by_user_email.split("@")[0] : "Неизвестно");
     }
     if (slot.booked_by_user_email) {
       return slot.booked_by_user_email.split("@")[0];
