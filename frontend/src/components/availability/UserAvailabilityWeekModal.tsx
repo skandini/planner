@@ -43,13 +43,19 @@ export function UserAvailabilityWeekModal({
     start.setHours(0, 0, 0, 0);
     return start;
   });
+  const [isInitialMount, setIsInitialMount] = useState(true);
 
-  // Вызываем onWeekChange после обновления weekStart (не во время рендеринга)
+  // Вызываем onWeekChange только при изменении недели пользователем (не при первом рендере)
   useEffect(() => {
+    if (isInitialMount) {
+      setIsInitialMount(false);
+      return;
+    }
     if (onWeekChange) {
       onWeekChange(weekStart);
     }
-  }, [weekStart, onWeekChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart]);
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
