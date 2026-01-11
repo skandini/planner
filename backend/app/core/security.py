@@ -21,16 +21,30 @@ try:
     # Применяем патч - заменяем функцию в модуле
     bcrypt_module.detect_wrap_bug = _patched_detect_wrap_bug
     
-    # Также патчим все классы bcrypt в модуле
+    # Патчим все классы bcrypt в модуле - более агрессивный подход
     for name in dir(bcrypt_module):
-        obj = getattr(bcrypt_module, name)
-        # Если это класс и у него есть detect_wrap_bug
-        if isinstance(obj, type) and hasattr(obj, 'detect_wrap_bug'):
-            # Патчим как статический метод
-            obj.detect_wrap_bug = staticmethod(_patched_detect_wrap_bug)
-        # Если это функция detect_wrap_bug, патчим её
-        elif name == 'detect_wrap_bug' and callable(obj):
-            setattr(bcrypt_module, name, _patched_detect_wrap_bug)
+        try:
+            obj = getattr(bcrypt_module, name)
+            # Если это класс и у него есть detect_wrap_bug
+            if isinstance(obj, type):
+                # Патчим через __dict__ класса
+                if hasattr(obj, '__dict__') and 'detect_wrap_bug' in obj.__dict__:
+                    obj.__dict__['detect_wrap_bug'] = staticmethod(_patched_detect_wrap_bug)
+                # Также патчим через setattr
+                if hasattr(obj, 'detect_wrap_bug'):
+                    setattr(obj, 'detect_wrap_bug', staticmethod(_patched_detect_wrap_bug))
+        except Exception:
+            # Игнорируем ошибки при патчинге отдельных атрибутов
+            pass
+    
+    # Патчим функцию напрямую в модуле
+    if hasattr(bcrypt_module, 'detect_wrap_bug'):
+        bcrypt_module.detect_wrap_bug = _patched_detect_wrap_bug
+    
+    # Также патчим через __dict__ модуля
+    if hasattr(bcrypt_module, '__dict__'):
+        bcrypt_module.__dict__['detect_wrap_bug'] = _patched_detect_wrap_bug
+        
 except Exception as e:
     # Если патч не удался, логируем и продолжаем
     import logging
