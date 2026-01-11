@@ -442,77 +442,76 @@ export function WeekView({
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!selection?.isActive || !onTimeSlotClick) {
-      return;
-    }
-
-    const columnEl = columnRefs.current[selection.columnIndex];
-    if (!columnEl) {
-      return;
-    }
-
-    const rect = columnEl.getBoundingClientRect();
-    const currentY = e.clientY - rect.top;
-    const clampedY = Math.max(0, Math.min(DAY_HEIGHT, currentY));
-    
-    // Привязка к 5-минутным интервалам
-    const minutes = (clampedY / DAY_HEIGHT) * MINUTES_IN_DAY;
-    const snappedMinutes = Math.round(minutes / 5) * 5;
-    const snappedY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
-
     setSelection((prev) => {
-      if (!prev) return null;
+      if (!prev?.isActive || !onTimeSlotClick) {
+        return prev;
+      }
+
+      const columnEl = columnRefs.current[prev.columnIndex];
+      if (!columnEl) {
+        return prev;
+      }
+
+      const rect = columnEl.getBoundingClientRect();
+      const currentY = e.clientY - rect.top;
+      const clampedY = Math.max(0, Math.min(DAY_HEIGHT, currentY));
+      
+      // Привязка к 5-минутным интервалам
+      const minutes = (clampedY / DAY_HEIGHT) * MINUTES_IN_DAY;
+      const snappedMinutes = Math.round(minutes / 5) * 5;
+      const snappedY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+      
+      // Обновляем подсказку с временем
+      const dayColumn = dayColumns[prev.columnIndex];
+      if (dayColumn) {
+        const startY = Math.min(prev.startY, snappedY);
+        const endY = Math.max(prev.startY, snappedY);
+        const minHeight = (30 / MINUTES_IN_DAY) * DAY_HEIGHT;
+        const actualHeight = Math.max(minHeight, endY - startY);
+        
+        const startMinutes = (startY / DAY_HEIGHT) * MINUTES_IN_DAY;
+        const endMinutes = startMinutes + (actualHeight / DAY_HEIGHT) * MINUTES_IN_DAY;
+        
+        const roundedStartMinutes = Math.floor(startMinutes / 5) * 5;
+        const roundedEndMinutes = Math.ceil(endMinutes / 5) * 5;
+        
+        // Получаем компоненты дня в московском времени
+        const dayMoscow = getTimeInTimeZone(dayColumn.dayStart, MOSCOW_TIMEZONE);
+        
+        // Создаем время, интерпретируя его как московское время
+        const startHour = Math.floor(roundedStartMinutes / 60);
+        const startMinute = roundedStartMinutes % 60;
+        const endHour = Math.floor(roundedEndMinutes / 60);
+        const endMinute = roundedEndMinutes % 60;
+        
+        // Создаем строку в формате "YYYY-MM-DDTHH:mm" для московского времени
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const startDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(startHour)}:${pad(startMinute)}`;
+        const endDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(endHour)}:${pad(endMinute)}`;
+        
+        // Конвертируем московское время в Date объекты
+        const startTime = new Date(`${startDateStr}+03:00`);
+        const endTime = new Date(`${endDateStr}+03:00`);
+        
+        const durationMinutes = roundedEndMinutes - roundedStartMinutes;
+        const durationHours = Math.floor(durationMinutes / 60);
+        const durationMins = durationMinutes % 60;
+        const durationStr = durationHours > 0 
+          ? `${durationHours}ч ${durationMins}м`
+          : `${durationMins}м`;
+        
+        setTimeTooltip({
+          x: e.clientX + 15,
+          y: e.clientY - 15,
+          startTime: formatTimeInTimeZone(startTime, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' }),
+          endTime: formatTimeInTimeZone(endTime, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' }),
+          duration: durationStr,
+        });
+      }
+      
       return { ...prev, endY: snappedY };
     });
-    
-    // Обновляем подсказку с временем
-    const dayColumn = dayColumns[selection.columnIndex];
-    if (dayColumn) {
-      const startY = Math.min(selection.startY, snappedY);
-      const endY = Math.max(selection.startY, snappedY);
-      const minHeight = (30 / MINUTES_IN_DAY) * DAY_HEIGHT;
-      const actualHeight = Math.max(minHeight, endY - startY);
-      
-      const startMinutes = (startY / DAY_HEIGHT) * MINUTES_IN_DAY;
-      const endMinutes = startMinutes + (actualHeight / DAY_HEIGHT) * MINUTES_IN_DAY;
-      
-      const roundedStartMinutes = Math.floor(startMinutes / 5) * 5;
-      const roundedEndMinutes = Math.ceil(endMinutes / 5) * 5;
-      
-      // Получаем компоненты дня в московском времени
-      const dayMoscow = getTimeInTimeZone(dayColumn.dayStart, MOSCOW_TIMEZONE);
-      
-      // Создаем время, интерпретируя его как московское время
-      const startHour = Math.floor(roundedStartMinutes / 60);
-      const startMinute = roundedStartMinutes % 60;
-      const endHour = Math.floor(roundedEndMinutes / 60);
-      const endMinute = roundedEndMinutes % 60;
-      
-      // Создаем строку в формате "YYYY-MM-DDTHH:mm" для московского времени
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const startDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(startHour)}:${pad(startMinute)}`;
-      const endDateStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(endHour)}:${pad(endMinute)}`;
-      
-      // Конвертируем московское время в Date объекты
-      const startTime = new Date(`${startDateStr}+03:00`);
-      const endTime = new Date(`${endDateStr}+03:00`);
-      
-      const durationMinutes = roundedEndMinutes - roundedStartMinutes;
-      const durationHours = Math.floor(durationMinutes / 60);
-      const durationMins = durationMinutes % 60;
-      const durationStr = durationHours > 0 
-        ? `${durationHours}ч ${durationMins}м`
-        : `${durationMins}м`;
-      
-      setTimeTooltip({
-        x: e.clientX + 15,
-        y: e.clientY - 15,
-        startTime: formatTimeInTimeZone(startTime, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' }),
-        endTime: formatTimeInTimeZone(endTime, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' }),
-        duration: durationStr,
-      });
-    }
-  }, [selection, DAY_HEIGHT, onTimeSlotClick, MINUTES_IN_DAY, dayColumns]);
+  }, [DAY_HEIGHT, onTimeSlotClick, MINUTES_IN_DAY, dayColumns]);
 
   const handleMouseUp = useCallback(() => {
     if (!selection?.isActive || !onTimeSlotClick) {
