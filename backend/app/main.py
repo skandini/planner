@@ -17,12 +17,25 @@ from app.db import init_db
 def create_application() -> FastAPI:
     app = FastAPI(title=settings.PROJECT_NAME, version="0.1.0")
     
-    # Rate limiting - используем Redis если доступен, иначе память
-    limiter = Limiter(
-        key_func=get_remote_address,
-        storage_uri=settings.REDIS_URL,
-        default_limits=["100/minute"],
-    )
+    # Rate limiting - для локальной разработки используем память, для продакшена Redis
+    try:
+        import redis
+        # Пытаемся подключиться к Redis
+        redis_client = redis.from_url(settings.REDIS_URL, socket_connect_timeout=1)
+        redis_client.ping()
+        # Если подключение успешно, используем Redis
+        limiter = Limiter(
+            key_func=get_remote_address,
+            storage_uri=settings.REDIS_URL,
+            default_limits=["100/minute"],
+        )
+    except Exception:
+        # Если Redis недоступен, используем память (для локальной разработки)
+        limiter = Limiter(
+            key_func=get_remote_address,
+            default_limits=["100/minute"],
+        )
+    
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
