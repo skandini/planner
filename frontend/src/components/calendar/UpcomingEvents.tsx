@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
+import type { Room } from "@/types/room.types";
 import { parseUTC, formatDate, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 
 interface UpcomingEventsProps {
@@ -11,6 +12,7 @@ interface UpcomingEventsProps {
   users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
   apiBaseUrl?: string;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
+  rooms?: Room[];
 }
 
 export function UpcomingEvents({
@@ -20,6 +22,7 @@ export function UpcomingEvents({
   users = [],
   apiBaseUrl = "http://localhost:8000",
   getUserOrganizationAbbreviation,
+  rooms = [],
 }: UpcomingEventsProps) {
   const [now, setNow] = useState<Date>(new Date());
 
@@ -176,11 +179,14 @@ export function UpcomingEvents({
                       <p className="text-xs text-slate-500 mb-1">
                         {formatEventTime(event)}
                       </p>
-                      {event.room_id && (
-                        <p className="text-xs font-medium text-slate-600">
-                          🏢 {event.room_id}
-                        </p>
-                      )}
+                      {event.room_id && (() => {
+                        const room = rooms.find((r) => r.id === event.room_id);
+                        return (
+                          <p className="text-xs font-medium text-slate-600">
+                            🏢 {room?.name || event.room_id}
+                          </p>
+                        );
+                      })()}
                       {event.participants && event.participants.length > 0 && (
                         <div className="mt-2 flex items-center gap-2">
                           <div className="flex -space-x-1.5">

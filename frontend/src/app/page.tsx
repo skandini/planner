@@ -1884,7 +1884,7 @@ export default function Home() {
             })}
           </div>
           
-          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[300px] lg:flex-shrink-0 overflow-y-auto">
+          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[345px] lg:flex-shrink-0 overflow-y-auto">
             {/* Мини-календарь - перемещен наверх */}
             <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
@@ -2274,6 +2274,7 @@ export default function Home() {
               onEventClick={(event) => openEventModal(undefined, event)}
               users={users}
               apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
+              rooms={rooms}
             />
           </section>
 
