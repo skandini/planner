@@ -206,9 +206,6 @@ export function MonthView({
 
   return (
     <div className="mt-6 relative">
-      {loading && (
-        <p className="mb-4 text-sm text-slate-400">Загружаем события…</p>
-      )}
       <div className="grid grid-cols-7 gap-3 text-xs uppercase tracking-[0.3em] text-slate-500">
         {WEEKDAY_LABELS.map((label) => (
           <p key={label}>{label}</p>

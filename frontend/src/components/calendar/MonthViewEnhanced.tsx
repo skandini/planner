@@ -105,13 +105,6 @@ export function MonthViewEnhanced({
 
   return (
     <div className="mt-6 relative">
-      {loading && (
-        <div className="mb-4 flex items-center gap-2 text-sm text-slate-400">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500" />
-          Загружаем события…
-        </div>
-      )}
-      
       {/* Заголовок дней недели */}
       <div className="grid grid-cols-7 gap-2 mb-3">
         {WEEKDAY_LABELS.map((label) => (

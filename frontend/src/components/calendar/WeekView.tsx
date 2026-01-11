@@ -636,12 +636,6 @@ export function WeekView({
                   />
                 )}
 
-                {loading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-sm text-slate-500">
-                    Загружаем события…
-                  </div>
-                )}
-
                 {dayEvents.map((event) => {
                   const eventStart = parseUTC(event.starts_at);
                   const eventEnd = parseUTC(event.ends_at);

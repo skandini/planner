@@ -374,15 +374,6 @@ export function WeekViewEnhanced({
                   />
                 )}
 
-                {loading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm text-sm text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-lime-500" />
-                      Загружаем события…
-                    </div>
-                  </div>
-                )}
-
                 {/* События */}
                 {dayEvents.map((event) => {
                   const eventStart = parseUTC(event.starts_at);
