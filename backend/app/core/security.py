@@ -11,9 +11,9 @@ os.environ.setdefault("PASSLIB_BCRYPT_STRICT", "0")
 try:
     # Импортируем модуль passlib.handlers.bcrypt
     import passlib.handlers.bcrypt as bcrypt_module
+    import types
     
-    # Патчим функцию detect_wrap_bug на уровне модуля
-    # Это статический метод класса, поэтому патчим его как обычную функцию
+    # Патчим функцию detect_wrap_bug - это статический метод класса
     def _patched_detect_wrap_bug(ident):
         # Всегда возвращаем False, чтобы пропустить проверку с длинным паролем
         return False
@@ -21,13 +21,16 @@ try:
     # Применяем патч - заменяем функцию в модуле
     bcrypt_module.detect_wrap_bug = _patched_detect_wrap_bug
     
-    # Также патчим на уровне всех классов bcrypt в модуле
-    for attr_name in dir(bcrypt_module):
-        attr = getattr(bcrypt_module, attr_name)
-        if hasattr(attr, 'detect_wrap_bug'):
-            # Если это класс с методом detect_wrap_bug, патчим его
-            if hasattr(attr, '__dict__'):
-                attr.detect_wrap_bug = staticmethod(_patched_detect_wrap_bug)
+    # Также патчим все классы bcrypt в модуле
+    for name in dir(bcrypt_module):
+        obj = getattr(bcrypt_module, name)
+        # Если это класс и у него есть detect_wrap_bug
+        if isinstance(obj, type) and hasattr(obj, 'detect_wrap_bug'):
+            # Патчим как статический метод
+            obj.detect_wrap_bug = staticmethod(_patched_detect_wrap_bug)
+        # Если это функция detect_wrap_bug, патчим её
+        elif name == 'detect_wrap_bug' and callable(obj):
+            setattr(bcrypt_module, name, _patched_detect_wrap_bug)
 except Exception as e:
     # Если патч не удался, логируем и продолжаем
     import logging
