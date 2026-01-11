@@ -69,9 +69,58 @@ def check_current_version():
         return None
 
 
+def cleanup_duplicates():
+    """Удалить дубликаты и несуществующие миграции из alembic_version."""
+    params = get_db_params()
+    
+    print(f"\nОчистка дубликатов в alembic_version...")
+    
+    try:
+        engine = create_engine(params['full_url'])
+        
+        with engine.begin() as conn:
+            # Сначала получаем все записи
+            result = conn.execute(text("SELECT version_num FROM alembic_version;"))
+            all_versions = [row[0] for row in result.fetchall()]
+            
+            print(f"Найдено записей в alembic_version: {len(all_versions)}")
+            for version in all_versions:
+                print(f"  - {version}")
+            
+            # Удаляем несуществующие миграции (например, 'add_composite_indexes')
+            invalid_versions = ['add_composite_indexes']
+            for invalid_version in invalid_versions:
+                result = conn.execute(text(f"DELETE FROM alembic_version WHERE version_num = '{invalid_version}';"))
+                if result.rowcount > 0:
+                    print(f"✓ Удалена несуществующая миграция: {invalid_version}")
+            
+            # Если осталось больше одной записи, оставляем только последнюю реальную
+            result = conn.execute(text("SELECT version_num FROM alembic_version ORDER BY version_num;"))
+            remaining = [row[0] for row in result.fetchall()]
+            
+            if len(remaining) > 1:
+                print(f"\nНайдено {len(remaining)} записей, удаляем все кроме последней...")
+                # Оставляем только последнюю (обычно это 22a45ee15fd2 или более новая)
+                keep_version = remaining[-1]  # Последняя в списке
+                for version in remaining[:-1]:
+                    conn.execute(text(f"DELETE FROM alembic_version WHERE version_num = '{version}';"))
+                    print(f"✓ Удалена запись: {version}")
+                print(f"✓ Оставлена запись: {keep_version}")
+            
+            return True
+            
+    except Exception as e:
+        print(f"Ошибка при очистке дубликатов: {e}")
+        return False
+
+
 def update_version(new_version: str = None):
     """Обновить версию миграции в БД."""
     params = get_db_params()
+    
+    # Сначала очищаем дубликаты
+    if not cleanup_duplicates():
+        return False
     
     if new_version is None:
         # Используем последнюю известную версию
@@ -83,8 +132,10 @@ def update_version(new_version: str = None):
         engine = create_engine(params['full_url'])
         
         with engine.begin() as conn:
-            # Обновляем версию
-            conn.execute(text(f"UPDATE alembic_version SET version_num = '{new_version}';"))
+            # Сначала удаляем все записи
+            conn.execute(text("DELETE FROM alembic_version;"))
+            # Затем вставляем новую версию
+            conn.execute(text(f"INSERT INTO alembic_version (version_num) VALUES ('{new_version}');"))
             print(f"✓ Версия успешно обновлена до {new_version}")
             return True
             
