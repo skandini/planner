@@ -35,6 +35,7 @@ import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventModalEnhanced as EventModal } from "@/components/events/EventModalEnhanced";
 import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
+import { UserAvailabilityWeekModal } from "@/components/availability/UserAvailabilityWeekModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { CalendarMembersManager } from "@/components/calendar/CalendarMembersManager";
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
@@ -796,7 +797,7 @@ export default function Home() {
   }, [selectedDate]);
 
   const loadUserAvailability = useCallback(
-    async (userId: string) => {
+    async (userId: string, weekStartDate?: Date) => {
       if (!selectedCalendarId || !accessToken) {
         setUserAvailability([]);
         setUserAvailabilityError(null);
@@ -805,14 +806,15 @@ export default function Home() {
       setUserAvailabilityLoading(true);
       setUserAvailabilityError(null);
       try {
-        // Создаем диапазон для дня (00:00 - 23:59:59)
-        const dayStart = new Date(selectedDate);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(selectedDate);
-        dayEnd.setHours(23, 59, 59, 999);
+        // Создаем диапазон для недели (от начала недели до конца недели)
+        const weekStart = weekStartDate ? new Date(weekStartDate) : startOfWeek(selectedDate);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        weekEnd.setHours(23, 59, 59, 999);
         
-        const fromStr = dayStart.toISOString();
-        const toStr = dayEnd.toISOString();
+        const fromStr = weekStart.toISOString();
+        const toStr = weekEnd.toISOString();
         const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${userId}/availability?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`;
         const response = await authFetch(url, { cache: "no-store" });
         if (response.ok) {
@@ -2933,7 +2935,7 @@ export default function Home() {
           />
         )}
         {selectedUserForView && (
-          <UserAvailabilityView
+          <UserAvailabilityWeekModal
             userId={selectedUserForView}
             user={users.find((u) => u.id === selectedUserForView) || null}
             availability={userAvailability}
@@ -2967,6 +2969,11 @@ export default function Home() {
             addToCalendarError={addToCalendarError}
             addToCalendarLoading={addToCalendarLoading}
             isMember={members.some((m) => m.user_id === selectedUserForView)}
+            onWeekChange={(weekStart) => {
+              if (selectedUserForView) {
+                loadUserAvailability(selectedUserForView, weekStart);
+              }
+            }}
           />
         )}
       </div>
