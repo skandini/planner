@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { EventDraft, EventRecord, ConflictEntry } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
-import type { UserProfile } from "@/types/user.types";
+import type { UserProfile, EventParticipant } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
@@ -510,30 +510,52 @@ export function EventModalEnhanced({
                   </div>
 
                   {/* Участники */}
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Участники</h3>
-                    <ParticipantSearch
-                      form={form}
-                      setForm={setForm}
-                      users={users}
-                      usersLoading={usersLoading}
-                      usersError={usersError}
-                      calendarMembers={members}
-                      membersLoading={membersLoading}
-                      readOnly={isReadOnly}
-                      organizations={organizations}
-                      getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                      apiBaseUrl={apiBaseUrl}
-                      currentUserEmail={currentUserEmail}
-                      compact={true}
-                    />
-                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                          <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          Участники
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {editingEvent?.participants?.length || form.participant_ids.length > 0
+                            ? `${editingEvent?.participants?.length || form.participant_ids.length} ${(editingEvent?.participants?.length || form.participant_ids.length) === 1 ? "участник" : "участников"}`
+                            : "Добавьте участников события"}
+                        </p>
+                      </div>
+                      {(editingEvent?.participants?.length || form.participant_ids.length) > 0 && (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                          {editingEvent?.participants?.length || form.participant_ids.length}
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Статусы участников (только при редактировании) */}
-                  {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                      <h3 className="text-sm font-semibold text-slate-900 mb-3">Ответы участников</h3>
-                      <div className="space-y-2">
+                    {/* Добавление участников */}
+                    {!isReadOnly && (
+                      <div className="mb-4">
+                        <ParticipantSearch
+                          form={form}
+                          setForm={setForm}
+                          users={users}
+                          usersLoading={usersLoading}
+                          usersError={usersError}
+                          calendarMembers={members}
+                          membersLoading={membersLoading}
+                          readOnly={isReadOnly}
+                          organizations={organizations}
+                          getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                          apiBaseUrl={apiBaseUrl}
+                          currentUserEmail={currentUserEmail}
+                          compact={true}
+                        />
+                      </div>
+                    )}
+
+                    {/* Список участников с статусами */}
+                    {editingEvent && editingEvent.participants && editingEvent.participants.length > 0 ? (
+                      <div className="space-y-2.5">
                         {editingEvent.participants.map((participant) => {
                           const isCurrentUser = participant.email === currentUserEmail;
                           return (
@@ -546,12 +568,73 @@ export function EventModalEnhanced({
                               isCurrentUser={isCurrentUser}
                               currentUserEmail={currentUserEmail}
                               getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                              apiBaseUrl={apiBaseUrl}
                             />
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                    ) : form.participant_ids.length > 0 && !editingEvent ? (
+                      // Показываем выбранных участников при создании нового события
+                      <div className="space-y-2.5">
+                        {users
+                          .filter((user) => form.participant_ids.includes(user.id))
+                          .map((user) => {
+                            const participant: EventParticipant = {
+                              user_id: user.id,
+                              email: user.email,
+                              full_name: user.full_name || null,
+                              response_status: "needs_action",
+                              avatar_url: user.avatar_url || null,
+                            };
+                            const isCurrentUser = user.email === currentUserEmail;
+                            return (
+                              <div
+                                key={user.id}
+                                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm"
+                              >
+                                {user.avatar_url ? (
+                                  <img
+                                    src={user.avatar_url.startsWith("http") ? user.avatar_url : `${apiBaseUrl}${user.avatar_url}`}
+                                    alt={user.full_name || user.email}
+                                    className="h-10 w-10 rounded-full object-cover border-2 border-slate-200 flex-shrink-0"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-sm font-semibold text-white border-2 border-slate-200 flex-shrink-0">
+                                    {(user.full_name || user.email)[0].toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-semibold text-slate-900 truncate">
+                                      {user.full_name || user.email}
+                                    </p>
+                                    {getUserOrganizationAbbreviation && (
+                                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700 flex-shrink-0">
+                                        {getUserOrganizationAbbreviation(user.id)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {user.full_name && (
+                                    <p className="text-xs text-slate-500 truncate mt-0.5">{user.email}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5 rounded-lg border-2 border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+                                  <span>○</span>
+                                  <span>Будет приглашен</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-sm text-slate-500">
+                        {isReadOnly ? "Нет участников" : "Добавьте участников, используя поле выше"}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Вложения */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4">

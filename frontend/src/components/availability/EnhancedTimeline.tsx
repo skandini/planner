@@ -423,31 +423,31 @@ export function EnhancedTimeline({
 
   return (
     <div className="space-y-4">
-      {/* Легенда с тремя состояниями */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border border-red-600 bg-red-500" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Занято</span>
+      {/* Легенда с тремя состояниями - легкий воздушный дизайн со скруглениями */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="h-2.5 w-8 rounded-lg border border-red-200/60 bg-red-50/60" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Занято</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border border-gray-400 bg-gray-300" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Свободно</span>
+        <div className="flex items-center gap-2">
+          <div className="h-2.5 w-8 rounded-lg border border-slate-200/60 bg-white" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Свободно</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded border border-blue-600 bg-blue-500" />
-          <span className="text-[0.65rem] font-medium text-slate-700">Выбрано</span>
+        <div className="flex items-center gap-2">
+          <div className="h-2.5 w-8 rounded-lg border-2 border-blue-300/70 bg-blue-50/70" />
+          <span className="text-[0.65rem] font-medium text-slate-600">Выбрано</span>
         </div>
       </div>
 
-      {/* Красивый таймлайн с gap и rounded */}
-      <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm" ref={timelineRef} style={{ maxHeight: "calc(85vh - 300px)" }}>
+      {/* Легкий воздушный таймлайн в стиле основного календаря */}
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.12)]" ref={timelineRef} style={{ maxHeight: "calc(85vh - 300px)" }}>
         <div className="min-w-full space-y-2 p-3">
           {/* Заголовок времени */}
           <div
-            className="grid rounded-lg border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-2"
+            className="grid rounded-lg border-b border-slate-200 bg-slate-50 p-2"
             style={{ gridTemplateColumns: templateColumns }}
           >
-            <div className="px-3 py-2 text-xs font-semibold text-slate-700 uppercase tracking-wide">Ресурс</div>
+            <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-[0.3em]">Ресурс</div>
             {timeSlots.map((slot) => {
               // Создаем дату для слота в московском времени для правильного отображения времени
               const slotDate = buildSlotTimes(slot.index).slotStart;
@@ -472,15 +472,15 @@ export function EnhancedTimeline({
             return (
               <div
                 key={row.id}
-                className={`grid rounded-lg border transition-all shadow-sm ${
+                className={`grid rounded-lg border transition-all ${
                   hasConflict
-                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50"
-                    : "border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:border-slate-300 hover:shadow-md"
+                    ? "border-amber-200 bg-amber-50/30"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                 }`}
                 style={{ gridTemplateColumns: templateColumns }}
               >
                 {/* Название ресурса */}
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 bg-white/50">
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 bg-white">
                   {row.avatarUrl ? (
                     <img
                       src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
@@ -562,18 +562,18 @@ export function EnhancedTimeline({
                       tooltipText = state === "busy" ? "Занято" : isSelected ? "Выбрано" : "Доступно - кликните для выбора времени";
                     }
 
-                  // Цветовая схема: занятое - красным, свободное - серым, выбранное - голубым
-                  let slotClassName = "h-8 transition-all border ";
+                  // Легкая воздушная цветовая схема с скругленными ячейками и плавными эффектами
+                  let slotClassName = "h-8 rounded-lg transition-all duration-300 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
-                    // Занято - красный цвет
-                    slotClassName += "bg-red-500 border-red-600 cursor-not-allowed";
+                    // Занято - легкий красный с прозрачностью, скругленный
+                    slotClassName += "bg-red-50/60 border border-red-200/60 cursor-not-allowed hover:bg-red-50/80 hover:border-red-300/70 hover:shadow-sm hover:shadow-red-100/40";
                   } else if (isSelected) {
-                    // Выбранное - голубой цвет
-                    slotClassName += "bg-blue-500 border-blue-600 cursor-pointer";
+                    // Выбранное - легкий голубой с прозрачностью, скругленный
+                    slotClassName += "bg-blue-50/70 border-2 border-blue-300/70 cursor-pointer hover:bg-blue-50/90 hover:border-blue-400/80 hover:shadow-md hover:shadow-blue-200/50";
                   } else {
-                    // Свободное - серый цвет
-                    slotClassName += "bg-gray-300 border-gray-400 hover:bg-gray-400 cursor-pointer";
+                    // Свободное - белый фон с легкой границей, скругленный, с плавными hover-эффектами
+                    slotClassName += "bg-white border border-slate-200/60 cursor-pointer hover:bg-slate-50 hover:border-slate-300/80 hover:shadow-sm hover:shadow-slate-200/30 active:bg-slate-100/60 active:scale-[0.98]";
                   }
 
                   return (
@@ -590,7 +590,32 @@ export function EnhancedTimeline({
                         }
                       }}
                       title={tooltipText}
-                    />
+                    >
+                      {/* Плавный декоративный эффект для свободных слотов при hover */}
+                      {state === "free" && !isSelected && (
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
+                          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/40 via-white/20 to-transparent rounded-lg"></div>
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-slate-300/40 to-transparent"></div>
+                        </div>
+                      )}
+                      
+                      {/* Плавный эффект для выбранных слотов */}
+                      {isSelected && (
+                        <div className="absolute inset-0 rounded-lg">
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/30 via-blue-50/20 to-transparent rounded-lg"></div>
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-gradient-to-r from-transparent via-blue-300/50 to-transparent rounded-full"></div>
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-gradient-to-r from-transparent via-blue-300/50 to-transparent rounded-full"></div>
+                        </div>
+                      )}
+                      
+                      {/* Плавный эффект для занятых слотов */}
+                      {state === "busy" && (
+                        <div className="absolute inset-0 opacity-60 group-hover:opacity-80 transition-opacity duration-300 ease-out rounded-lg">
+                          <div className="absolute inset-0 bg-gradient-to-br from-red-100/40 via-red-50/20 to-transparent rounded-lg"></div>
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px bg-gradient-to-r from-transparent via-red-300/40 to-transparent rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
                   );
                   });
                 })()}

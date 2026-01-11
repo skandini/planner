@@ -29,6 +29,7 @@ export type EventParticipant = {
   email: string;
   full_name: string | null;
   response_status: string;
+  avatar_url?: string | null;
 };
 
 export type ParticipantProfile = {

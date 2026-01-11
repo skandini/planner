@@ -465,7 +465,7 @@ export function AvailabilitySlotsTable({
                     return (
                       <tr
                         key={`${row.day.toISOString()}-${row.userId}`}
-                        className="border-b border-slate-100 hover:bg-slate-50 transition"
+                        className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-transparent transition-all duration-200"
                       >
                         {showDay && (
                           <td
@@ -513,16 +513,16 @@ export function AvailabilitySlotsTable({
                           return (
                             <td
                               key={timeSlot.label}
-                              className="px-1 py-1 text-center border-r border-slate-100 last:border-r-0"
+                              className="px-1.5 py-1.5 text-center border-r border-slate-100 last:border-r-0"
                             >
                               {slot ? (
                                 <div
-                                  className={`w-full h-12 rounded-lg transition-all flex flex-col items-center justify-center text-xs font-medium ${
+                                  className={`group relative w-full h-14 rounded-xl transition-all duration-300 ease-out flex flex-col items-center justify-center text-xs font-medium overflow-hidden ${
                                     isBooked
-                                      ? "bg-gradient-to-br from-blue-100 to-blue-200 border-2 border-blue-400 shadow-md cursor-default"
+                                      ? "bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100 border border-blue-300/50 shadow-lg shadow-blue-200/50 cursor-default hover:shadow-xl hover:shadow-blue-300/60 hover:scale-[1.02]"
                                       : isMySlot
-                                      ? "bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-400 shadow-sm cursor-default"
-                                      : "bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-400 shadow-sm hover:from-green-200 hover:to-green-300 cursor-pointer"
+                                      ? "bg-gradient-to-br from-emerald-50 via-emerald-100 to-teal-100 border border-emerald-300/50 shadow-md shadow-emerald-200/40 cursor-default hover:shadow-lg hover:shadow-emerald-300/50"
+                                      : "bg-gradient-to-br from-lime-50 via-emerald-50 to-green-50 border border-emerald-300/40 shadow-sm shadow-emerald-100/30 cursor-pointer hover:from-emerald-100 hover:via-green-100 hover:to-lime-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-300/40 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-[0.98]"
                                   }`}
                                   onClick={() => !isMySlot && !isBooked && handleBookSlot(slot)}
                                   title={
@@ -533,23 +533,64 @@ export function AvailabilitySlotsTable({
                                       : `${slot.process_name} (${new Date(slot.starts_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })} - ${new Date(slot.ends_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })})`
                                   }
                                 >
-                                  {isBooked ? (
-                                    <>
-                                      <span className="text-blue-800 font-semibold text-[10px] leading-tight">
-                                        {getBookedByDisplayName(slot)}
-                                      </span>
-                                      <span className="text-blue-600 text-[9px] mt-0.5">
-                                        {slot.process_name}
-                                      </span>
-                                    </>
-                                  ) : isMySlot ? (
-                                    <span className="text-green-800 font-semibold">Мой</span>
-                                  ) : (
-                                    <span className="text-green-700 text-[10px]">{slot.process_name}</span>
+                                  {/* Декоративный фон для доступных слотов */}
+                                  {!isBooked && !isMySlot && (
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent"></div>
+                                      <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-300/50 to-transparent"></div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Иконка для забронированных слотов */}
+                                  {isBooked && (
+                                    <div className="absolute top-1 right-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                      <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Иконка для моих слотов */}
+                                  {isMySlot && (
+                                    <div className="absolute top-1 right-1 opacity-60">
+                                      <svg className="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Контент */}
+                                  <div className="relative z-10 flex flex-col items-center justify-center gap-0.5 px-1">
+                                    {isBooked ? (
+                                      <>
+                                        <span className="text-blue-700 font-bold text-[10px] leading-tight group-hover:text-blue-800 transition-colors">
+                                          {getBookedByDisplayName(slot)}
+                                        </span>
+                                        <span className="text-blue-600/80 text-[9px] font-medium mt-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                                          {slot.process_name}
+                                        </span>
+                                      </>
+                                    ) : isMySlot ? (
+                                      <span className="text-emerald-700 font-bold text-[10px]">Мой</span>
+                                    ) : (
+                                      <>
+                                        <span className="text-emerald-700 font-semibold text-[10px] group-hover:text-emerald-800 group-hover:font-bold transition-all">
+                                          {slot.process_name}
+                                        </span>
+                                        <div className="w-4 h-0.5 bg-emerald-400/40 rounded-full group-hover:bg-emerald-500/60 group-hover:w-6 transition-all"></div>
+                                      </>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Эффект свечения при hover для доступных слотов */}
+                                  {!isBooked && !isMySlot && (
+                                    <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/20 to-transparent blur-sm"></div>
+                                    </div>
                                   )}
                                 </div>
                               ) : (
-                                <div className="w-full h-12 rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200"></div>
+                                <div className="w-full h-14 rounded-xl bg-gradient-to-br from-slate-50/50 to-slate-100/50 border border-slate-200/30 backdrop-blur-sm"></div>
                               )}
                             </td>
                           );

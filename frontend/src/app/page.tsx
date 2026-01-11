@@ -607,10 +607,18 @@ export default function Home() {
 
   const loadEvents = useCallback(async () => {
     if (!accessToken) {
+      console.log("[Events] No access token, skipping load");
       setEvents([]);
       return;
     }
+    console.log("[Events] Loading events...", {
+      rangeStart: rangeStart.toISOString(),
+      rangeEnd: rangeEnd.toISOString(),
+      selectedCalendarId,
+      viewMode,
+    });
     setEventsLoading(true);
+    setEventsError(null);
     try {
       const url = new URL(EVENT_ENDPOINT);
       // Не фильтруем по calendar_id, чтобы получить все доступные события
@@ -619,14 +627,20 @@ export default function Home() {
       url.searchParams.set("from", rangeStart.toISOString());
       url.searchParams.set("to", rangeEnd.toISOString());
       
+      console.log("[Events] Fetching from:", url.toString());
       const response = await authFetch(url.toString(), { 
         cache: "no-store",
       });
       
+      console.log("[Events] Response status:", response.status, response.ok);
+      
       if (!response.ok) {
-        throw new Error("Не удалось получить события");
+        const errorText = await response.text().catch(() => "Unknown error");
+        console.error("[Events] Error response:", response.status, errorText);
+        throw new Error(`Не удалось получить события: ${response.status} ${errorText}`);
       }
       const data: EventRecord[] = await response.json();
+      console.log("[Events] Loaded events:", data.length, data);
       // Если выбран календарь, показываем события из этого календаря
       // ИЛИ события, где пользователь является участником (даже если они в другом календаре)
       let filteredEvents = selectedCalendarId
@@ -657,14 +671,16 @@ export default function Home() {
         });
       }
       
+      console.log("[Events] Filtered events:", filteredEvents.length, filteredEvents);
       setEvents(filteredEvents);
       setEventsError(null);
     } catch (err) {
-      setEventsError(
-        err instanceof Error ? err.message : "Ошибка получения событий",
-      );
+      const errorMessage = err instanceof Error ? err.message : "Ошибка получения событий";
+      console.error("[Events] Load error:", err);
+      setEventsError(errorMessage);
     } finally {
       setEventsLoading(false);
+      console.log("[Events] Loading finished");
     }
   }, [selectedCalendarId, rangeStart, rangeEnd, accessToken, authFetch, userEmail]);
 
