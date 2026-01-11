@@ -2510,6 +2510,8 @@ export default function Home() {
             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
             currentUserEmail={userEmail || undefined}
+            events={events}
+            accentColor={selectedCalendar?.color}
             onEventUpdated={async () => {
               // Перезагружаем событие после обновления вложений
               if (editingEventId) {

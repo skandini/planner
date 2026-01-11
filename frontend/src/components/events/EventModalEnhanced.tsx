@@ -378,7 +378,7 @@ export function EventModalEnhanced({
         }}
       >
       <div 
-        className="w-[80vw] h-[85vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl flex flex-col"
+        className="w-[95vw] max-w-[1400px] h-[90vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Компактный заголовок */}
@@ -439,7 +439,7 @@ export function EventModalEnhanced({
               )}
 
               {/* Двухколоночный layout */}
-              <div className="flex-1 grid grid-cols-[400px,1fr] gap-6 p-6">
+              <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px,1fr] gap-6 p-6">
                 {/* Левая колонка - основная информация */}
                 <div className="space-y-4 overflow-y-auto">
                   {/* Название и даты */}
@@ -744,7 +744,7 @@ export function EventModalEnhanced({
                 </div>
 
                 {/* Правая колонка - Таймлайн и переговорки */}
-                <div className="flex flex-col space-y-3 overflow-y-auto">
+                <div className="flex flex-col space-y-3 overflow-y-auto min-h-[400px] lg:min-h-0">
                   {/* Навигация по дням */}
                   <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2">
                     <button
