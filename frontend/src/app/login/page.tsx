@@ -22,24 +22,57 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const url = `${API_BASE_URL}/auth/login`;
+      console.log("[Login] Attempting login to:", url);
+      console.log("[Login] Email:", email);
+      
+      // Добавляем таймаут для запроса
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+      
+      console.log("[Login] Sending request...");
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        mode: "cors",
+        credentials: "omit",
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
+      console.log("[Login] Response status:", response.status, response.ok);
+      
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || "Не удалось войти");
+        console.error("[Login] Error response:", response.status, data);
+        throw new Error(data.detail || `Не удалось войти (${response.status})`);
       }
       const data = await response.json();
+      console.log("[Login] Success, received tokens");
+      
       login({
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         userEmail: email,
       });
+      
+      console.log("[Login] Redirecting to home page");
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка");
+      console.error("[Login] Exception:", err);
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError("Запрос превысил время ожидания. Проверьте, что backend сервер запущен на http://localhost:8000");
+        } else if (err.message.includes('fetch')) {
+          setError("Не удалось подключиться к серверу. Проверьте, что backend запущен на http://localhost:8000");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Произошла ошибка при входе");
+      }
     } finally {
       setLoading(false);
     }
