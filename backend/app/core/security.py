@@ -9,14 +9,25 @@ os.environ.setdefault("PASSLIB_BCRYPT_STRICT", "0")
 # Патчим passlib ДО импорта CryptContext для обхода проверки бага обертки bcrypt
 # которая использует длинный тестовый пароль (>72 байт)
 try:
+    # Импортируем модуль passlib.handlers.bcrypt
     import passlib.handlers.bcrypt as bcrypt_module
     
-    # Заменяем функцию detect_wrap_bug на функцию, которая всегда возвращает False
+    # Патчим функцию detect_wrap_bug на уровне модуля
+    # Это статический метод класса, поэтому патчим его как обычную функцию
     def _patched_detect_wrap_bug(ident):
+        # Всегда возвращаем False, чтобы пропустить проверку с длинным паролем
         return False
     
-    # Применяем патч до инициализации CryptContext
+    # Применяем патч - заменяем функцию в модуле
     bcrypt_module.detect_wrap_bug = _patched_detect_wrap_bug
+    
+    # Также патчим на уровне всех классов bcrypt в модуле
+    for attr_name in dir(bcrypt_module):
+        attr = getattr(bcrypt_module, attr_name)
+        if hasattr(attr, 'detect_wrap_bug'):
+            # Если это класс с методом detect_wrap_bug, патчим его
+            if hasattr(attr, '__dict__'):
+                attr.detect_wrap_bug = staticmethod(_patched_detect_wrap_bug)
 except Exception as e:
     # Если патч не удался, логируем и продолжаем
     import logging
@@ -27,6 +38,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
+# Инициализируем CryptContext после патча
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
