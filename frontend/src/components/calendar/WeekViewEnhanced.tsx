@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC, formatTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewEnhancedProps {
@@ -52,14 +52,6 @@ export function WeekViewEnhanced({
     startY: number;
     endY: number;
     isActive: boolean;
-  } | null>(null);
-  
-  const [timeTooltip, setTimeTooltip] = useState<{
-    x: number;
-    y: number;
-    startTime: string;
-    endTime: string;
-    duration: string;
   } | null>(null);
 
   useEffect(() => {
@@ -174,7 +166,6 @@ export function WeekViewEnhanced({
     const startY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
     
     setSelection({ columnIndex, startY, endY: startY, isActive: true });
-    setTimeTooltip(null); // Очищаем предыдущую подсказку
   };
 
   const dayColumns = useMemo(
@@ -201,58 +192,20 @@ export function WeekViewEnhanced({
   );
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    setSelection((prev) => {
-      if (!prev?.isActive || !onTimeSlotClick) return prev;
-      const columnEl = columnRefs.current[prev.columnIndex];
-      if (!columnEl) return prev;
-      const rect = columnEl.getBoundingClientRect();
-      const currentY = e.clientY - rect.top;
-      const clampedY = Math.max(0, Math.min(DAY_HEIGHT, currentY));
-      
-      // Привязка к 5-минутным интервалам
-      const minutes = (clampedY / DAY_HEIGHT) * MINUTES_IN_DAY;
-      const snappedMinutes = Math.round(minutes / 5) * 5;
-      const snappedY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
-      
-      // Обновляем подсказку с временем
-      const dayColumn = dayColumns[prev.columnIndex];
-      if (dayColumn) {
-        const startY = Math.min(prev.startY, snappedY);
-        const endY = Math.max(prev.startY, snappedY);
-        const minHeight = (30 / MINUTES_IN_DAY) * DAY_HEIGHT;
-        const actualHeight = Math.max(minHeight, endY - startY);
-        
-        const startMinutes = (startY / DAY_HEIGHT) * MINUTES_IN_DAY;
-        const endMinutes = startMinutes + (actualHeight / DAY_HEIGHT) * MINUTES_IN_DAY;
-        
-        const roundedStartMinutes = Math.floor(startMinutes / 5) * 5;
-        const roundedEndMinutes = Math.ceil(endMinutes / 5) * 5;
-        
-        const startTime = new Date(dayColumn.dayStart);
-        startTime.setHours(Math.floor(roundedStartMinutes / 60), roundedStartMinutes % 60, 0, 0);
-        
-        const endTime = new Date(dayColumn.dayStart);
-        endTime.setHours(Math.floor(roundedEndMinutes / 60), roundedEndMinutes % 60, 0, 0);
-        
-        const durationMinutes = roundedEndMinutes - roundedStartMinutes;
-        const durationHours = Math.floor(durationMinutes / 60);
-        const durationMins = durationMinutes % 60;
-        const durationStr = durationHours > 0 
-          ? `${durationHours}ч ${durationMins}м`
-          : `${durationMins}м`;
-        
-        setTimeTooltip({
-          x: e.clientX + 15,
-          y: e.clientY - 15,
-          startTime: formatTimeInTimeZone(startTime, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' }),
-          endTime: formatTimeInTimeZone(endTime, MOSCOW_TIMEZONE, { hour: '2-digit', minute: '2-digit' }),
-          duration: durationStr,
-        });
-      }
-      
-      return { ...prev, endY: snappedY };
-    });
-  }, [DAY_HEIGHT, onTimeSlotClick, MINUTES_IN_DAY, dayColumns]);
+    if (!selection?.isActive || !onTimeSlotClick) return;
+    const columnEl = columnRefs.current[selection.columnIndex];
+    if (!columnEl) return;
+    const rect = columnEl.getBoundingClientRect();
+    const currentY = e.clientY - rect.top;
+    const clampedY = Math.max(0, Math.min(DAY_HEIGHT, currentY));
+    
+    // Привязка к 5-минутным интервалам
+    const minutes = (clampedY / DAY_HEIGHT) * MINUTES_IN_DAY;
+    const snappedMinutes = Math.round(minutes / 5) * 5;
+    const snappedY = (snappedMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
+    
+    setSelection((prev) => prev ? { ...prev, endY: snappedY } : null);
+  }, [selection, DAY_HEIGHT, onTimeSlotClick, MINUTES_IN_DAY]);
 
   const handleMouseUp = useCallback(() => {
     if (!selection?.isActive || !onTimeSlotClick) return;
@@ -283,7 +236,6 @@ export function WeekViewEnhanced({
 
     onTimeSlotClick(dayColumn.dayStart, startTime, endTime);
     setSelection(null);
-    setTimeTooltip(null);
   }, [selection, dayColumns, onTimeSlotClick, DAY_HEIGHT]);
 
   useEffect(() => {
@@ -697,25 +649,6 @@ export function WeekViewEnhanced({
               </div>
             </div>
           )}
-        </div>
-      )}
-      
-      {/* Подсказка с временем при выделении */}
-      {timeTooltip && (
-        <div
-          className="fixed z-50 pointer-events-none rounded-lg bg-slate-900 text-white px-3 py-2 text-xs font-semibold shadow-xl border border-slate-700"
-          style={{
-            left: `${timeTooltip.x}px`,
-            top: `${timeTooltip.y}px`,
-            transform: 'translateY(-100%)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-lime-400">{timeTooltip.startTime}</span>
-            <span className="text-slate-400">→</span>
-            <span className="text-lime-400">{timeTooltip.endTime}</span>
-            <span className="text-slate-400 ml-1">({timeTooltip.duration})</span>
-          </div>
         </div>
       )}
     </div>
