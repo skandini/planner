@@ -364,9 +364,15 @@ export function WeekView({
     }
     
     const rect = columnEl.getBoundingClientRect();
-    // Вычисляем позицию в минутах от начала дня (0:00-23:59) в московском времени
-    let minutes = ((e.clientY - rect.top) / rect.height) * MINUTES_IN_DAY;
+    // Вычисляем позицию курсора в минутах от начала дня (0:00-23:59) в московском времени
+    let cursorMinutes = ((e.clientY - rect.top) / rect.height) * MINUTES_IN_DAY;
+    cursorMinutes = Math.max(0, Math.min(MINUTES_IN_DAY, cursorMinutes));
+    
+    // Вычитаем offsetMinutes (смещение от начала события, где пользователь схватил событие)
+    // чтобы событие размещалось там, где пользователь его отпустил, а не по позиции курсора
+    let minutes = cursorMinutes - dragInfo.current.offsetMinutes;
     minutes = Math.max(0, Math.min(MINUTES_IN_DAY, minutes));
+    
     // Округляем до 5 минут для привязки
     minutes = Math.round(minutes / 5) * 5;
     
