@@ -59,18 +59,37 @@ def verify_token(token: str, token_type: str = "access") -> dict[str, Any]:
         raise ValueError("Invalid token") from exc
 
 
+def _truncate_password(password: str) -> str:
+    """
+    Обрезает пароль до 72 байт для совместимости с bcrypt.
+    bcrypt имеет ограничение на длину пароля в 72 байта.
+    """
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Обрезаем до 72 байт
+        truncated = password_bytes[:72]
+        # Удаляем неполные UTF-8 последовательности в конце
+        # UTF-8 байты начинающиеся с 10xxxxxx (0x80-0xBF) являются продолжением
+        while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
+            truncated = truncated[:-1]
+        try:
+            password = truncated.decode('utf-8')
+        except UnicodeDecodeError:
+            # Если не удалось декодировать, используем замену
+            password = truncated.decode('utf-8', errors='replace')
+    return password
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     # bcrypt имеет ограничение на длину пароля в 72 байта
     # Обрезаем пароль до 72 байт, если он длиннее
-    if len(plain_password.encode('utf-8')) > 72:
-        plain_password = plain_password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+    plain_password = _truncate_password(plain_password)
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     # bcrypt имеет ограничение на длину пароля в 72 байта
     # Обрезаем пароль до 72 байт, если он длиннее
-    if len(password.encode('utf-8')) > 72:
-        password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+    password = _truncate_password(password)
     return pwd_context.hash(password)
 
