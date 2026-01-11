@@ -296,55 +296,36 @@ export function UserAvailabilityWeekModal({
                           const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
                           const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
 
-                          // Создаем дату дня в московском времени
+                          // Получаем компоненты дня в московском времени
                           const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
-                          const dayStartMinutes = 0;
-                          const dayEndMinutes = MINUTES_IN_DAY;
 
                           // Вычисляем минуты события в московском времени
-                          const eventStartMinutes = eventStartMoscow.hour * 60 + eventStartMoscow.minute;
-                          const eventEndMinutes = eventEndMoscow.hour * 60 + eventEndMoscow.minute;
+                          let eventStartMinutes = eventStartMoscow.hour * 60 + eventStartMoscow.minute;
+                          let eventEndMinutes = eventEndMoscow.hour * 60 + eventEndMoscow.minute;
 
                           // Проверяем, попадает ли событие в текущий день (по московскому времени)
-                          const eventStartDay = new Date(eventStartMoscow.year, eventStartMoscow.month, eventStartMoscow.day);
-                          const dayDate = new Date(dayMoscow.year, dayMoscow.month, dayMoscow.day);
+                          const eventStartDayKey = `${eventStartMoscow.year}-${eventStartMoscow.month}-${eventStartMoscow.day}`;
+                          const dayKey = `${dayMoscow.year}-${dayMoscow.month}-${dayMoscow.day}`;
                           
-                          if (eventStartDay.getTime() !== dayDate.getTime() && 
-                              eventEndMoscow.year === dayMoscow.year && 
-                              eventEndMoscow.month === dayMoscow.month && 
-                              eventEndMoscow.day === dayMoscow.day) {
-                            // Событие начинается в предыдущем дне, но заканчивается в текущем
-                            const startMinutes = 0;
-                            const endMinutes = Math.min(MINUTES_IN_DAY, eventEndMinutes);
-                            const topPx = (startMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
-                            const heightPx = ((endMinutes - startMinutes) / MINUTES_IN_DAY) * DAY_HEIGHT;
-
-                            return (
-                              <div
-                                key={event.id}
-                                className="absolute left-0 right-0 mx-0.5 rounded border-l-4 border-red-500 bg-red-50 p-1 text-xs shadow-sm"
-                                style={{
-                                  top: `${topPx}px`,
-                                  height: `${Math.max(heightPx, 20)}px`,
-                                }}
-                                title={`${event.title} ${formatTimeInTimeZone(eventStart, MOSCOW_TIMEZONE)} - ${formatTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE)}`}
-                              >
-                                <div className="font-semibold text-red-900 truncate">{event.title}</div>
-                                <div className="text-[0.65rem] text-red-700">
-                                  {formatTimeInTimeZone(eventStart, MOSCOW_TIMEZONE)} - {formatTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE)}
-                                </div>
-                              </div>
-                            );
+                          // Если событие начинается в другом дне, показываем с начала дня
+                          if (eventStartDayKey !== dayKey) {
+                            eventStartMinutes = 0;
                           }
 
-                          if (eventStartDay.getTime() !== dayDate.getTime()) {
-                            return null;
+                          // Если событие заканчивается в другом дне, показываем до конца дня
+                          const eventEndDayKey = `${eventEndMoscow.year}-${eventEndMoscow.month}-${eventEndMoscow.day}`;
+                          if (eventEndDayKey !== dayKey) {
+                            eventEndMinutes = MINUTES_IN_DAY;
                           }
 
-                          const startMinutes = Math.max(dayStartMinutes, eventStartMinutes);
-                          const endMinutes = Math.min(dayEndMinutes, eventEndMinutes);
+                          const startMinutes = Math.max(0, Math.min(MINUTES_IN_DAY, eventStartMinutes));
+                          const endMinutes = Math.max(startMinutes, Math.min(MINUTES_IN_DAY, eventEndMinutes));
                           const topPx = (startMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                           const heightPx = ((endMinutes - startMinutes) / MINUTES_IN_DAY) * DAY_HEIGHT;
+
+                          if (heightPx <= 0) {
+                            return null;
+                          }
 
                           return (
                             <div
