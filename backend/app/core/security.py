@@ -175,27 +175,37 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         # Если все еще длиннее, обрезаем до 72 байт напрямую
         plain_password = final_check[:72].decode('utf-8', errors='replace')
     
-    try:
-        return pwd_context.verify(plain_password, hashed_password)
-    except (ValueError, Exception) as e:
-        # Перехватываем любые исключения, связанные с длиной пароля
-        error_str = str(e).lower()
-        if "72" in error_str or "bytes" in error_str or "truncate" in error_str or "longer" in error_str:
-            # Если все еще ошибка, пробуем еще более агрессивную обрезку
-            password_bytes = plain_password.encode('utf-8')
-            if len(password_bytes) > 72:
-                # Просто обрезаем до 72 байт
-                truncated = password_bytes[:72]
-                # Удаляем все байты продолжения UTF-8
-                while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
-                    truncated = truncated[:-1]
-                if truncated:
-                    plain_password = truncated.decode('utf-8', errors='replace')
-                    return pwd_context.verify(plain_password, hashed_password)
-                else:
+    # Множественные попытки с разными вариантами обрезки
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except (ValueError, Exception) as e:
+            error_str = str(e).lower()
+            # Если ошибка связана с длиной пароля
+            if "72" in error_str or "bytes" in error_str or "truncate" in error_str or "longer" in error_str:
+                if attempt < max_attempts - 1:
+                    # Пробуем еще более агрессивную обрезку
+                    password_bytes = plain_password.encode('utf-8')
+                    if len(password_bytes) > 72:
+                        # Обрезаем до 72 байт
+                        truncated = password_bytes[:72]
+                        # Удаляем все байты продолжения UTF-8
+                        while truncated and (truncated[-1] & 0b11000000) == 0b10000000:
+                            truncated = truncated[:-1]
+                        if truncated:
+                            plain_password = truncated.decode('utf-8', errors='replace')
+                            # Проверяем еще раз длину
+                            if len(plain_password.encode('utf-8')) <= 72:
+                                continue
+                    # Если не удалось обрезать, возвращаем False
                     return False
-        # Если ошибка не связана с длиной пароля, пробрасываем дальше
-        raise
+                else:
+                    # Последняя попытка - возвращаем False
+                    return False
+            else:
+                # Если ошибка не связана с длиной пароля, пробрасываем дальше
+                raise
 
 
 def get_password_hash(password: str) -> str:
