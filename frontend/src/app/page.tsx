@@ -1763,9 +1763,6 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </button>
-                  <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    Настройки профиля
-                  </div>
                 </div>
               </div>
 
@@ -1786,7 +1783,7 @@ export default function Home() {
 
         <main className="flex flex-1 flex-col gap-3 lg:flex-row overflow-hidden min-h-0 relative">
           {/* Правая панель с иконками для переключения режимов */}
-          <div className="fixed right-0 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2 translate-x-[calc(100%-2.875rem)] transition-transform duration-300 ease-in-out hover:translate-x-0">
+          <div className="fixed right-0 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2 translate-x-[calc(100%-2.875rem)] transition-transform duration-300 ease-in-out hover:-translate-x-4">
             {availableViewModes.map((mode) => {
               const isActive = viewMode === mode;
               const getIcon = () => {

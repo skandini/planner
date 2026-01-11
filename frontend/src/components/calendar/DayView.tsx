@@ -148,12 +148,15 @@ export function DayView({
   }, [day]);
 
   const dayEvents = useMemo(() => {
+    // Нормализуем день: устанавливаем время на полдень для корректного сравнения
+    const normalizedDay = new Date(day);
+    normalizedDay.setHours(12, 0, 0, 0);
+    const dayMoscow = getTimeInTimeZone(normalizedDay, MOSCOW_TIMEZONE);
+    
     return events.filter((event) => {
       const eventStart = parseUTC(event.starts_at);
       // Получаем компоненты даты события в московском времени
       const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
-      // Получаем компоненты дня в московском времени
-      const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
       // Сравниваем даты напрямую по компонентам
       return (
         eventStartMoscow.year === dayMoscow.year &&
@@ -161,7 +164,7 @@ export function DayView({
         eventStartMoscow.day === dayMoscow.day
       );
     });
-  }, [events, day, dayKey]);
+  }, [events, day]);
   
   const getEventPosition = useCallback((event: EventRecord) => {
     const eventStart = parseUTC(event.starts_at);
