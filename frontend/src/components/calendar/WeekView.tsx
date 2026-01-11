@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { addDays, addDaysInMoscow, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface WeekViewProps {
@@ -14,7 +14,7 @@ interface WeekViewProps {
   onEventClick: (event: EventRecord) => void;
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
-  onTimeSlotClick?: (date: Date, startTime: Date, endTime: Date) => void;
+  onTimeSlotClick?: (date: Date, startTime: Date, endTime: Date, startDateStr?: string, endDateStr?: string) => void;
   onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
   currentUserEmail?: string;
   users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
@@ -235,9 +235,20 @@ export function WeekView({
   const dayColumns = useMemo(
     () =>
       days.map((date) => {
-        const dayStart = new Date(date);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = addDays(dayStart, 1);
+        // Получаем компоненты дня в московском времени
+        const dateMoscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+        
+        // Создаем dayStart и dayEnd в московском времени (полночь МСК = 21:00 предыдущего дня UTC)
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const dayStartMoscowStr = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T00:00:00+03:00`;
+        const dayEndMoscowStr = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T23:59:59+03:00`;
+        
+        const dayStart = new Date(dayStartMoscowStr);
+        // Для dayEnd используем начало следующего дня в московском времени
+        const nextDay = addDaysInMoscow(date, 1);
+        const nextDayMoscow = getTimeInTimeZone(nextDay, MOSCOW_TIMEZONE);
+        const dayEndMoscowStrNext = `${nextDayMoscow.year}-${pad(nextDayMoscow.month + 1)}-${pad(nextDayMoscow.day)}T00:00:00+03:00`;
+        const dayEnd = new Date(dayEndMoscowStrNext);
         
         // Получаем компоненты дня в московском времени для фильтрации
         const dayStartMoscow = getTimeInTimeZone(dayStart, MOSCOW_TIMEZONE);
@@ -280,6 +291,7 @@ export function WeekView({
           date,
           dayStart,
           dayEnd,
+          dayStartMoscow, // Сохраняем компоненты дня в московском времени
           events: dayEvents,
           isToday: date.toDateString() === todayKey,
         };
@@ -358,16 +370,17 @@ export function WeekView({
     // Округляем до 5 минут для привязки
     minutes = Math.round(minutes / 5) * 5;
     
-    // Получаем компоненты дня в московском времени из dayColumn.date
-    const dayMoscow = getTimeInTimeZone(dayColumn.date, MOSCOW_TIMEZONE);
+    // Используем компоненты дня в московском времени, которые уже были вычислены
+    // Это гарантирует правильный день без сдвига
+    const dayMoscow = dayColumn.dayStartMoscow;
     
     // Вычисляем новые час и минуту в московском времени
     const newHour = Math.floor(minutes / 60);
     const newMinute = minutes % 60;
     
-    // Создаем новую дату в московском времени
+    // Создаем новую дату в московском времени (с секундами для корректного парсинга)
     const pad = (n: number) => String(n).padStart(2, '0');
-    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(newHour)}:${pad(newMinute)}+03:00`;
+    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(newHour)}:${pad(newMinute)}:00+03:00`;
     const newStart = new Date(newStartStr);
     
     onEventMove(dragInfo.current.event, newStart);
@@ -477,7 +490,8 @@ export function WeekView({
     const startTime = new Date(`${startDateStr}+03:00`);
     const endTime = new Date(`${endDateStr}+03:00`);
 
-    onTimeSlotClick(dayColumn.dayStart, startTime, endTime);
+    // Передаем также строки дат для правильной интерпретации в модальном окне
+    onTimeSlotClick(dayColumn.dayStart, startTime, endTime, startDateStr, endDateStr);
     setSelection(null);
   }, [selection, dayColumns, onTimeSlotClick, DAY_HEIGHT]);
 

@@ -352,7 +352,8 @@ def _generate_unavailability_events(
     to_date: datetime,
 ) -> List[EventRead]:
     """Generate virtual events for unavailable time slots based on user's availability schedule."""
-    from datetime import timedelta, time as dt_time, timezone as dt_timezone
+    from datetime import timedelta, time as dt_time
+    from datetime import timezone as dt_timezone
     
     if not schedule:
         return []
@@ -367,8 +368,8 @@ def _generate_unavailability_events(
     if not isinstance(schedule, dict):
         return []
     
-    # For simplicity, work with UTC and assume schedule times are in user's timezone
-    # In production, you might want to use pytz or zoneinfo for proper timezone handling
+    # Для работы с московским временем (UTC+3)
+    # Schedule times указаны в московском времени, нам нужно правильно создать события
     tz_offset = 0  # Default to UTC
     if timezone == "Europe/Moscow":
         tz_offset = 3  # UTC+3
@@ -376,6 +377,10 @@ def _generate_unavailability_events(
         tz_offset = 2  # UTC+2
     elif timezone == "Asia/Almaty":
         tz_offset = 6  # UTC+6
+    
+    # Создаем timezone-aware datetime объекты для правильной работы с часовыми поясами
+    # Используем timezone offset для создания datetime в нужном часовом поясе
+    moscow_tz = dt_timezone(timedelta(hours=tz_offset))
     
     # Day names mapping
     day_names = {
@@ -397,13 +402,19 @@ def _generate_unavailability_events(
     
     unavailability_events = []
     try:
-        current_date = from_date.date()
-        end_date = to_date.date()
+        # Конвертируем даты в московское время для правильного определения дня недели
+        # Если timezone = "Europe/Moscow", добавляем 3 часа к UTC
+        moscow_offset = timedelta(hours=tz_offset)
+        from_date_moscow = from_date + moscow_offset
+        to_date_moscow = to_date + moscow_offset
+        current_date = from_date_moscow.date()
+        end_date = to_date_moscow.date()
     except (AttributeError, ValueError):
         return []
     
     # Iterate through each day in the range
     while current_date <= end_date:
+        # Используем дату в московском времени для определения дня недели
         weekday = current_date.weekday()
         day_name = day_names[weekday]
         
@@ -412,9 +423,12 @@ def _generate_unavailability_events(
         
         if not day_slots:
             # If no slots defined, user is unavailable all day
-            # Create datetime in UTC (assuming schedule times are already in UTC or we adjust)
-            day_start_utc = datetime.combine(current_date, dt_time(0, 0)) - timedelta(hours=tz_offset)
-            day_end_utc = datetime.combine(current_date, dt_time(23, 59, 59)) - timedelta(hours=tz_offset)
+            # Создаем datetime в московском времени для этого дня, затем конвертируем в UTC
+            day_start_moscow = datetime.combine(current_date, dt_time(0, 0), moscow_tz)
+            day_end_moscow = datetime.combine(current_date, dt_time(23, 59, 59), moscow_tz)
+            # Конвертируем в UTC (наивный datetime для совместимости с базой данных)
+            day_start_utc = day_start_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
+            day_end_utc = day_end_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
             
             if day_start_utc < to_date and day_end_utc > from_date:
                 now = datetime.utcnow()
@@ -449,8 +463,12 @@ def _generate_unavailability_events(
                     start_hour, start_minute = map(int, slot_start.split(":"))
                     end_hour, end_minute = map(int, slot_end.split(":"))
                     
-                    slot_start_utc = datetime.combine(current_date, dt_time(start_hour, start_minute)) - timedelta(hours=tz_offset)
-                    slot_end_utc = datetime.combine(current_date, dt_time(end_hour, end_minute)) - timedelta(hours=tz_offset)
+                    # Создаем datetime в московском времени для этого слота, затем конвертируем в UTC
+                    slot_start_moscow = datetime.combine(current_date, dt_time(start_hour, start_minute), moscow_tz)
+                    slot_end_moscow = datetime.combine(current_date, dt_time(end_hour, end_minute), moscow_tz)
+                    # Конвертируем в UTC (наивный datetime для совместимости с базой данных)
+                    slot_start_utc = slot_start_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
+                    slot_end_utc = slot_end_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
                     
                     if slot_start_utc < to_date and slot_end_utc > from_date:
                         now = datetime.utcnow()
@@ -480,8 +498,11 @@ def _generate_unavailability_events(
                 first_slot_start = sorted_slots[0].get("start", "00:00")
                 hour, minute = map(int, first_slot_start.split(":"))
                 if hour > 0 or minute > 0:
-                    day_start_utc = datetime.combine(current_date, dt_time(0, 0)) - timedelta(hours=tz_offset)
-                    first_slot_utc = datetime.combine(current_date, dt_time(hour, minute)) - timedelta(hours=tz_offset)
+                    # Создаем datetime в московском времени, затем конвертируем в UTC
+                    day_start_moscow = datetime.combine(current_date, dt_time(0, 0), moscow_tz)
+                    first_slot_moscow = datetime.combine(current_date, dt_time(hour, minute), moscow_tz)
+                    day_start_utc = day_start_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
+                    first_slot_utc = first_slot_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
                     
                     if day_start_utc < to_date and first_slot_utc > from_date:
                         now = datetime.utcnow()
@@ -511,8 +532,11 @@ def _generate_unavailability_events(
                         end_hour, end_minute = map(int, current_slot_end.split(":"))
                         start_hour, start_minute = map(int, next_slot_start.split(":"))
                         
-                        gap_end_utc = datetime.combine(current_date, dt_time(end_hour, end_minute)) - timedelta(hours=tz_offset)
-                        gap_start_utc = datetime.combine(current_date, dt_time(start_hour, start_minute)) - timedelta(hours=tz_offset)
+                        # Создаем datetime в московском времени, затем конвертируем в UTC
+                        gap_end_moscow = datetime.combine(current_date, dt_time(end_hour, end_minute), moscow_tz)
+                        gap_start_moscow = datetime.combine(current_date, dt_time(start_hour, start_minute), moscow_tz)
+                        gap_end_utc = gap_end_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
+                        gap_start_utc = gap_start_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
                         
                         if gap_end_utc < gap_start_utc and gap_end_utc < to_date and gap_start_utc > from_date:
                             now = datetime.utcnow()
@@ -538,8 +562,11 @@ def _generate_unavailability_events(
                     if isinstance(last_slot_end, str):
                         end_hour, end_minute = map(int, last_slot_end.split(":"))
                         if end_hour < 23 or end_minute < 59:
-                            last_slot_utc = datetime.combine(current_date, dt_time(end_hour, end_minute)) - timedelta(hours=tz_offset)
-                            day_end_utc = datetime.combine(current_date, dt_time(23, 59, 59)) - timedelta(hours=tz_offset)
+                            # Создаем datetime в московском времени, затем конвертируем в UTC
+                            last_slot_moscow = datetime.combine(current_date, dt_time(end_hour, end_minute), moscow_tz)
+                            day_end_moscow = datetime.combine(current_date, dt_time(23, 59, 59), moscow_tz)
+                            last_slot_utc = last_slot_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
+                            day_end_utc = day_end_moscow.astimezone(dt_timezone.utc).replace(tzinfo=None)
                             
                             if last_slot_utc < to_date and day_end_utc > from_date:
                                 now = datetime.utcnow()
@@ -560,7 +587,11 @@ def _generate_unavailability_events(
                     pass
         
         try:
-            current_date = (datetime.combine(current_date, dt_time(0, 0)) + timedelta(days=1)).date()
+            # Переходим к следующему дню в московском времени
+            # Создаем datetime в московском времени, добавляем день, затем получаем date
+            current_date_moscow_dt = datetime.combine(current_date, dt_time(0, 0), moscow_tz)
+            next_day_moscow = current_date_moscow_dt + timedelta(days=1)
+            current_date = next_day_moscow.date()
         except (ValueError, TypeError):
             break
     

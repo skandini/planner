@@ -48,6 +48,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
   addDays,
+  addDaysInMoscow,
   addMonths,
   getMonthGridDays,
   formatDate,
@@ -327,8 +328,6 @@ export default function Home() {
       const response = await authFetch(`${USERS_ENDPOINT}me`, { cache: "no-store" });
       if (response.ok) {
         const data: UserProfile = await response.json();
-        console.log('Loaded user profile:', data);
-        console.log('Avatar URL:', data.avatar_url);
         setCurrentUser(data);
         
         // Загружаем информацию об организации если есть
@@ -361,7 +360,6 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         setOrganizations(data);
-        console.log("Загружено организаций:", data.length);
       } else {
         console.error("Ошибка загрузки организаций:", response.status, response.statusText);
         const errorData = await response.json().catch(() => ({}));
@@ -453,7 +451,6 @@ export default function Home() {
         throw new Error(`Не удалось загрузить переговорки: ${response.status}`);
       }
       const data: Room[] = await response.json();
-      console.log("Loaded rooms:", data.length);
       setRooms(data);
     } catch (err) {
       console.error("Failed to load rooms:", err);
@@ -564,9 +561,9 @@ export default function Home() {
   const canManageEvents = selectedRole !== null; // Любая роль позволяет создавать события
 
   const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
-  const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
+  const weekEnd = useMemo(() => addDaysInMoscow(weekStart, 7), [weekStart]);
   const weekDays = useMemo(
-    () => Array.from({ length: 7 }, (_, idx) => addDays(weekStart, idx)),
+    () => Array.from({ length: 7 }, (_, idx) => addDaysInMoscow(weekStart, idx)),
     [weekStart],
   );
 
@@ -1033,6 +1030,8 @@ export default function Home() {
     event?: EventRecord,
     startTime?: Date,
     endTime?: Date,
+    startDateStr?: string,
+    endDateStr?: string,
   ) => {
     if (!canManageEvents && !event) {
       return;
@@ -1041,8 +1040,12 @@ export default function Home() {
       const start = parseUTC(event.starts_at);
       const end = parseUTC(event.ends_at);
       // Конвертируем в московское время для отображения в форме
-      const startsAtLocal = toTimeZoneString(start, MOSCOW_TIMEZONE);
-      const endsAtLocal = toTimeZoneString(end, MOSCOW_TIMEZONE);
+      // Используем getTimeInTimeZone для получения компонентов в московском времени
+      const startMoscow = getTimeInTimeZone(start, MOSCOW_TIMEZONE);
+      const endMoscow = getTimeInTimeZone(end, MOSCOW_TIMEZONE);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const startsAtLocal = `${startMoscow.year}-${pad(startMoscow.month + 1)}-${pad(startMoscow.day)}T${pad(startMoscow.hour)}:${pad(startMoscow.minute)}`;
+      const endsAtLocal = `${endMoscow.year}-${pad(endMoscow.month + 1)}-${pad(endMoscow.day)}T${pad(endMoscow.hour)}:${pad(endMoscow.minute)}`;
       const recurrenceRule = event.recurrence_rule || null;
       const recurrenceUntil = recurrenceRule?.until
         ? new Date(recurrenceRule.until).toISOString().split("T")[0]
@@ -1072,22 +1075,27 @@ export default function Home() {
     } else {
       // startTime и endTime уже созданы в московском времени в WeekView/DayView
       // Если они не переданы, создаем их как московское время
-      let start: Date;
-      let end: Date;
+      let startsAtLocal: string;
+      let endsAtLocal: string;
       
       if (startTime && endTime) {
-        // Используем переданные времена (уже в московском времени)
-        start = startTime;
-        end = endTime;
+        // startTime и endTime уже в московском времени (созданы с +03:00)
+        // Используем toISOString() и парсим его, чтобы получить компоненты в UTC,
+        // затем конвертируем обратно в московское время для правильного отображения
+        // Но проще - использовать getTimeInTimeZone, который правильно интерпретирует Date
+        const startMoscow = getTimeInTimeZone(startTime, MOSCOW_TIMEZONE);
+        const endMoscow = getTimeInTimeZone(endTime, MOSCOW_TIMEZONE);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        // Используем компоненты напрямую из московского времени
+        startsAtLocal = `${startMoscow.year}-${pad(startMoscow.month + 1)}-${pad(startMoscow.day)}T${pad(startMoscow.hour)}:${pad(startMoscow.minute)}`;
+        endsAtLocal = `${endMoscow.year}-${pad(endMoscow.month + 1)}-${pad(endMoscow.day)}T${pad(endMoscow.hour)}:${pad(endMoscow.minute)}`;
       } else {
         // Создаем время по умолчанию в московском времени
         const date = initialDate || selectedDate;
         const dateMoscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
         const pad = (n: number) => String(n).padStart(2, '0');
-        const startStr = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T09:00+03:00`;
-        const endStr = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T10:00+03:00`;
-        start = new Date(startStr);
-        end = new Date(endStr);
+        startsAtLocal = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T09:00`;
+        endsAtLocal = `${dateMoscow.year}-${pad(dateMoscow.month + 1)}-${pad(dateMoscow.day)}T10:00`;
       }
 
       setEventForm({
@@ -1095,8 +1103,8 @@ export default function Home() {
         description: "",
         location: "",
         room_id: null,
-        starts_at: toTimeZoneString(start, MOSCOW_TIMEZONE),
-        ends_at: toTimeZoneString(end, MOSCOW_TIMEZONE),
+        starts_at: startsAtLocal,
+        ends_at: endsAtLocal,
         participant_ids: currentUser?.id ? [currentUser.id] : [], // Автор добавляется по умолчанию
         recurrence_enabled: false,
         recurrence_frequency: "weekly",
@@ -2486,7 +2494,7 @@ export default function Home() {
                     )}
                     <span className="text-xs text-slate-500">
                 {viewMode === "week"
-                        ? `${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(weekStart)} – ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(addDays(weekStart, 6))}`
+                        ? `${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(weekStart)} – ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(addDaysInMoscow(weekStart, 6))}`
                         : new Intl.DateTimeFormat("ru-RU", { month: "short", year: "numeric", timeZone: MOSCOW_TIMEZONE }).format(selectedDate)}
                     </span>
         </div>
@@ -2584,8 +2592,8 @@ export default function Home() {
               }}
               rooms={rooms}
               onEventMove={canManageEvents ? handleEventMove : undefined}
-              onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date) => {
-                openEventModal(date, undefined, startTime, endTime);
+              onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date, startDateStr?: string, endDateStr?: string) => {
+                openEventModal(date, undefined, startTime, endTime, startDateStr, endDateStr);
               } : undefined}
               onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
                 try {
@@ -2623,8 +2631,8 @@ export default function Home() {
               }}
               rooms={rooms}
               onEventMove={canManageEvents ? handleEventMove : undefined}
-              onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date) => {
-                openEventModal(date, undefined, startTime, endTime);
+              onTimeSlotClick={canManageEvents ? (date: Date, startTime: Date, endTime: Date, startDateStr?: string, endDateStr?: string) => {
+                openEventModal(date, undefined, startTime, endTime, startDateStr, endDateStr);
               } : undefined}
               onUpdateParticipantStatus={async (eventId: string, userId: string, status: string) => {
                 try {
@@ -2798,6 +2806,7 @@ export default function Home() {
             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
             accentColor={selectedCalendar?.color || "#6366f1"}
+            events={events}
             currentUserEmail={userEmail || undefined}
             onEventUpdated={async () => {
               // Перезагружаем событие после обновления вложений

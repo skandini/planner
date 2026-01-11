@@ -8,7 +8,7 @@ import type { UserProfile, ParticipantProfile } from "@/types/user.types";
 import type { TimelineRowData } from "@/types/common.types";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
-import { inputToDate } from "@/lib/utils/dateUtils";
+import { inputToDate, getTimeInTimeZone, MOSCOW_TIMEZONE, addDaysInMoscow } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
 
 interface ResourcePanelProps {
@@ -35,6 +35,8 @@ interface ResourcePanelProps {
   organizations?: Array<{ id: string; name: string; slug: string }>;
   apiBaseUrl?: string;
   accentColor?: string; // Цвет календаря для занятого времени
+  events?: EventRecord[]; // События из основного массива для отображения как в основной сетке
+  currentUserEmail?: string; // Email текущего пользователя
 }
 
 export function ResourcePanel({
@@ -61,6 +63,8 @@ export function ResourcePanel({
   organizations = [],
   apiBaseUrl = "",
   accentColor = "#6366f1", // По умолчанию indigo-500
+  events = [], // События из основного массива
+  currentUserEmail, // Email текущего пользователя
 }: ResourcePanelProps) {
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
@@ -181,21 +185,29 @@ export function ResourcePanel({
     }
 
     // Загружаем доступность для всего дня, чтобы видеть всю занятость
-    // Используем дату из starts_at или selectedDate
+    // Используем дату из starts_at или selectedDate (в московском времени)
     let targetDate: Date;
     if (form.starts_at) {
+      // form.starts_at в формате "YYYY-MM-DDTHH:mm" представляет московское время
       const dateStr = form.starts_at.split("T")[0];
-      targetDate = new Date(dateStr + "T00:00:00");
+      const pad = (n: number) => String(n).padStart(2, '0');
+      targetDate = new Date(`${dateStr}T00:00:00+03:00`);
     } else {
-      targetDate = new Date(selectedDate);
-      targetDate.setHours(0, 0, 0, 0);
+      // selectedDate уже должен быть в московском времени
+      const selectedMoscow = getTimeInTimeZone(selectedDate, MOSCOW_TIMEZONE);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      targetDate = new Date(`${selectedMoscow.year}-${pad(selectedMoscow.month + 1)}-${pad(selectedMoscow.day)}T00:00:00+03:00`);
     }
     
-    // Загружаем доступность для всего дня (00:00 - 23:59:59)
-    const rangeStart = new Date(targetDate);
-    rangeStart.setHours(0, 0, 0, 0);
-    const rangeEnd = new Date(targetDate);
-    rangeEnd.setHours(23, 59, 59, 999);
+    // Загружаем доступность для всего дня (00:00 - 23:59:59) в московском времени
+    // Получаем компоненты даты в московском времени
+    const targetMoscow = getTimeInTimeZone(targetDate, MOSCOW_TIMEZONE);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    // Создаем rangeStart и rangeEnd в московском времени
+    const rangeStartStr = `${targetMoscow.year}-${pad(targetMoscow.month + 1)}-${pad(targetMoscow.day)}T00:00:00+03:00`;
+    const rangeEndStr = `${targetMoscow.year}-${pad(targetMoscow.month + 1)}-${pad(targetMoscow.day)}T23:59:59+03:00`;
+    const rangeStart = new Date(rangeStartStr);
+    const rangeEnd = new Date(rangeEndStr);
 
     // Не требуем автоматического добавления в календарь
     // Участники могут быть добавлены в события без членства в календаре
@@ -223,16 +235,12 @@ export function ResourcePanel({
           return;
         }
         
-        console.log(`Fetching availability for ${selectedParticipantProfiles.length} participants`);
         const entries = await Promise.allSettled(
           selectedParticipantProfiles.map(async (participant) => {
             const url = `${CALENDAR_ENDPOINT}${selectedCalendarId}/members/${participant.user_id}/availability?from=${encodeURIComponent(rangeStart.toISOString())}&to=${encodeURIComponent(rangeEnd.toISOString())}`;
             try {
-              console.log(`[Availability] Fetching for ${participant.label} (${participant.user_id})`);
-              console.log(`[Availability] URL: ${url}`);
               const response = await authFetch(url, { cache: "no-store" });
               
-              console.log(`[Availability] Response status: ${response.status} for ${participant.label}`);
               
               if (!response.ok) {
                 // Если ошибка, логируем и возвращаем пустой список
@@ -270,14 +278,6 @@ export function ResourcePanel({
                 return participantInEvent.response_status !== "declined";
               });
               
-              console.log(`[Availability] Loaded ${data.length} events for ${participant.label} (${participant.user_id}), filtered to ${filteredData.length} (excluded ${data.length - filteredData.length} declined)`);
-              if (filteredData.length > 0) {
-                console.log(`[Availability] Events for ${participant.label}:`, filteredData.map(e => ({
-                  title: e.title,
-                  starts_at: e.starts_at,
-                  ends_at: e.ends_at,
-                })));
-              }
               return [participant.user_id, filteredData] as const;
             } catch (err) {
               // Логируем ошибки при загрузке доступности
@@ -335,10 +335,9 @@ export function ResourcePanel({
   }, [
     authFetch,
     form.all_day,
-    form.ends_at,
-    form.starts_at,
     selectedCalendarId,
     selectedParticipantProfiles,
+    selectedDate, // Используем selectedDate вместо form.starts_at/ends_at для избежания лишних перезагрузок при редактировании
   ]);
 
   // Определяем участников с конфликтами
@@ -493,6 +492,9 @@ export function ResourcePanel({
         departments={allDepartments}
         apiBaseUrl={apiBaseUrl}
         accentColor={accentColor}
+        events={events}
+        rooms={rooms}
+        currentUserEmail={currentUserEmail}
         onRemoveParticipant={(participantId) => {
           setForm((prev) => ({
             ...prev,
@@ -501,13 +503,12 @@ export function ResourcePanel({
         }}
         onTimeRangeSelect={(start, end) => {
           // Форматируем даты для формы (в московском времени)
+          // start и end уже в московском времени (созданы с +03:00)
           const formatDateTime = (date: Date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
+            // Получаем компоненты в московском времени
+            const moscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            return `${moscow.year}-${pad(moscow.month + 1)}-${pad(moscow.day)}T${pad(moscow.hour)}:${pad(moscow.minute)}`;
           };
           setForm((prev) => ({
             ...prev,

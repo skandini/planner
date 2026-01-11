@@ -14,7 +14,7 @@ interface DayViewProps {
   onEventClick: (event: EventRecord) => void;
   rooms: Room[];
   onEventMove?: (event: EventRecord, newStart: Date) => void;
-  onTimeSlotClick?: (date: Date, startTime: Date, endTime: Date) => void;
+  onTimeSlotClick?: (date: Date, startTime: Date, endTime: Date, startDateStr?: string, endDateStr?: string) => void;
   onUpdateParticipantStatus?: (eventId: string, userId: string, status: string) => Promise<void>;
   currentUserEmail?: string;
   users?: Array<{ id: string; email: string; avatar_url: string | null; full_name: string | null }>;
@@ -140,6 +140,13 @@ export function DayView({
     setHoveredEvent(null);
   }, []);
   
+  // Получаем компоненты дня в московском времени для использования в handleDrop
+  const dayMoscowComponents = useMemo(() => {
+    const dayStart = new Date(day);
+    dayStart.setHours(0, 0, 0, 0);
+    return getTimeInTimeZone(dayStart, MOSCOW_TIMEZONE);
+  }, [day]);
+
   const dayEvents = useMemo(() => {
     return events.filter((event) => {
       const eventStart = parseUTC(event.starts_at);
@@ -222,18 +229,19 @@ export function DayView({
     const dropHour = Math.floor(roundedMinutes / 60);
     const dropMinute = roundedMinutes % 60;
     
-    // Получаем компоненты дня в московском времени
-    const dayMoscow = getTimeInTimeZone(day, MOSCOW_TIMEZONE);
+    // Используем компоненты дня в московском времени, которые уже были вычислены
+    // Это гарантирует правильный день без сдвига
+    const dayMoscow = dayMoscowComponents;
     
-    // Создаем новую дату в московском времени
+    // Создаем новую дату в московском времени (с секундами для корректного парсинга)
     const pad = (n: number) => String(n).padStart(2, '0');
-    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(dropHour)}:${pad(dropMinute)}+03:00`;
+    const newStartStr = `${dayMoscow.year}-${pad(dayMoscow.month + 1)}-${pad(dayMoscow.day)}T${pad(dropHour)}:${pad(dropMinute)}:00+03:00`;
     const newStart = new Date(newStartStr);
     
     onEventMove(dragInfo.current.event, newStart);
     dragInfo.current = null;
     draggingRef.current = false;
-  }, [onEventMove, HOUR_HEIGHT, day]);
+  }, [onEventMove, HOUR_HEIGHT, dayMoscowComponents]);
   
   const handleTimeSlotClick = useCallback((hour: number, minute: number = 0) => {
     if (!onTimeSlotClick) return;
@@ -251,7 +259,8 @@ export function DayView({
     const startTime = new Date(`${startDateStr}+03:00`);
     const endTime = new Date(`${endDateStr}+03:00`);
     
-    onTimeSlotClick(day, startTime, endTime);
+    // Передаем также строки дат для правильной интерпретации в модальном окне
+    onTimeSlotClick(day, startTime, endTime, startDateStr, endDateStr);
   }, [day, onTimeSlotClick]);
   
   useEffect(() => {

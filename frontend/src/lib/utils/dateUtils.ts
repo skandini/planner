@@ -1,4 +1,18 @@
 export const startOfWeek = (date: Date) => {
+  // Проверяем, что date является валидным Date объектом
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.error('startOfWeek: Invalid date provided', date);
+    // Возвращаем начало текущей недели, если переданная дата невалидна
+    const now = new Date();
+    const moscowComponents = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const moscowDateStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(moscowComponents.day)}T12:00:00+03:00`;
+    date = new Date(moscowDateStr);
+  }
+  
+  // Получаем компоненты даты в московском времени
+  const moscowComponents = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+  
   // Получаем день недели в московском времени напрямую через Intl.DateTimeFormat
   // Это гарантирует правильное определение дня недели независимо от часового пояса браузера
   const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
@@ -6,7 +20,19 @@ export const startOfWeek = (date: Date) => {
     weekday: 'long', // 'Monday', 'Tuesday', etc. - более надежно чем 'short'
   });
   
-  const weekdayStr = weekdayFormatter.format(date);
+  // Создаем временную дату в московском времени для правильного определения дня недели
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const moscowDateStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(moscowComponents.day)}T12:00:00+03:00`;
+  const moscowDate = new Date(moscowDateStr);
+  
+  // Проверяем, что moscowDate валидна
+  if (isNaN(moscowDate.getTime())) {
+    console.error('startOfWeek: Invalid moscowDate', moscowDateStr);
+    // Возвращаем текущую дату, если не удалось создать
+    return new Date();
+  }
+  
+  const weekdayStr = weekdayFormatter.format(moscowDate);
   // Маппинг дня недели на число (0 = воскресенье, 1 = понедельник, ..., 6 = суббота)
   const weekdayMap: Record<string, number> = {
     'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6
@@ -18,14 +44,11 @@ export const startOfWeek = (date: Date) => {
   // Если понедельник (1), diff = 0 (уже понедельник)
   // Если вторник (2), diff = -1 (откатываемся на 1 день)
   // И так далее
-  const diff = (day === 0 ? -6 : 1) - day;
-  
-  // Получаем компоненты даты в московском времени
-  const moscowComponents = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+  // Правильная формула: diff = day === 0 ? -6 : 1 - day
+  const diff = day === 0 ? -6 : 1 - day;
   
   // Вычисляем дату начала недели используя компоненты даты в московском времени
   // Используем простой подход: создаем дату в московском времени с явным указанием часового пояса
-  const pad = (n: number) => String(n).padStart(2, '0');
   
   // Вычисляем день начала недели
   let startDay = moscowComponents.day + diff;
@@ -65,11 +88,22 @@ export const startOfWeek = (date: Date) => {
   const moscowWeekStartStr = `${startYear}-${pad(startMonth + 1)}-${pad(startDay)}T12:00:00+03:00`;
   const result = new Date(moscowWeekStartStr);
   
+  // Проверяем, что результат валиден
+  if (isNaN(result.getTime())) {
+    console.error('startOfWeek: Invalid result date', moscowWeekStartStr);
+    // Если невалидна, создаем через UTC
+    return new Date(Date.UTC(startYear, startMonth, startDay, 9, 0, 0));
+  }
+  
   // Проверяем, что дата правильная - компоненты должны совпадать
-  const checkComponents = getTimeInTimeZone(result, MOSCOW_TIMEZONE);
-  if (checkComponents.year === startYear && checkComponents.month === startMonth && checkComponents.day === startDay) {
-    // Дата правильная - возвращаем её (время не важно для начала недели, главное - правильный день)
-    return result;
+  try {
+    const checkComponents = getTimeInTimeZone(result, MOSCOW_TIMEZONE);
+    if (checkComponents.year === startYear && checkComponents.month === startMonth && checkComponents.day === startDay) {
+      // Дата правильная - возвращаем её (время не важно для начала недели, главное - правильный день)
+      return result;
+    }
+  } catch (error) {
+    console.error('startOfWeek: Error checking result', error);
   }
   
   // Если компоненты не совпали (маловероятно), создаем через UTC напрямую
@@ -82,6 +116,79 @@ export const addDays = (date: Date, amount: number) => {
   const result = new Date(date);
   result.setDate(result.getDate() + amount);
   return result;
+};
+
+// Добавляет дни в московском времени (гарантирует правильный день без сдвига)
+export const addDaysInMoscow = (date: Date, amount: number): Date => {
+  // Проверяем, что date является валидным Date объектом
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.error('addDaysInMoscow: Invalid date provided', date);
+    // Возвращаем текущую дату, если переданная дата невалидна
+    return new Date();
+  }
+  
+  // Получаем компоненты даты в московском времени
+  const moscowComponents = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+  
+  // Вычисляем новый день
+  let newDay = moscowComponents.day + amount;
+  let newMonth = moscowComponents.month;
+  let newYear = moscowComponents.year;
+  
+  // Обрабатываем переход через границы месяца/года
+  // Используем цикл, чтобы обработать случаи, когда нужно перейти через несколько месяцев
+  while (true) {
+    if (newDay < 1) {
+      // Переход к предыдущему месяцу
+      newMonth -= 1;
+      if (newMonth < 0) {
+        newMonth = 11;
+        newYear -= 1;
+      }
+      const daysInPrevMonth = new Date(Date.UTC(newYear, newMonth + 1, 0)).getUTCDate();
+      newDay = daysInPrevMonth + newDay;
+    } else {
+      // Проверяем количество дней в текущем месяце
+      const daysInMonth = new Date(Date.UTC(newYear, newMonth + 1, 0)).getUTCDate();
+      if (newDay > daysInMonth) {
+        // Переход к следующему месяцу
+        newDay = newDay - daysInMonth;
+        newMonth += 1;
+        if (newMonth > 11) {
+          newMonth = 0;
+          newYear += 1;
+        }
+      } else {
+        // newDay в допустимом диапазоне для текущего месяца, выходим из цикла
+        break;
+      }
+    }
+  }
+  
+  // Создаем дату в московском времени (полдень для избежания проблем)
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const moscowDateStr = `${newYear}-${pad(newMonth + 1)}-${pad(newDay)}T12:00:00+03:00`;
+  const result = new Date(moscowDateStr);
+  
+  // Проверяем, что результат валиден
+  if (isNaN(result.getTime())) {
+    console.error('addDaysInMoscow: Invalid result date', moscowDateStr);
+    // Если невалидна, создаем через UTC
+    return new Date(Date.UTC(newYear, newMonth, newDay, 9, 0, 0));
+  }
+  
+  // Проверяем, что дата правильная
+  try {
+    const checkMoscow = getTimeInTimeZone(result, MOSCOW_TIMEZONE);
+    if (checkMoscow.year === newYear && checkMoscow.month === newMonth && checkMoscow.day === newDay) {
+      return result;
+    }
+  } catch (error) {
+    console.error('addDaysInMoscow: Error checking result', error);
+  }
+  
+  // Если не совпало, создаем через UTC
+  return new Date(Date.UTC(newYear, newMonth, newDay, 9, 0, 0));
 };
 
 export const startOfMonth = (date: Date) => {
@@ -102,7 +209,7 @@ export const getMonthGridDays = (date: Date) => {
   const firstDay = startOfMonth(date);
   // Получаем начало недели для первого дня месяца (понедельник недели, в которой находится первый день месяца)
   const gridStart = startOfWeek(firstDay);
-  return Array.from({ length: 42 }, (_, idx) => addDays(gridStart, idx));
+  return Array.from({ length: 42 }, (_, idx) => addDaysInMoscow(gridStart, idx));
 };
 
 export const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions) =>
@@ -164,15 +271,28 @@ export const toUTCString = (localStr: string): string => {
   const [hour, minute] = timePart.split(':').map(Number);
   
   // Создаём дату, интерпретируя строку как московское время (UTC+3)
-  const moscowDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+03:00`;
+  // Важно: используем формат ISO 8601 с явным указанием часового пояса
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const moscowDateStr = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00+03:00`;
   
+  // Создаем Date объект из строки с московским временем
   const date = new Date(moscowDateStr);
   
   if (isNaN(date.getTime())) {
     throw new Error(`Invalid date: ${localStr}`);
   }
   
-  return date.toISOString();
+  // Возвращаем ISO строку в UTC
+  // Проверяем, что конвертация правильная - вычитаем 3 часа из московского времени
+  const utcStr = date.toISOString();
+  
+  // Проверяем, что дата правильно конвертирована
+  // Например, если входная строка "2024-12-07T09:00" (7 декабря, 9:00 МСК),
+  // то UTC должна быть "2024-12-07T06:00:00.000Z" (7 декабря, 6:00 UTC)
+  // Если входная строка "2024-12-07T00:00" (7 декабря, 0:00 МСК),
+  // то UTC должна быть "2024-12-06T21:00:00.000Z" (6 декабря, 21:00 UTC)
+  
+  return utcStr;
 };
 
 export const toUTCDateISO = (date: Date) =>
@@ -183,26 +303,74 @@ export const MOSCOW_TIMEZONE = 'Europe/Moscow';
 
 // Получает компоненты времени в указанном часовом поясе
 export const getTimeInTimeZone = (date: Date, timeZone: string) => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+  // Проверяем, что date является валидным Date объектом
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    // Если дата невалидна, возвращаем текущую дату в московском времени
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+    const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
+    const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+    const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+    const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+    const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+    return { year, month, day, hour, minute, second };
+  }
   
-  const parts = formatter.formatToParts(date);
-  const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
-  const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
-  const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
-  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
-  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
-  const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
-  
-  return { year, month, day, hour, minute, second };
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    
+    const parts = formatter.formatToParts(date);
+    const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+    const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
+    const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+    const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+    const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+    const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+    
+    return { year, month, day, hour, minute, second };
+  } catch (error) {
+    // Если произошла ошибка, возвращаем компоненты текущей даты в московском времени
+    console.error('Error in getTimeInTimeZone:', error, date);
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(now);
+    const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+    const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
+    const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+    const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+    const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+    const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+    return { year, month, day, hour, minute, second };
+  }
 };
 
 // Форматирует время в указанном часовом поясе

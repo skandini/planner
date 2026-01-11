@@ -598,7 +598,6 @@ def list_events(
     statement = statement.order_by(Event.starts_at)
     events = session.exec(statement).all()
     
-    print(f"[DEBUG] Found {len(events)} events for user {current_user.id}")
 
     # Предзагружаем календари для всех событий одним запросом
     calendar_ids = {event.calendar_id for event in events}
@@ -717,7 +716,6 @@ def list_events(
             )
         )
 
-    print(f"[DEBUG] Returning {len(serialized)} serialized events")
     return serialized
 
 

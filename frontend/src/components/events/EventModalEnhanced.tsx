@@ -11,7 +11,7 @@ import { ParticipantSearch } from "@/components/participants/ParticipantSearch";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
 import { EventAttachments } from "@/components/events/EventAttachments";
 import { CommentsSection } from "@/components/events/CommentsSection";
-import { toUTCDateISO, getTimeInTimeZone, parseUTC, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { toUTCDateISO, getTimeInTimeZone, parseUTC, MOSCOW_TIMEZONE, addDaysInMoscow } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT, ROOM_ENDPOINT } from "@/lib/constants";
 
 interface EventModalEnhancedProps {
@@ -49,6 +49,7 @@ interface EventModalEnhancedProps {
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   apiBaseUrl?: string;
   accentColor?: string; // Цвет календаря для занятого времени
+  events?: EventRecord[]; // События из основного массива для отображения в таймлайне
 }
 
 export function EventModalEnhanced({
@@ -83,6 +84,7 @@ export function EventModalEnhanced({
   getUserOrganizationAbbreviation,
   apiBaseUrl,
   accentColor = "#6366f1", // По умолчанию indigo-500
+  events = [], // События из основного массива
 }: EventModalEnhancedProps) {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
@@ -181,8 +183,6 @@ export function EventModalEnhanced({
     return new Date(Date.UTC(year, month - 1, day, 9, 0, 0)); // 12:00 МСК = 09:00 UTC
   }, []);
   
-  const selectedDate = form.starts_at ? getDateFromForm(form.starts_at) : new Date();
-  
   // Дата для просмотра в таймлайне - инициализируем из editingEvent или формы
   // Используем editingEvent.starts_at напрямую для правильной инициализации
   const [viewDate, setViewDate] = useState<Date>(() => {
@@ -191,8 +191,16 @@ export function EventModalEnhanced({
       const startUTC = parseUTC(editingEvent.starts_at);
       const moscow = getTimeInTimeZone(startUTC, MOSCOW_TIMEZONE);
       // Создаем Date в московском времени для дня события
-      const moscowDateStr = `${moscow.year}-${String(moscow.month + 1).padStart(2, '0')}-${String(moscow.day).padStart(2, '0')}T12:00:00+03:00`;
-      return new Date(moscowDateStr);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const moscowDateStr = `${moscow.year}-${pad(moscow.month + 1)}-${pad(moscow.day)}T12:00:00+03:00`;
+      const date = new Date(moscowDateStr);
+      // Проверяем, что дата правильная
+      const checkMoscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+      if (checkMoscow.year === moscow.year && checkMoscow.month === moscow.month && checkMoscow.day === moscow.day) {
+        return date;
+      }
+      // Если не совпало, создаем через UTC
+      return new Date(Date.UTC(moscow.year, moscow.month, moscow.day, 9, 0, 0));
     }
     // Если нет editingEvent, но есть form.starts_at, используем его
     if (form.starts_at) {
@@ -201,16 +209,24 @@ export function EventModalEnhanced({
     // Иначе - текущая дата
     const now = new Date();
     const nowMoscow = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
-    const moscowDateStr = `${nowMoscow.year}-${String(nowMoscow.month + 1).padStart(2, '0')}-${String(nowMoscow.day).padStart(2, '0')}T12:00:00+03:00`;
-    return new Date(moscowDateStr);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const moscowDateStr = `${nowMoscow.year}-${pad(nowMoscow.month + 1)}-${pad(nowMoscow.day)}T12:00:00+03:00`;
+    const date = new Date(moscowDateStr);
+    const checkMoscow = getTimeInTimeZone(date, MOSCOW_TIMEZONE);
+    if (checkMoscow.year === nowMoscow.year && checkMoscow.month === nowMoscow.month && checkMoscow.day === nowMoscow.day) {
+      return date;
+    }
+    return new Date(Date.UTC(nowMoscow.year, nowMoscow.month, nowMoscow.day, 9, 0, 0));
   });
   
-  // Навигация по дням
+  // selectedDate для ResourcePanel - используем viewDate, который уже правильно инициализирован
+  const selectedDate = viewDate;
+  
+  // Навигация по дням в московском времени
   const navigateDays = useCallback((days: number) => {
     setViewDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setDate(newDate.getDate() + days);
-      return newDate;
+      // Используем addDaysInMoscow для правильного перехода к следующему дню в московском времени
+      return addDaysInMoscow(prev, days);
     });
   }, []);
   
@@ -225,8 +241,17 @@ export function EventModalEnhanced({
     if (editingEvent?.starts_at && editingEvent.id !== prevEditingEventIdRef.current && !isNavigating) {
       const startUTC = parseUTC(editingEvent.starts_at);
       const moscow = getTimeInTimeZone(startUTC, MOSCOW_TIMEZONE);
-      const moscowDateStr = `${moscow.year}-${String(moscow.month + 1).padStart(2, '0')}-${String(moscow.day).padStart(2, '0')}T12:00:00+03:00`;
-      setViewDate(new Date(moscowDateStr));
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const moscowDateStr = `${moscow.year}-${pad(moscow.month + 1)}-${pad(moscow.day)}T12:00:00+03:00`;
+      const newViewDate = new Date(moscowDateStr);
+      // Проверяем, что дата правильная
+      const checkMoscow = getTimeInTimeZone(newViewDate, MOSCOW_TIMEZONE);
+      if (checkMoscow.year === moscow.year && checkMoscow.month === moscow.month && checkMoscow.day === moscow.day) {
+        setViewDate(newViewDate);
+      } else {
+        // Если не совпало, создаем через UTC
+        setViewDate(new Date(Date.UTC(moscow.year, moscow.month, moscow.day, 9, 0, 0)));
+      }
       prevEditingEventIdRef.current = editingEvent.id;
     } else if (!editingEvent && form.starts_at && !isNavigating) {
       // Если нет editingEvent (новое событие), используем form.starts_at
@@ -747,6 +772,8 @@ export function EventModalEnhanced({
                       organizations={organizations}
                       apiBaseUrl={apiBaseUrl}
                       accentColor={accentColor}
+                      events={events}
+                      currentUserEmail={currentUserEmail}
                     />
                   </div>
                 </div>

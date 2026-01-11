@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { TimelineRowData } from "@/types/common.types";
 import type { EventRecord } from "@/types/event.types";
 import { inputToDate, parseUTC, getTimeInTimeZone, formatTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
-import { WORKDAY_START_HOUR, WORKDAY_END_HOUR, SLOT_DURATION_MINUTES } from "@/lib/constants";
+import { WORKDAY_START_HOUR, WORKDAY_END_HOUR, SLOT_DURATION_MINUTES, MINUTES_IN_DAY } from "@/lib/constants";
 
 interface EnhancedTimelineProps {
   rows: TimelineRowData[];
@@ -22,6 +22,9 @@ interface EnhancedTimelineProps {
   onTimeRangeSelect?: (start: Date, end: Date) => void;
   onRemoveParticipant?: (participantId: string) => void;
   accentColor?: string; // Цвет календаря для занятого времени
+  events?: EventRecord[]; // События из основного массива для отображения как в основной сетке
+  rooms?: Array<{ id: string; name: string }>; // Переговорки для отображения названий
+  currentUserEmail?: string; // Email текущего пользователя для определения статуса участия
 }
 
 export function EnhancedTimeline({
@@ -40,6 +43,9 @@ export function EnhancedTimeline({
   onTimeRangeSelect,
   onRemoveParticipant,
   accentColor = "#6366f1", // По умолчанию indigo-500
+  events = [], // События из основного массива
+  rooms = [], // Переговорки
+  currentUserEmail, // Email текущего пользователя
 }: EnhancedTimelineProps) {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [currentSelectionSlot, setCurrentSelectionSlot] = useState<number | null>(null);
@@ -49,8 +55,41 @@ export function EnhancedTimeline({
   const timelineRef = useRef<HTMLDivElement>(null);
   
   const selectionRange = useMemo(() => {
-    const start = inputToDate(selectedStart, { allDay: isAllDay });
-    const end = inputToDate(selectedEnd, { allDay: isAllDay, endOfDay: true });
+    // Парсим даты из формы - они в формате "YYYY-MM-DDTHH:mm" и представляют московское время
+    // Нужно интерпретировать их как московское время, а не локальное
+    let start: Date | null = null;
+    let end: Date | null = null;
+    
+    if (selectedStart) {
+      const [datePart, timePart] = selectedStart.split('T');
+      if (datePart) {
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour = 0, minute = 0] = timePart ? timePart.split(':').map(Number) : [0, 0];
+        const pad = (n: number) => String(n).padStart(2, '0');
+        // Создаем дату в московском времени
+        const moscowDateStr = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00+03:00`;
+        start = new Date(moscowDateStr);
+      }
+    }
+    
+    if (selectedEnd) {
+      const [datePart, timePart] = selectedEnd.split('T');
+      if (datePart) {
+        const [year, month, day] = datePart.split('-').map(Number);
+        if (isAllDay && !timePart) {
+          // Для allDay используем конец дня
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const moscowDateStr = `${year}-${pad(month)}-${pad(day)}T23:59:59+03:00`;
+          end = new Date(moscowDateStr);
+        } else {
+          const [hour = 0, minute = 0] = timePart ? timePart.split(':').map(Number) : [0, 0];
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const moscowDateStr = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00+03:00`;
+          end = new Date(moscowDateStr);
+        }
+      }
+    }
+    
     return { start, end };
   }, [selectedEnd, selectedStart, isAllDay]);
 
@@ -58,18 +97,26 @@ export function EnhancedTimeline({
   const baseDate = useMemo(() => {
     let dateToUse: Date;
     if (selectionRange.start) {
-      dateToUse = new Date(selectionRange.start);
+      // selectionRange.start уже в московском времени (создан с +03:00)
+      dateToUse = selectionRange.start;
     } else {
-      dateToUse = new Date(referenceDate);
+      // referenceDate передается из EventModalEnhanced как viewDate
+      // Он уже должен быть в московском времени
+      dateToUse = referenceDate;
     }
     // Получаем компоненты даты в московском времени
     const moscowComponents = getTimeInTimeZone(dateToUse, MOSCOW_TIMEZONE);
-    // Создаем дату в московском времени (полдень для избежания проблем с переходом дня)
+    // Создаем дату в московском времени (полночь для начала дня)
     const pad = (n: number) => String(n).padStart(2, '0');
-    const moscowDateStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(moscowComponents.day)}T12:00:00+03:00`;
+    const moscowDateStr = `${moscowComponents.year}-${pad(moscowComponents.month + 1)}-${pad(moscowComponents.day)}T00:00:00+03:00`;
     const moscowDate = new Date(moscowDateStr);
-    moscowDate.setHours(0, 0, 0, 0);
-    return moscowDate;
+    // Проверяем, что дата правильная
+    const checkMoscow = getTimeInTimeZone(moscowDate, MOSCOW_TIMEZONE);
+    if (checkMoscow.year === moscowComponents.year && checkMoscow.month === moscowComponents.month && checkMoscow.day === moscowComponents.day) {
+      return moscowDate;
+    }
+    // Если не совпало, создаем через UTC (полночь МСК = 21:00 предыдущего дня UTC)
+    return new Date(Date.UTC(moscowComponents.year, moscowComponents.month, moscowComponents.day, 21, 0, 0));
   }, [referenceDate, selectionRange.start]);
 
   // Создаем слоты времени - метки будут отображаться в московском времени
@@ -91,6 +138,65 @@ export function EnhancedTimeline({
     () => rows.filter((row) => row.id !== "placeholder"),
     [rows],
   );
+
+  // Фильтруем события для дня и ресурса (используя ту же логику, что и в WeekView)
+  const getFilteredEventsForRow = useCallback((row: TimelineRowData): EventRecord[] => {
+    if (!events || events.length === 0) return [];
+
+    // Получаем компоненты базовой даты в московском времени
+    const dayMoscow = getTimeInTimeZone(baseDate, MOSCOW_TIMEZONE);
+    const dayStartKey = dayMoscow.year * 10000 + dayMoscow.month * 100 + dayMoscow.day;
+    const dayEndKey = dayStartKey + 1; // Следующий день
+
+    // Фильтруем события для этого дня
+    const dayEvents = events.filter((event) => {
+      const eventStart = parseUTC(event.starts_at);
+      const eventEnd = parseUTC(event.ends_at);
+      
+      // Получаем компоненты времени события в московском времени
+      const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+      const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
+      
+      // Создаем ключи дат для сравнения: YYYYMMDD
+      const eventStartKey = eventStartMoscow.year * 10000 + eventStartMoscow.month * 100 + eventStartMoscow.day;
+      const eventEndKey = eventEndMoscow.year * 10000 + eventEndMoscow.month * 100 + eventEndMoscow.day;
+      
+      // Событие попадает в день, если его начало до следующего дня и конец после начала текущего дня
+      if (!(eventStartKey < dayEndKey && eventEndKey >= dayStartKey)) {
+        return false;
+      }
+
+      // Фильтруем по ресурсу (участник или переговорка)
+      if (row.type === "participant") {
+        // Для участника: событие должно включать этого участника (и он не должен быть declined)
+        const participantId = row.id.replace("participant-", "");
+        const hasParticipant = event.participants?.some((p) => {
+          if (p.user_id === participantId) {
+            // Исключаем события, где участник отклонил
+            return p.response_status !== "declined";
+          }
+          return false;
+        });
+        if (!hasParticipant) return false;
+      } else if (row.type === "room") {
+        // Для переговорки: событие должно быть назначено на эту переговорку
+        const roomId = row.id.replace("room-", "");
+        if (event.room_id !== roomId) return false;
+      }
+
+      // Исключаем события, где текущий пользователь отклонил (если он участник)
+      if (currentUserEmail && event.participants) {
+        const userParticipant = event.participants.find((p) => p.email === currentUserEmail);
+        if (userParticipant && userParticipant.response_status === "declined") {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    return dayEvents;
+  }, [events, baseDate, currentUserEmail]);
 
   if (resourceRows.length === 0) {
     return (
@@ -117,22 +223,29 @@ export function EnhancedTimeline({
     const slotStartStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}:00+03:00`;
     const slotStart = new Date(slotStartStr);
     
-    // Вычисляем время окончания слота
-    const slotEnd = new Date(slotStart);
-    slotEnd.setMinutes(slotEnd.getMinutes() + SLOT_DURATION_MINUTES);
+    // Вычисляем время окончания слота в московском времени
+    const totalMinutes = slot.hour * 60 + slot.minute + SLOT_DURATION_MINUTES;
+    const endHour = Math.floor(totalMinutes / 60);
+    const endMinute = totalMinutes % 60;
+    const slotEndStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}:00+03:00`;
+    const slotEnd = new Date(slotEndStr);
     
     return { slotStart, slotEnd };
   }, [baseDate, timeSlots]);
 
   // Упрощенная логика: только два состояния - занят или доступен
+  // Используем события из основного массива events (как в WeekView)
   const getSlotState = useCallback((
     row: TimelineRowData,
     slotIndex: number,
   ): "free" | "busy" => {
     const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
 
+    // Получаем события для этого ресурса и дня из основного массива
+    const rowEvents = getFilteredEventsForRow(row);
+
     // Проверяем, есть ли событие в этом слоте
-    const eventInSlot = row.availability.find((event) => {
+    const eventInSlot = rowEvents.find((event) => {
       const eventStart = parseUTC(event.starts_at);
       const eventEnd = parseUTC(event.ends_at);
       return eventStart < slotEnd && eventEnd > slotStart;
@@ -145,7 +258,7 @@ export function EnhancedTimeline({
     
     // Иначе слот доступен
     return "free";
-  }, [buildSlotTimes]);
+  }, [buildSlotTimes, getFilteredEventsForRow]);
 
   const isSlotBusy = useCallback((slotIndex: number): boolean => {
     if (slotIndex < 0 || slotIndex >= timeSlots.length) return true;
@@ -256,10 +369,13 @@ export function EnhancedTimeline({
       
       if (!hasMoved) {
         const { slotStart, slotEnd } = buildSlotTimes(startSlot);
-        const dayStart = new Date(baseDate);
-        dayStart.setHours(8, 0, 0, 0);
-        const dayEnd = new Date(baseDate);
-        dayEnd.setHours(20, 0, 0, 0);
+        // Проверяем границы дня в московском времени
+        const baseMoscow = getTimeInTimeZone(baseDate, MOSCOW_TIMEZONE);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const dayStartStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T08:00:00+03:00`;
+        const dayEndStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T20:00:00+03:00`;
+        const dayStart = new Date(dayStartStr);
+        const dayEnd = new Date(dayEndStr);
         
         if (slotStart >= dayStart && slotEnd <= dayEnd) {
           onTimeRangeSelect(slotStart, slotEnd);
@@ -268,10 +384,13 @@ export function EnhancedTimeline({
         const { slotStart } = buildSlotTimes(startSlot);
         const { slotEnd } = buildSlotTimes(finalEndSlot);
         
-        const dayStart = new Date(baseDate);
-        dayStart.setHours(8, 0, 0, 0);
-        const dayEnd = new Date(baseDate);
-        dayEnd.setHours(20, 0, 0, 0);
+        // Проверяем границы дня в московском времени
+        const baseMoscow = getTimeInTimeZone(baseDate, MOSCOW_TIMEZONE);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const dayStartStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T08:00:00+03:00`;
+        const dayEndStr = `${baseMoscow.year}-${pad(baseMoscow.month + 1)}-${pad(baseMoscow.day)}T20:00:00+03:00`;
+        const dayStart = new Date(dayStartStr);
+        const dayEnd = new Date(dayEndStr);
         
         if (slotStart >= dayStart && slotEnd <= dayEnd) {
           onTimeRangeSelect(slotStart, slotEnd);
@@ -406,32 +525,37 @@ export function EnhancedTimeline({
                 </div>
 
                 {/* Слоты времени */}
-                {timeSlots.map((slot) => {
-                  const state = getSlotState(row, slot.index);
-                  const { slotStart, slotEnd } = buildSlotTimes(slot.index);
-                  const eventInSlot = row.availability.find((event) => {
-                    const eventStart = parseUTC(event.starts_at);
-                    const eventEnd = parseUTC(event.ends_at);
-                    return eventStart < slotEnd && eventEnd > slotStart;
-                  });
+                {(() => {
+                  // Мемоизируем события для строки один раз, а не для каждого слота (оптимизация производительности)
+                  const rowEvents = getFilteredEventsForRow(row);
+                  return timeSlots.map((slot) => {
+                    const state = getSlotState(row, slot.index);
+                    const { slotStart, slotEnd } = buildSlotTimes(slot.index);
+                    
+                    // Ищем событие в этом слоте
+                    const eventInSlot = rowEvents.find((event) => {
+                      const eventStart = parseUTC(event.starts_at);
+                      const eventEnd = parseUTC(event.ends_at);
+                      return eventStart < slotEnd && eventEnd > slotStart;
+                    });
 
-                  // Получаем время слота в московском времени для tooltip
-                  const slotMoscow = getTimeInTimeZone(slotStart, MOSCOW_TIMEZONE);
-                  const slotTimeLabel = `${String(slotMoscow.hour).padStart(2, "0")}:${String(slotMoscow.minute).padStart(2, "0")}`;
+                    // Получаем время слота в московском времени для tooltip
+                    const slotMoscow = getTimeInTimeZone(slotStart, MOSCOW_TIMEZONE);
+                    const slotTimeLabel = `${String(slotMoscow.hour).padStart(2, "0")}:${String(slotMoscow.minute).padStart(2, "0")}`;
 
-                  // Формируем tooltip для события с временем в московском времени
-                  let tooltipText = "";
-                  if (eventInSlot) {
-                    const eventStart = parseUTC(eventInSlot.starts_at);
-                    const eventEnd = parseUTC(eventInSlot.ends_at);
-                    const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
-                    const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
-                    const eventStartTime = `${String(eventStartMoscow.hour).padStart(2, "0")}:${String(eventStartMoscow.minute).padStart(2, "0")}`;
-                    const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
-                    tooltipText = `${eventInSlot.title} (${eventStartTime} - ${eventEndTime})`;
-                  } else {
-                    tooltipText = state === "busy" ? "Занято" : "Доступно - кликните для выбора времени";
-                  }
+                    // Формируем tooltip для события с временем в московском времени
+                    let tooltipText = "";
+                    if (eventInSlot) {
+                      const eventStart = parseUTC(eventInSlot.starts_at);
+                      const eventEnd = parseUTC(eventInSlot.ends_at);
+                      const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
+                      const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
+                      const eventStartTime = `${String(eventStartMoscow.hour).padStart(2, "0")}:${String(eventStartMoscow.minute).padStart(2, "0")}`;
+                      const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
+                      tooltipText = `${eventInSlot.title} (${eventStartTime} - ${eventEndTime})`;
+                    } else {
+                      tooltipText = state === "busy" ? "Занято" : "Доступно - кликните для выбора времени";
+                    }
 
                   // Упрощенная цветовая схема - только два состояния
                   let slotClassName = "h-8 rounded-md transition-all border shadow-sm ";
@@ -461,7 +585,8 @@ export function EnhancedTimeline({
                       title={tooltipText}
                     />
                   );
-                })}
+                  });
+                })()}
               </div>
             );
           })}
