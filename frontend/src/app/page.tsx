@@ -2403,7 +2403,7 @@ export default function Home() {
                         className="h-4 w-4 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
                       />
                       <span className="text-xs font-medium text-slate-700 whitespace-nowrap">
-                        Показать мою доступность
+                        Доступность
                       </span>
                     </label>
                   )}
