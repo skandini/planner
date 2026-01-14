@@ -1,9 +1,54 @@
+# Секретные файлы
+.env
+.env.*
+*.env
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python
 __pycache__/
 *.py[cod]
-*.sqlite3
-.db
-.env
-.venv/
-.mypy_cache/
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing
 .pytest_cache/
-.alembic/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Uploads (загруженные пользователями файлы)
+uploads/*
+!uploads/.gitkeep
+
+# Временные файлы
+temp/
+tmp/
+*.tmp
+
+# Логи
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
