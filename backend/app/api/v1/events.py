@@ -1211,15 +1211,21 @@ def delete_event(
             )
         ).all()
         if series_ids:
-            # Notify participants (асинхронно через Celery)
+            # Создаем уведомления об отмене СИНХРОННО (до удаления события)
+            canceller_text = f" {canceller_name}" if canceller_name else ""
             for participant_id in participant_ids:
                 if participant_id != current_user.id:
-                    notify_event_cancelled_task.delay(
-                        user_id=str(participant_id),
-                        event_id=str(event.id),
-                        canceller_name=canceller_name,
+                    notification = Notification(
+                        user_id=participant_id,
+                        event_id=event.id,
+                        type="event_cancelled",
+                        title="Встреча отменена",
+                        message=f"Встреча «{event.title}» была отменена{canceller_text}",
                     )
-            # Сначала удаляем уведомления (foreign key constraint)
+                    session.add(notification)
+            session.flush()  # Сохраняем уведомления до удаления события
+            
+            # Теперь удаляем все уведомления (включая только что созданные)
             session.exec(
                 delete(Notification).where(Notification.event_id.in_(series_ids))
             )
@@ -1238,15 +1244,21 @@ def delete_event(
             )
             session.delete(event)
     else:
-        # Notify participants (асинхронно через Celery)
+        # Создаем уведомления об отмене СИНХРОННО (до удаления события)
+        canceller_text = f" {canceller_name}" if canceller_name else ""
         for participant_id in participant_ids:
             if participant_id != current_user.id:
-                notify_event_cancelled_task.delay(
-                    user_id=str(participant_id),
-                    event_id=str(event_id),
-                    canceller_name=canceller_name,
+                notification = Notification(
+                    user_id=participant_id,
+                    event_id=event_id,
+                    type="event_cancelled",
+                    title="Встреча отменена",
+                    message=f"Встреча «{event.title}» была отменена{canceller_text}",
                 )
-        # Сначала удаляем уведомления (foreign key constraint)
+                session.add(notification)
+        session.flush()  # Сохраняем уведомления до удаления события
+        
+        # Теперь удаляем все уведомления (включая только что созданные)
         session.exec(
             delete(Notification).where(Notification.event_id == event_id)
         )
