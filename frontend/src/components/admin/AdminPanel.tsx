@@ -7,6 +7,7 @@ import type { UserProfile } from "@/types/user.types";
 import { NotificationCreator } from "./NotificationCreator";
 import { RoomManagement } from "./RoomManagement";
 import { Statistics } from "../statistics/Statistics";
+import { OrganizationManagement } from "./OrganizationManagement";
 
 type Role = "admin" | "it" | "employee";
 
@@ -30,7 +31,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
   });
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
   const [bootstrapMode, setBootstrapMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "rooms" | "statistics">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "rooms" | "organizations" | "statistics">("users");
   const [form, setForm] = useState({
     email: "",
     full_name: "",
@@ -285,6 +286,16 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
               }`}
             >
               Переговорки
+            </button>
+            <button
+              onClick={() => setActiveTab("organizations")}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === "organizations"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Организации
             </button>
             <button
               onClick={() => setActiveTab("statistics")}
@@ -579,6 +590,10 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
 
           {activeTab === "rooms" && (
             <RoomManagement authFetch={authFetch} />
+          )}
+
+          {activeTab === "organizations" && (
+            <OrganizationManagement authFetch={authFetch} />
           )}
 
           {activeTab === "statistics" && (

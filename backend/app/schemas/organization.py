@@ -20,6 +20,17 @@ class OrganizationCreate(OrganizationBase):
     pass
 
 
+class OrganizationUpdate(BaseModel):
+    """Schema for partial organization updates."""
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    timezone: Optional[str] = None
+    description: Optional[str] = None
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
+
+
 class OrganizationRead(OrganizationBase):
     id: UUID
 

@@ -2581,6 +2581,7 @@ export default function Home() {
               apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
               onClose={() => setViewMode("week")}
               onUsersUpdate={loadUsers}
+              onOrganizationsUpdate={loadOrganizations}
             />
           )}
           {viewMode === "support" && (

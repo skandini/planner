@@ -4,6 +4,7 @@ import type { AuthenticatedFetch } from "@/types/common.types";
 import type { UserProfile } from "@/types/user.types";
 import { DEPARTMENTS_ENDPOINT, USERS_ENDPOINT } from "@/lib/constants";
 import { UserProfileCard } from "@/components/profile/UserProfileCard";
+import { UserTooltip } from "@/components/common/UserTooltip";
 
 /**
  * Вертикальная древовидная оргструктура с компактными карточками.
@@ -17,9 +18,10 @@ interface OrgStructureProps {
   apiBaseUrl: string;
   onClose?: () => void;
   onUsersUpdate?: () => void;
+  onOrganizationsUpdate?: () => void;
 }
 
-export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onClose, onUsersUpdate }: OrgStructureProps) {
+export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onClose, onUsersUpdate, onOrganizationsUpdate }: OrgStructureProps) {
   const [departments, setDepartments] = useState<DepartmentWithChildren[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>(""); // "" = all organizations
   
   // Tab state
   const [activeTab, setActiveTab] = useState<"structure" | "employees">("structure");
@@ -226,6 +229,9 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
       });
       setInitialFormData(null);
       await loadDepartments();
+      if (onOrganizationsUpdate) {
+        onOrganizationsUpdate(); // Перезагружаем организации после создания/редактирования отдела
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Ошибка сохранения отдела";
       setError(errorMessage);
@@ -405,7 +411,7 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
     );
   };
 
-  const renderTree = (nodes: DepartmentWithChildren[], depth = 0) => (
+  const renderTree = (nodes: DepartmentWithChildren[], depth = 0, parentOrg: { id: string; name: string; slug: string } | null = null) => (
     <ul className="space-y-6 pl-0">
       {nodes.map((d, index) => {
         const manager = d.manager_id ? users.find((u) => u.id === d.manager_id) : null;
@@ -418,7 +424,13 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
           if (u.department_id === d.id) return true;
           return false;
         });
-        const org = d.organization_id ? organizations.find((o) => o.id === d.organization_id) : null;
+        // Определяем организацию: либо своя, либо унаследованная от родителя
+        const org = d.organization_id 
+          ? organizations.find((o) => o.id === d.organization_id) 
+          : parentOrg;
+        const isRoot = depth === 0;
+        const inheritedOrg = !d.organization_id && parentOrg; // Унаследованная организация
+        
         const avatar = (u?: UserProfile) => (
           <div className="relative w-9 h-9">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-sky-200 via-white to-cyan-200 opacity-80" />
@@ -439,8 +451,6 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
           </div>
         );
 
-        const isRoot = depth === 0;
-
         return (
           <li 
             key={d.id} 
@@ -451,9 +461,19 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
           >
 
             <div
-              className={`dept-card group w-[320px] max-w-[320px] rounded-3xl border border-slate-200/70 bg-white/90 backdrop-blur shadow-xl px-4 py-4 transition hover:-translate-y-[4px] hover:shadow-2xl ${
+              className={`dept-card group w-[320px] max-w-[320px] rounded-3xl border ${
+                isRoot && org 
+                  ? "border-emerald-300/70 bg-gradient-to-br from-emerald-50/30 via-white/90 to-white/90" 
+                  : inheritedOrg
+                    ? "border-indigo-200/70 bg-gradient-to-br from-indigo-50/20 via-white/90 to-white/90"
+                    : "border-slate-200/70 bg-white/90"
+              } backdrop-blur shadow-xl px-4 py-4 transition hover:-translate-y-[4px] hover:shadow-2xl relative ${
                 dragOverDept === d.id ? "ring-4 ring-indigo-400 ring-offset-2 bg-indigo-50/50" : ""
               }`}
+              style={{
+                borderLeftWidth: inheritedOrg ? '4px' : isRoot && org ? '4px' : '1px',
+                borderLeftColor: inheritedOrg ? '#818cf8' : isRoot && org ? '#34d399' : undefined,
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -492,13 +512,31 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-2xl bg-gradient-to-br from-indigo-100 to-cyan-100 text-slate-700 shadow-inner">
-                      🏢
+                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-2xl shadow-inner ${
+                      isRoot 
+                        ? "bg-gradient-to-br from-emerald-100 via-green-100 to-teal-100 ring-2 ring-emerald-300 ring-offset-1" 
+                        : "bg-gradient-to-br from-indigo-100 to-cyan-100"
+                    } text-slate-700`}>
+                      {isRoot ? "🏛️" : "🏢"}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-slate-900 text-sm leading-tight truncate">{d.name}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="font-semibold text-slate-900 text-sm leading-tight truncate">{d.name}</div>
+                        {isRoot && org && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300 whitespace-nowrap">
+                            Юрлицо
+                          </span>
+                        )}
+                        {!isRoot && inheritedOrg && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200 whitespace-nowrap" title={`Входит в организацию "${inheritedOrg.name}"`}>
+                            🏛️ {inheritedOrg.name}
+                          </span>
+                        )}
+                      </div>
                       {org && (
-                        <div className="text-[11px] text-slate-500 truncate">Орг: {org.name}</div>
+                        <div className={`text-[11px] truncate ${isRoot ? "text-emerald-600 font-medium" : inheritedOrg ? "text-indigo-500 font-medium" : "text-slate-500"}`}>
+                          {isRoot ? "Юридическое лицо: " : inheritedOrg ? "Входит в: " : "Орг: "}{org.name}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -713,13 +751,36 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             </div>
 
             {d.children && d.children.length > 0 && (
-              <div className="mt-10 flex flex-col items-center relative">
+              <div className="mt-6 flex flex-col items-center relative">
+                {/* Вертикальная линия от родителя */}
+                <div className="w-0.5 h-10 bg-gradient-to-b from-slate-300 to-slate-400 relative">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400"></div>
+                </div>
+                
+                {/* Горизонтальная линия-соединитель */}
+                {d.children.length > 1 && (
+                  <div 
+                    className="absolute h-0.5 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"
+                    style={{
+                      top: '40px',
+                      left: '50%',
+                      right: '50%',
+                      width: `calc(${(d.children.length - 1) * 352}px)`,
+                      transform: 'translateX(-50%)',
+                    }}
+                  />
+                )}
+                
                 {/* Контейнер для дочерних отделов */}
-                <div className="relative flex flex-row gap-12 mt-10" style={{ position: 'relative', minHeight: '50px' }}>
+                <div className="relative flex flex-row gap-8 mt-0">
                   {d.children.map((child, childIndex) => {
                     return (
                       <div key={child.id} className="relative flex flex-col items-center">
-                        {renderTree([child], depth + 1)}
+                        {/* Вертикальная линия к ребенку */}
+                        {d.children.length > 1 && (
+                          <div className="w-0.5 h-10 bg-gradient-to-b from-slate-400 to-slate-300 mb-2"></div>
+                        )}
+                        {renderTree([child], depth + 1, org || parentOrg)}
                       </div>
                     );
                   })}
@@ -846,10 +907,11 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             </button>
             <button
               onClick={handleResetZoom}
-              className="px-3 py-1.5 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm"
+              className="px-3 py-1.5 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm flex items-center gap-1"
               title="Сбросить масштаб"
             >
-              ⌂
+              <span className="text-base">🔍</span>
+              <span className="text-xs">100%</span>
             </button>
           </div>
           
@@ -911,9 +973,19 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
         {activeTab === "employees" ? (
           <div className="absolute inset-0 overflow-y-auto p-6">
             <div className="max-w-7xl mx-auto">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-between gap-4">
                 <h3 className="text-lg font-semibold text-slate-900">Список сотрудников</h3>
                 <div className="flex items-center gap-2">
+                  <select
+                    value={selectedOrgFilter}
+                    onChange={(e) => setSelectedOrgFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  >
+                    <option value="">Все организации</option>
+                    {organizations.map(org => (
+                      <option key={org.id} value={org.id}>{org.name}</option>
+                    ))}
+                  </select>
                   <input
                     type="text"
                     placeholder="Поиск по имени, email, должности..."
@@ -924,46 +996,113 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {users
                   .filter((user) => {
-                    if (!searchQuery.trim()) return true;
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      user.full_name?.toLowerCase().includes(query) ||
-                      user.email.toLowerCase().includes(query) ||
-                      user.position?.toLowerCase().includes(query)
-                    );
+                    // Search filter
+                    if (searchQuery.trim()) {
+                      const query = searchQuery.toLowerCase();
+                      const matchesSearch = (
+                        user.full_name?.toLowerCase().includes(query) ||
+                        user.email.toLowerCase().includes(query) ||
+                        user.position?.toLowerCase().includes(query)
+                      );
+                      if (!matchesSearch) return false;
+                    }
+                    
+                    // Organization filter
+                    if (selectedOrgFilter) {
+                      const flatten = (depts: DepartmentWithChildren[]): DepartmentWithChildren[] => {
+                        const result: DepartmentWithChildren[] = [];
+                        depts.forEach(d => {
+                          result.push(d);
+                          if (d.children) result.push(...flatten(d.children));
+                        });
+                        return result;
+                      };
+                      const flatDepts = flatten(departments);
+                      const userDeptIds = user.department_ids || (user.department_id ? [user.department_id] : []);
+                      const userDepts = userDeptIds
+                        .map(deptId => flatDepts.find(d => d.id === deptId))
+                        .filter(Boolean);
+                      
+                      const userOrgIds = user.organization_ids || (user.organization_id ? [user.organization_id] : []);
+                      
+                      // Find root department for each user's department
+                      const findRootDeptFilter = (dept: DepartmentWithChildren): DepartmentWithChildren | null => {
+                        if (!dept.parent_id) return dept;
+                        const parent = flatDepts.find(d => d.id === dept.parent_id);
+                        return parent ? findRootDeptFilter(parent) : dept;
+                      };
+                      
+                      const rootDeptOrgIds = userDepts
+                        .map(dept => findRootDeptFilter(dept))
+                        .filter(Boolean)
+                        .filter(rootDept => rootDept.organization_id)
+                        .map(rootDept => rootDept.organization_id);
+                      
+                      const allUserOrgIds = [...userOrgIds, ...rootDeptOrgIds];
+                      
+                      if (!allUserOrgIds.includes(selectedOrgFilter)) return false;
+                    }
+                    
+                    return true;
                   })
                   .map((user) => {
+                    // Helper to flatten departments
+                    const flatten = (depts: DepartmentWithChildren[]): DepartmentWithChildren[] => {
+                      const result: DepartmentWithChildren[] = [];
+                      depts.forEach(d => {
+                        result.push(d);
+                        if (d.children) result.push(...flatten(d.children));
+                      });
+                      return result;
+                    };
+                    const flatDepts = flatten(departments);
+                    
                     const userDeptIds = user.department_ids || (user.department_id ? [user.department_id] : []);
                     const userDepts = userDeptIds
-                      .map(deptId => {
-                        const flatten = (depts: DepartmentWithChildren[]): DepartmentWithChildren[] => {
-                          const result: DepartmentWithChildren[] = [];
-                          depts.forEach(d => {
-                            result.push(d);
-                            if (d.children) result.push(...flatten(d.children));
-                          });
-                          return result;
-                        };
-                        return flatten(departments).find(d => d.id === deptId);
-                      })
+                      .map(deptId => flatDepts.find(d => d.id === deptId))
                       .filter(Boolean);
                     
+                    // Get all organizations user belongs to (direct)
                     const userOrgIds = user.organization_ids || (user.organization_id ? [user.organization_id] : []);
                     const userOrgs = userOrgIds
                       .map(orgId => organizations.find(o => o.id === orgId))
                       .filter(Boolean);
                     
+                    // Get organizations from root departments (legal entities)
+                    // For each department, find its root department
+                    const findRootDept = (dept: DepartmentWithChildren): DepartmentWithChildren | null => {
+                      if (!dept.parent_id) return dept; // Already root
+                      const parent = flatDepts.find(d => d.id === dept.parent_id);
+                      return parent ? findRootDept(parent) : dept;
+                    };
+                    
+                    const rootDeptOrgs = userDepts
+                      .map(dept => findRootDept(dept))
+                      .filter(Boolean)
+                      .filter(rootDept => rootDept.organization_id)
+                      .map(rootDept => organizations.find(o => o.id === rootDept.organization_id))
+                      .filter(Boolean);
+                    
+                    // Combine and deduplicate
+                    const allOrgIds = new Set([
+                      ...userOrgs.map(o => o.id),
+                      ...rootDeptOrgs.map(o => o.id)
+                    ]);
+                    const allOrgs = Array.from(allOrgIds)
+                      .map(id => organizations.find(o => o.id === id))
+                      .filter(Boolean);
+                    
                     return (
                       <div
                         key={user.id}
-                        className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition cursor-pointer"
+                        className="bg-white rounded-md border border-slate-200 p-2 hover:shadow-md transition cursor-pointer"
                         onClick={() => setSelectedUser(user)}
                       >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-white shadow flex-shrink-0">
+                        <div className="flex items-start gap-2">
+                          <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border border-white shadow flex-shrink-0">
                             {user.avatar_url ? (
                               <img
                                 src={apiBaseUrl && !user.avatar_url.startsWith('http') ? `${apiBaseUrl}${user.avatar_url}` : user.avatar_url}
@@ -982,78 +1121,49 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="text-sm font-semibold text-slate-900">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <h4 className="text-xs font-semibold text-slate-900 truncate">
                                 {user.full_name || user.email}
                               </h4>
-                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              <span className={`px-1 py-0 rounded text-[9px] font-medium flex-shrink-0 ${
                                 user.role === "admin" ? "bg-purple-100 text-purple-700" :
                                 user.role === "it" ? "bg-blue-100 text-blue-700" :
                                 "bg-slate-100 text-slate-700"
                               }`}>
-                                {user.role === "admin" ? "Админ" :
-                                 user.role === "it" ? "ИТ" :
-                                 "Сотрудник"}
+                                {user.role === "admin" ? "A" :
+                                 user.role === "it" ? "IT" :
+                                 "S"}
                               </span>
                             </div>
                             
-                            {user.email && (
-                              <p className="text-xs text-slate-500 mb-1">{user.email}</p>
-                            )}
-                            
                             {user.position && (
-                              <p className="text-xs text-slate-600 mb-2">{user.position}</p>
+                              <p className="text-[10px] text-slate-600 mb-1 truncate">{user.position}</p>
                             )}
                             
-                            <div className="flex items-center gap-4 flex-wrap">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500">Доступы:</span>
-                                <div className="flex items-center gap-1">
-                                  {user.access_org_structure && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
-                                      Оргструктура
-                                    </span>
-                                  )}
-                                  {user.access_tickets && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">
-                                      Тикеты
-                                    </span>
-                                  )}
-                                  {!user.access_org_structure && !user.access_tickets && (
-                                    <span className="text-xs text-slate-400">Нет доступов</span>
-                                  )}
-                                </div>
+                            <div className="space-y-1">
+                              {/* Организация - Юридическое лицо - ВСЕ */}
+                              <div className="text-[10px] text-emerald-700 font-semibold">
+                                {allOrgs.length > 0 ? (
+                                  <>
+                                    {allOrgs.map((org, idx) => (
+                                      <div key={org.id}>
+                                        Юридическое лицо: {org.name}
+                                      </div>
+                                    ))}
+                                  </>
+                                ) : (
+                                  <div>Юридическое лицо: Не указано</div>
+                                )}
                               </div>
                               
+                              {/* Отдел - ВСЕ */}
                               {userDepts.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-slate-500">Отделы:</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {userDepts.slice(0, 3).map(dept => (
-                                      <span key={dept.id} className="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">
-                                        {dept.name}
-                                      </span>
-                                    ))}
-                                    {userDepts.length > 3 && (
-                                      <span className="text-[10px] text-slate-500">+{userDepts.length - 3}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {userOrgs.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-slate-500">Организации:</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {userOrgs.slice(0, 2).map(org => (
-                                      <span key={org.id} className="px-2 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700">
-                                        {org.name}
-                                      </span>
-                                    ))}
-                                    {userOrgs.length > 2 && (
-                                      <span className="text-[10px] text-slate-500">+{userOrgs.length - 2}</span>
-                                    )}
-                                  </div>
+                                <div className="text-[10px] text-slate-600">
+                                  {userDepts.map((dept, idx) => (
+                                    <div key={dept.id}>
+                                      Отдел: {dept.name}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
@@ -1107,20 +1217,43 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
                   <h3 className="text-sm font-semibold text-slate-700 mb-4">Найденные сотрудники:</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {matchingUsers.map((user, userIndex) => {
+                      // Helper to find department recursively
+                      const findDeptRecursive = (deptId: string, depts: DepartmentWithChildren[]): DepartmentWithChildren | null => {
+                        for (const d of depts) {
+                          if (d.id === deptId) return d;
+                          if (d.children) {
+                            const found = findDeptRecursive(deptId, d.children);
+                            if (found) return found;
+                          }
+                        }
+                        return null;
+                      };
+                      
                       // Get all departments user belongs to (support both old and new format)
                       const userDeptIds = user.department_ids || (user.department_id ? [user.department_id] : []);
                       const userDepts = userDeptIds
-                        .map(deptId => {
-                          const dept = departments.find(d => d.id === deptId) || 
-                                      departments.flatMap(d => d.children || []).find(d => d.id === deptId);
-                          return dept;
-                        })
+                        .map(deptId => findDeptRecursive(deptId, departments))
                         .filter(Boolean);
                       
-                      // Get all organizations user belongs to
+                      // Get all organizations user belongs to (direct)
                       const userOrgIds = user.organization_ids || (user.organization_id ? [user.organization_id] : []);
                       const userOrgs = userOrgIds
                         .map(orgId => organizations.find(o => o.id === orgId))
+                        .filter(Boolean);
+                      
+                      // Get organizations from root departments (legal entities)
+                      const rootDeptOrgs = userDepts
+                        .filter(dept => !dept.parent_id && dept.organization_id)
+                        .map(dept => organizations.find(o => o.id === dept.organization_id))
+                        .filter(Boolean);
+                      
+                      // Combine and deduplicate
+                      const allOrgIds = new Set([
+                        ...userOrgs.map(o => o.id),
+                        ...rootDeptOrgs.map(o => o.id)
+                      ]);
+                      const allOrgs = Array.from(allOrgIds)
+                        .map(id => organizations.find(o => o.id === id))
                         .filter(Boolean);
                       
                       return (
@@ -1131,6 +1264,16 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
                             animation: `fadeInUp 0.4s ease-out ${userIndex * 0.05}s forwards`
                           }}
                           onClick={() => setSelectedUser(user)}
+                          onMouseEnter={(e) => {
+                            setHoveredUser(user);
+                            setHoverPos({ x: e.clientX, y: e.clientY });
+                          }}
+                          onMouseMove={(e) => {
+                            if (hoveredUser?.id === user.id) {
+                              setHoverPos({ x: e.clientX, y: e.clientY });
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredUser(null)}
                         >
                           <div className="flex items-center gap-3">
                             <div className="relative w-10 h-10 flex-shrink-0">
@@ -1162,9 +1305,9 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
                                   Отделы: {userDepts.map(d => d.name).join(", ")}
                                 </div>
                               )}
-                              {userOrgs.length > 0 && (
-                                <div className="text-xs text-indigo-600 truncate">
-                                  Организации: {userOrgs.map(o => o.name).join(", ")}
+                              {allOrgs.length > 0 && (
+                                <div className="text-xs text-emerald-600 truncate font-medium">
+                                  Юрлица: {allOrgs.map(o => o.name).join(", ")}
                                 </div>
                               )}
                             </div>
@@ -1179,7 +1322,7 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
               {/* Departments tree */}
               {filteredDepartments.length > 0 && (
                 <div className="transition-all duration-500">
-                  {renderTree(filteredDepartments)}
+                  {renderTree(filteredDepartments, 0, null)}
                 </div>
               )}
               
@@ -1196,81 +1339,15 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
         )}
       </div>
 
-        {hoveredUser && (() => {
-          // Get all departments user belongs to (support both old and new format)
-          const userDeptIds = hoveredUser.department_ids || (hoveredUser.department_id ? [hoveredUser.department_id] : []);
-          const userDepts = userDeptIds
-            .map(deptId => {
-              const dept = departments.find(d => d.id === deptId) || 
-                          departments.flatMap(d => d.children || []).find(d => d.id === deptId);
-              return dept;
-            })
-            .filter(Boolean);
-          
-          // Get all organizations user belongs to
-          const userOrgIds = hoveredUser.organization_ids || (hoveredUser.organization_id ? [hoveredUser.organization_id] : []);
-          const userOrgs = userOrgIds
-            .map(orgId => organizations.find(o => o.id === orgId))
-            .filter(Boolean);
-          
-          return (
-            <div
-              className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-2xl px-4 py-3 w-72 pointer-events-none"
-              style={{ left: hoverPos.x + 12, top: hoverPos.y + 12 }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border border-white shadow flex-shrink-0">
-                  {hoveredUser.avatar_url ? (
-                    <img
-                      src={`${apiBaseUrl}${hoveredUser.avatar_url}`}
-                      alt={hoveredUser.full_name || hoveredUser.email}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-600 font-semibold">
-                      {(hoveredUser.full_name || hoveredUser.email).charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-slate-900 truncate">{hoveredUser.full_name || hoveredUser.email}</div>
-                  {hoveredUser.position && (
-                    <div className="text-xs text-slate-600 truncate mt-0.5">{hoveredUser.position}</div>
-                  )}
-                  {hoveredUser.email && (
-                    <div className="text-xs text-slate-500 truncate mt-0.5">{hoveredUser.email}</div>
-                  )}
-                  
-                  {userDepts.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-200">
-                      <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Отделы</div>
-                      <div className="flex flex-wrap gap-1">
-                        {userDepts.map(dept => (
-                          <span key={dept.id} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                            {dept.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {userOrgs.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-200">
-                      <div className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide mb-1">Организации</div>
-                      <div className="flex flex-wrap gap-1">
-                        {userOrgs.map(org => (
-                          <span key={org.id} className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            🏢 {org.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {hoveredUser && (
+          <UserTooltip
+            user={hoveredUser}
+            departments={departments}
+            organizations={organizations}
+            position={hoverPos}
+            apiBaseUrl={apiBaseUrl}
+          />
+        )}
 
       {/* Диалог подтверждения закрытия */}
       {showCloseConfirm && (

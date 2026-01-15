@@ -12,6 +12,8 @@ interface ParticipantStatusItemProps {
   currentUserEmail?: string;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   apiBaseUrl?: string;
+  isRecurring?: boolean;
+  onUpdateStatusSeries?: (eventId: string, userId: string, status: string, applyTo: "this" | "all") => Promise<void>;
 }
 
 export function ParticipantStatusItem({
@@ -23,8 +25,12 @@ export function ParticipantStatusItem({
   currentUserEmail,
   getUserOrganizationAbbreviation,
   apiBaseUrl = "http://localhost:8000",
+  isRecurring = false,
+  onUpdateStatusSeries,
 }: ParticipantStatusItemProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const statusLabels: Record<string, string> = {
     accepted: "Принял",
     declined: "Отклонил",
@@ -40,11 +46,21 @@ export function ParticipantStatusItem({
   const statusIcons: Record<string, string> = {
     accepted: "✓",
     declined: "✕",
-    needs_action: "○",
+    needs_action: "⏱️",
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!onUpdateStatus || isUpdating) return;
+    if (isUpdating) return;
+    
+    // Если это повторяемое событие, показываем диалог выбора
+    if (isRecurring && onUpdateStatusSeries) {
+      setPendingStatus(newStatus);
+      setShowRecurringDialog(true);
+      return;
+    }
+    
+    // Обычное событие - просто обновляем
+    if (!onUpdateStatus) return;
     setIsUpdating(true);
     try {
       await onUpdateStatus(eventId, participant.user_id, newStatus);
@@ -52,6 +68,20 @@ export function ParticipantStatusItem({
       console.error("Failed to update status:", err);
     } finally {
       setIsUpdating(false);
+    }
+  };
+  
+  const handleRecurringChoice = async (applyTo: "this" | "all") => {
+    if (!pendingStatus || !onUpdateStatusSeries || isUpdating) return;
+    setShowRecurringDialog(false);
+    setIsUpdating(true);
+    try {
+      await onUpdateStatusSeries(eventId, participant.user_id, pendingStatus, applyTo);
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    } finally {
+      setIsUpdating(false);
+      setPendingStatus(null);
     }
   };
 
@@ -77,6 +107,42 @@ export function ParticipantStatusItem({
   const initials = (participant.full_name || participant.email)[0].toUpperCase();
 
   return (
+    <>
+      {/* Диалог для повторяемых событий */}
+      {showRecurringDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowRecurringDialog(false)}>
+          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Повторяющееся событие</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              Это событие повторяется. Применить изменение статуса к:
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleRecurringChoice("this")}
+                className="w-full px-4 py-3 rounded-lg border-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium transition"
+              >
+                Только этому событию
+              </button>
+              <button
+                onClick={() => handleRecurringChoice("all")}
+                className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition"
+              >
+                Всем событиям серии
+              </button>
+              <button
+                onClick={() => {
+                  setShowRecurringDialog(false);
+                  setPendingStatus(null);
+                }}
+                className="w-full px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:shadow-md hover:border-slate-300">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Аватар */}
@@ -168,6 +234,7 @@ export function ParticipantStatusItem({
         )}
       </div>
     </div>
+    </>
   );
 }
 

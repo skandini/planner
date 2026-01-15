@@ -543,6 +543,14 @@ export function EventModalModern({
                             currentUserEmail={currentUserEmail}
                             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                             apiBaseUrl={apiBaseUrl}
+                            isRecurring={recurrenceInfo?.isSeriesChild || recurrenceInfo?.isSeriesParent || false}
+                            onUpdateStatusSeries={async (eventId, userId, status, applyTo) => {
+                              // Здесь нужно обработать применение к серии событий
+                              // Пока просто вызываем обычный обработчик
+                              if (onUpdateParticipantStatus) {
+                                await onUpdateParticipantStatus(eventId, userId, status);
+                              }
+                            }}
                           />
                         ))}
                       </div>
