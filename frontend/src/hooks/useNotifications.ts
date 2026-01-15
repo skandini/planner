@@ -3,7 +3,8 @@ import type { Notification } from "@/types/notification.types";
 import { notificationApi } from "@/lib/api/notificationApi";
 import { useAuthenticatedFetch } from "@/lib/api/baseApi";
 import { useAuth } from "@/context/AuthContext";
-import { useWebSocket } from "./useWebSocket";
+// WebSocket temporarily disabled - using reliable HTTP polling
+// import { useWebSocket } from "./useWebSocket";
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -61,55 +62,26 @@ export function useNotifications() {
     }
   }, [authFetch, accessToken, previousUnreadCount, playNotificationSound]);
 
-  // WebSocket для real-time уведомлений
-  const { isConnected: wsConnected, connectionState } = useWebSocket({
-    onMessage: (message) => {
-      if (message.type === "notification" && message.data) {
-        console.log("[Notifications] WebSocket message received:", message.data);
-        
-        // Добавляем новое уведомление в список
-        const newNotification = message.data.notification;
-        setNotifications((prev) => [newNotification, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-        
-        // Воспроизводим звук
-        playNotificationSound();
-      }
-    },
-    onConnect: () => {
-      console.log("[Notifications] WebSocket connected - real-time notifications enabled");
-      // Загружаем актуальные уведомления при подключении
-      loadNotifications();
-      loadUnreadCount();
-      
-      // Останавливаем polling если WebSocket подключен
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-    },
-    onDisconnect: () => {
-      console.log("[Notifications] WebSocket disconnected - falling back to polling");
-      // Fallback на polling если WebSocket отключился
-      startPolling();
-    },
-  });
+  // WebSocket disabled - using reliable HTTP polling only
+  // const { isConnected: wsConnected, connectionState } = useWebSocket({
+  //   ...
+  // });
 
-  // Функция для запуска polling (fallback)
+  // Simple HTTP polling every 15 seconds - reliable and battle-tested
   const startPolling = useCallback(() => {
     if (pollingIntervalRef.current || !accessToken) {
       return;
     }
 
-    console.log("[Notifications] Starting polling fallback (60 sec interval)");
+    console.log("[Notifications] Starting HTTP polling (15 sec interval)");
     
     pollingIntervalRef.current = setInterval(() => {
-      if (accessToken && !wsConnected) {
+      if (accessToken) {
         loadNotifications();
         loadUnreadCount();
       }
-    }, 60000); // 60 секунд когда WebSocket недоступен (реже чем раньше)
-  }, [accessToken, wsConnected, loadNotifications, loadUnreadCount]);
+    }, 15000); // 15 секунд - быстрая доставка уведомлений
+  }, [accessToken, loadNotifications, loadUnreadCount]);
 
   useEffect(() => {
     if (!accessToken) {
@@ -126,10 +98,8 @@ export function useNotifications() {
     loadNotifications();
     loadUnreadCount();
     
-    // Если WebSocket не подключен, запускаем polling
-    if (!wsConnected) {
-      startPolling();
-    }
+    // Запускаем HTTP polling
+    startPolling();
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -137,7 +107,7 @@ export function useNotifications() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [accessToken, wsConnected, startPolling, loadNotifications, loadUnreadCount]);
+  }, [accessToken, startPolling, loadNotifications, loadUnreadCount]);
 
   const markAsRead = useCallback(
     async (notificationId: string) => {
@@ -188,7 +158,5 @@ export function useNotifications() {
     markAllAsRead,
     deleteNotification,
     refresh: loadNotifications,
-    wsConnected,
-    connectionState,
   };
 }
