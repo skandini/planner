@@ -49,6 +49,57 @@ export function DayView({
   
   const [currentTime, setCurrentTime] = useState(() => new Date());
   
+  // Состояние для диалога повторяемых событий
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{
+    eventId: string;
+    userId: string;
+    status: string;
+    event: EventRecord;
+  } | null>(null);
+  
+  // Обертка для обновления статуса с проверкой повторяемости
+  const handleUpdateParticipantStatus = useCallback((event: EventRecord, userId: string, status: string) => {
+    const isRecurring = !!(event.recurrence_rule || event.recurrence_parent_id);
+    
+    if (isRecurring) {
+      setPendingStatusUpdate({ eventId: event.id, userId, status, event });
+      setShowRecurringDialog(true);
+    } else {
+      if (onUpdateParticipantStatus) {
+        onUpdateParticipantStatus(event.id, userId, status);
+      }
+    }
+  }, [onUpdateParticipantStatus]);
+  
+  // Применить изменение статуса к серии событий
+  const handleRecurringChoice = useCallback(async (applyTo: "this" | "all") => {
+    if (!pendingStatusUpdate || !onUpdateParticipantStatus) return;
+    
+    setShowRecurringDialog(false);
+    
+    const { eventId, userId, status, event } = pendingStatusUpdate;
+    
+    if (applyTo === "this") {
+      await onUpdateParticipantStatus(eventId, userId, status);
+    } else if (applyTo === "all") {
+      const parentId = event.recurrence_parent_id || event.id;
+      const seriesEvents = events.filter(e => 
+        e.id === parentId || e.recurrence_parent_id === parentId
+      );
+      
+      for (const e of seriesEvents) {
+        try {
+          await onUpdateParticipantStatus(e.id, userId, status);
+        } catch (err) {
+          console.error(`Failed to update status for event ${e.id}:`, err);
+        }
+      }
+    }
+    
+    setPendingStatusUpdate(null);
+  }, [pendingStatusUpdate, onUpdateParticipantStatus, events]);
+  
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -300,6 +351,41 @@ export function DayView({
   
   return (
     <>
+      {/* Диалог для повторяемых событий */}
+      {showRecurringDialog && pendingStatusUpdate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowRecurringDialog(false)}>
+          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Повторяющееся событие</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              Это событие повторяется. Применить изменение статуса к:
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleRecurringChoice("this")}
+                className="w-full px-4 py-3 rounded-lg border-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium transition"
+              >
+                Только этому событию
+              </button>
+              <button
+                onClick={() => handleRecurringChoice("all")}
+                className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition"
+              >
+                Всем событиям серии
+              </button>
+              <button
+                onClick={() => {
+                  setShowRecurringDialog(false);
+                  setPendingStatusUpdate(null);
+                }}
+                className="w-full px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex flex-col h-full">
         <div className="flex-shrink-0 px-4 py-3 border-b border-slate-200 bg-white">
           <h2 className="text-lg font-semibold text-slate-900 capitalize">{dayName}</h2>
