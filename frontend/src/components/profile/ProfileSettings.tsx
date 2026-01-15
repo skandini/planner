@@ -6,6 +6,7 @@ import type { UserProfile } from "@/types/user.types";
 import type { DepartmentWithChildren } from "@/types/department.types";
 import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 import { AvailabilityScheduleSettings } from "./AvailabilityScheduleSettings";
+import { PushNotificationSettings } from "../notifications/PushNotificationSettings";
 
 interface Organization {
   id: string;
@@ -48,7 +49,7 @@ export function ProfileSettings({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "availability">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "availability" | "notifications">("profile");
 
   useEffect(() => {
     if (isOpen) {
@@ -333,6 +334,17 @@ export function ProfileSettings({
                     >
                       Доступность
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("notifications")}
+                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                        activeTab === "notifications"
+                          ? "border-indigo-500 text-indigo-600"
+                          : "border-transparent text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      🔔 Уведомления
+                    </button>
                   </div>
                 </div>
                 <button
@@ -386,6 +398,10 @@ export function ProfileSettings({
             {activeTab === "availability" ? (
               <div className="p-6">
                 <AvailabilityScheduleSettings authFetch={authFetch} onUpdate={onUpdate} />
+              </div>
+            ) : activeTab === "notifications" ? (
+              <div className="p-6">
+                <PushNotificationSettings />
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center py-12">

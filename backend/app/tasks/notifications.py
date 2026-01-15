@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.celery_app import celery_app
 from app.db import engine
 from app.models import Event, Notification, User
+from app.services.web_push import send_web_push_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,18 @@ def notify_event_invited_task(
                 f"for user {user_id} about event {event_id}"
             )
             
+            # Send Web Push notification
+            try:
+                send_web_push_to_user(
+                    user_id=UUID(user_id),
+                    title="📅 Приглашение на встречу",
+                    body=f"Вас пригласили на встречу «{event.title}»{inviter_text}",
+                    url=f"/?eventId={event_id}",
+                )
+            except Exception as e:
+                logger.error(f"Failed to send web push: {e}")
+                # Continue even if web push fails
+            
             return {
                 "success": True,
                 "notification_id": str(notification.id),
@@ -170,6 +183,17 @@ def notify_event_updated_task(
                 f"for user {user_id} about event {event_id}"
             )
             
+            # Send Web Push notification
+            try:
+                send_web_push_to_user(
+                    user_id=UUID(user_id),
+                    title="🔔 Встреча изменена",
+                    body=f"Встреча «{event.title}» была изменена{updater_text}",
+                    url=f"/?eventId={event_id}",
+                )
+            except Exception as e:
+                logger.error(f"Failed to send web push: {e}")
+            
             return {
                 "success": True,
                 "notification_id": str(notification.id),
@@ -227,6 +251,17 @@ def notify_event_cancelled_task(
                 f"Created cancellation notification {notification.id} "
                 f"for user {user_id} about event {event_id}"
             )
+            
+            # Send Web Push notification
+            try:
+                send_web_push_to_user(
+                    user_id=UUID(user_id),
+                    title="❌ Встреча отменена",
+                    body=f"Встреча «{event.title}» была отменена{canceller_text}",
+                    url=f"/?eventId={event_id}",
+                )
+            except Exception as e:
+                logger.error(f"Failed to send web push: {e}")
             
             return {
                 "success": True,
@@ -298,6 +333,17 @@ def notify_participant_response_task(
                 f"Created participant response notification {notification.id} "
                 f"for user {calendar_owner_id} about event {event_id}"
             )
+            
+            # Send Web Push notification
+            try:
+                send_web_push_to_user(
+                    user_id=UUID(calendar_owner_id),
+                    title="👥 Ответ на приглашение",
+                    body=message,
+                    url=f"/?eventId={event_id}",
+                )
+            except Exception as e:
+                logger.error(f"Failed to send web push: {e}")
             
             return {
                 "success": True,
