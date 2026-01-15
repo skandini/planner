@@ -139,7 +139,7 @@ def schedule_reminders_for_event(
     from app.models import EventParticipant
     
     if reminder_minutes is None:
-        reminder_minutes = [15, 60, 1440]  # 15 мин, 1 час, 1 день
+        reminder_minutes = [5]  # 5 минут до встречи
     
     # Get all participants
     statement = select(EventParticipant).where(EventParticipant.event_id == event.id)
