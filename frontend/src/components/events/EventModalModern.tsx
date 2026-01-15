@@ -90,7 +90,6 @@ export function EventModalModern({
   const [showDescription, setShowDescription] = useState(!!form.description);
   
   const titleId = useId();
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   
   useEffect(() => {
@@ -128,22 +127,23 @@ export function EventModalModern({
   
   // Обновляем даты в форме при навигации
   useEffect(() => {
-    if (isNavigating && form.starts_at && form.ends_at) {
+    if (isNavigating) {
       const viewDateMoscow = getTimeInTimeZone(viewDate, MOSCOW_TIMEZONE);
       const pad = (n: number) => String(n).padStart(2, '0');
       const dateStr = `${viewDateMoscow.year}-${pad(viewDateMoscow.month + 1)}-${pad(viewDateMoscow.day)}`;
       
-      const startTime = form.starts_at.split("T")[1] || "09:00";
-      const endTime = form.ends_at.split("T")[1] || "10:00";
-      
-      setForm((prev) => ({
-        ...prev,
-        starts_at: `${dateStr}T${startTime}`,
-        ends_at: `${dateStr}T${endTime}`,
-      }));
+      setForm((prev) => {
+        const startTime = prev.starts_at?.split("T")[1] || "09:00";
+        const endTime = prev.ends_at?.split("T")[1] || "10:00";
+        return {
+          ...prev,
+          starts_at: `${dateStr}T${startTime}`,
+          ends_at: `${dateStr}T${endTime}`,
+        };
+      });
       setIsNavigating(false);
     }
-  }, [viewDate, isNavigating, form.starts_at, form.ends_at, setForm]);
+  }, [viewDate, isNavigating, setForm]);
   
   const handleClose = useCallback(() => {
     onClose();
@@ -234,45 +234,7 @@ export function EventModalModern({
             </div>
           </div>
 
-          {/* ========== TIMELINE SECTION (Основной инструмент на всю ширину) ========== */}
-          <div className="border-b border-slate-200 bg-slate-50 p-3">
-            {/* Навигация по дням */}
-            {/* TIMELINE - Главный инструмент */}
-            <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <ResourcePanel
-                rooms={rooms}
-                roomsLoading={roomsLoading}
-                form={form}
-                setForm={setForm}
-                selectedRoom={selectedRoom || null}
-                selectedDate={viewDate}
-                roomAvailability={[]}
-                loadingAvailability={false}
-                readOnly={isReadOnly}
-                members={members}
-                membersLoading={membersLoading}
-                users={users}
-                usersLoading={usersLoading}
-                usersError={usersError}
-                authFetch={authFetch}
-                selectedCalendarId={selectedCalendarId}
-                isAllDay={false}
-                onRefreshMembers={onRefreshMembers}
-                conflicts={[]}
-                getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
-                organizations={organizations}
-                apiBaseUrl={apiBaseUrl}
-                accentColor={accentColor}
-                events={events}
-                currentUserEmail={currentUserEmail}
-                editingEventId={editingEvent?.id}
-                onNavigateDays={navigateDays}
-                variant="modal"
-              />
-            </div>
-          </div>
-
-          {/* ========== CONTENT (Компактные поля в 2 колонки) ========== */}
+          {/* ========== CONTENT (Основная информация и участники наверху) ========== */}
           <div className="p-3">
             {(error || isReadOnly) && (
               <div className="mb-4 space-y-2">
@@ -321,7 +283,6 @@ export function EventModalModern({
                             Название события <span className="text-red-500">*</span>
                           </label>
                           <input
-                            ref={titleInputRef}
                             required
                             type="text"
                             disabled={isReadOnly}
@@ -615,6 +576,40 @@ export function EventModalModern({
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* ========== TIMELINE SECTION - Ресурсы и занятость ========== */}
+              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                <ResourcePanel
+                  rooms={rooms}
+                  roomsLoading={roomsLoading}
+                  form={form}
+                  setForm={setForm}
+                  selectedRoom={selectedRoom || null}
+                  selectedDate={viewDate}
+                  roomAvailability={[]}
+                  loadingAvailability={false}
+                  readOnly={isReadOnly}
+                  members={members}
+                  membersLoading={membersLoading}
+                  users={users}
+                  usersLoading={usersLoading}
+                  usersError={usersError}
+                  authFetch={authFetch}
+                  selectedCalendarId={selectedCalendarId}
+                  isAllDay={false}
+                  onRefreshMembers={onRefreshMembers}
+                  conflicts={[]}
+                  getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
+                  organizations={organizations}
+                  apiBaseUrl={apiBaseUrl}
+                  accentColor={accentColor}
+                  events={events}
+                  currentUserEmail={currentUserEmail}
+                  editingEventId={editingEvent?.id}
+                  onNavigateDays={navigateDays}
+                  variant="modal"
+                />
               </div>
 
               {/* ========== Переговорная комната ========== */}

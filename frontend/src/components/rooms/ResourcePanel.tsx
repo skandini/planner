@@ -440,7 +440,7 @@ export function ResourcePanel({
       {variant === "modal" && (
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5">
           <div className="text-xs font-semibold text-slate-800">
-            Ресурсы <span className="font-normal text-slate-500">• Переговорка и занятость</span>
+            Ресурсы участников
           </div>
           <div className="flex items-center gap-1.5">
             <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 border border-slate-200">
@@ -470,7 +470,7 @@ export function ResourcePanel({
             </svg>
           </button>
           
-          <div className="px-6 py-2 text-base font-semibold text-slate-900 min-w-[200px] text-center bg-white rounded border border-slate-200">
+          <div className="px-5 py-1.5 text-sm font-semibold text-slate-900 min-w-[180px] text-center bg-white rounded border border-slate-200">
             {new Intl.DateTimeFormat('ru-RU', { 
               weekday: 'short', 
               day: 'numeric', 
