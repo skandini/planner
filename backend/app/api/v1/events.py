@@ -6,7 +6,7 @@ from typing import List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import and_, delete, or_, select
+from sqlmodel import and_, delete, or_, select, update
 from sqlalchemy import func
 
 from app.api.deps import get_current_user
@@ -1225,9 +1225,11 @@ def delete_event(
                     session.add(notification)
             session.flush()  # Сохраняем уведомления до удаления события
             
-            # Теперь удаляем все уведомления (включая только что созданные)
+            # Устанавливаем event_id в NULL (чтобы уведомления остались, но не ссылались на удаленное событие)
             session.exec(
-                delete(Notification).where(Notification.event_id.in_(series_ids))
+                update(Notification)
+                .where(Notification.event_id.in_(series_ids))
+                .values(event_id=None)
             )
             # Потом участников
             session.exec(
@@ -1238,9 +1240,11 @@ def delete_event(
             # И наконец события
             session.exec(delete(Event).where(Event.id.in_(series_ids)))
         else:
-            # Удаляем уведомления перед удалением события
+            # Устанавливаем event_id в NULL (чтобы уведомления остались)
             session.exec(
-                delete(Notification).where(Notification.event_id == event.id)
+                update(Notification)
+                .where(Notification.event_id == event.id)
+                .values(event_id=None)
             )
             session.delete(event)
     else:
@@ -1258,9 +1262,11 @@ def delete_event(
                 session.add(notification)
         session.flush()  # Сохраняем уведомления до удаления события
         
-        # Теперь удаляем все уведомления (включая только что созданные)
+        # Устанавливаем event_id в NULL (чтобы уведомления остались)
         session.exec(
-            delete(Notification).where(Notification.event_id == event_id)
+            update(Notification)
+            .where(Notification.event_id == event_id)
+            .values(event_id=None)
         )
         # Потом участников
         session.exec(
