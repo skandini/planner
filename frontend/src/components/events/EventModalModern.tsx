@@ -90,7 +90,6 @@ export function EventModalModern({
   const [showDescription, setShowDescription] = useState(!!form.description);
   
   const titleId = useId();
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   
   useEffect(() => {
     if (onPendingFilesReady) {
@@ -132,6 +131,9 @@ export function EventModalModern({
       const pad = (n: number) => String(n).padStart(2, '0');
       const dateStr = `${viewDateMoscow.year}-${pad(viewDateMoscow.month + 1)}-${pad(viewDateMoscow.day)}`;
       
+      // Сохраняем текущий фокус перед обновлением
+      const activeEl = document.activeElement as HTMLElement;
+      
       setForm((prev) => {
         const startTime = prev.starts_at?.split("T")[1] || "09:00";
         const endTime = prev.ends_at?.split("T")[1] || "10:00";
@@ -142,16 +144,23 @@ export function EventModalModern({
         };
       });
       setIsNavigating(false);
+      
+      // Восстанавливаем фокус после обновления состояния
+      requestAnimationFrame(() => {
+        if (activeEl && activeEl !== document.body && document.body.contains(activeEl)) {
+          activeEl.focus();
+        }
+      });
     }
-  }, [viewDate, isNavigating, setForm]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewDate, isNavigating]);
   
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
 
-  // UX: блокируем скролл, закрытие по Escape (без автофокуса чтобы не мешать работе с select)
+  // UX: блокируем скролл, закрытие по Escape
   useEffect(() => {
-    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -166,7 +175,6 @@ export function EventModalModern({
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
-      previouslyFocusedRef.current?.focus?.();
     };
   }, [handleClose]);
 
@@ -257,7 +265,7 @@ export function EventModalModern({
               </div>
             )}
 
-            <form id="event-form" onSubmit={onSubmit}>
+            <form id="event-form" onSubmit={onSubmit} autoComplete="off">
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {/* ========== ЛЕВАЯ КОЛОНКА ========== */}
                 <div className="space-y-3">
