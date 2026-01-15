@@ -25,6 +25,7 @@ interface EnhancedTimelineProps {
   events?: EventRecord[]; // События из основного массива для отображения как в основной сетке
   rooms?: Array<{ id: string; name: string }>; // Переговорки для отображения названий
   currentUserEmail?: string; // Email текущего пользователя для определения статуса участия
+  editingEventId?: string; // ID редактируемого события (чтобы разрешить выделение его слотов)
 }
 
 export function EnhancedTimeline({
@@ -46,6 +47,7 @@ export function EnhancedTimeline({
   events = [], // События из основного массива
   rooms = [], // Переговорки
   currentUserEmail, // Email текущего пользователя
+  editingEventId, // ID редактируемого события
 }: EnhancedTimelineProps) {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [currentSelectionSlot, setCurrentSelectionSlot] = useState<number | null>(null);
@@ -200,12 +202,10 @@ export function EnhancedTimeline({
 
   if (resourceRows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-12 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100">
-          <svg className="h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
+      <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
+        <svg className="h-12 w-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
         <p className="text-sm font-medium text-slate-700">Добавьте участников или переговорку</p>
         <p className="mt-1 text-xs text-slate-500">чтобы увидеть таймлайн занятости</p>
       </div>
@@ -246,6 +246,10 @@ export function EnhancedTimeline({
 
     // Проверяем, есть ли событие в этом слоте
     const eventInSlot = rowEvents.find((event) => {
+      // Исключаем текущее редактируемое событие из проверки занятости
+      if (editingEventId && event.id === editingEventId) {
+        return false;
+      }
       const eventStart = parseUTC(event.starts_at);
       const eventEnd = parseUTC(event.ends_at);
       return eventStart < slotEnd && eventEnd > slotStart;
@@ -258,7 +262,7 @@ export function EnhancedTimeline({
     
     // Иначе слот доступен
     return "free";
-  }, [buildSlotTimes, getFilteredEventsForRow]);
+  }, [buildSlotTimes, getFilteredEventsForRow, editingEventId]);
 
   const isSlotBusy = useCallback((slotIndex: number): boolean => {
     if (slotIndex < 0 || slotIndex >= timeSlots.length) return true;
@@ -422,32 +426,32 @@ export function EnhancedTimeline({
   );
 
   return (
-    <div className="space-y-4">
-      {/* Легенда с тремя состояниями - легкий воздушный дизайн со скруглениями */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+    <div className="space-y-3">
+      {/* Легенда - легкий воздушный дизайн */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <div className="h-2.5 w-8 rounded-lg border border-red-200/60 bg-red-50/60" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Занято</span>
+          <div className="h-2 w-8 rounded border border-rose-200 bg-rose-100" />
+          <span className="text-[0.7rem] font-medium text-slate-600">Занято</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-2.5 w-8 rounded-lg border border-slate-200/60 bg-white" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Свободно</span>
+          <div className="h-2 w-8 rounded border border-emerald-200 bg-emerald-50" />
+          <span className="text-[0.7rem] font-medium text-slate-600">Свободно</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-2.5 w-8 rounded-lg border-2 border-blue-300/70 bg-blue-50/70" />
-          <span className="text-[0.65rem] font-medium text-slate-600">Выбрано</span>
+          <div className="h-2 w-8 rounded border border-blue-300 bg-blue-100" />
+          <span className="text-[0.7rem] font-medium text-slate-600">Выбрано</span>
         </div>
       </div>
 
-      {/* Легкий воздушный таймлайн в стиле основного календаря */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.12)]" ref={timelineRef} style={{ maxHeight: "calc(85vh - 300px)" }}>
-        <div className="min-w-full space-y-2 p-3">
+      {/* Легкий воздушный таймлайн */}
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white" ref={timelineRef} style={{ maxHeight: "400px" }}>
+        <div className="min-w-full space-y-1.5 p-2">
           {/* Заголовок времени */}
           <div
-            className="grid rounded-lg border-b border-slate-200 bg-slate-50 p-2"
+            className="grid rounded border-b border-slate-200 bg-slate-50 p-1.5"
             style={{ gridTemplateColumns: templateColumns }}
           >
-            <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-[0.3em]">Ресурс</div>
+            <div className="px-2 py-1.5 text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider">Ресурс</div>
             {timeSlots.map((slot) => {
               // Создаем дату для слота в московском времени для правильного отображения времени
               const slotDate = buildSlotTimes(slot.index).slotStart;
@@ -464,7 +468,7 @@ export function EnhancedTimeline({
             })}
           </div>
 
-          {/* Строки ресурсов - красивые карточки */}
+          {/* Строки ресурсов - легкие воздушные */}
           {resourceRows.map((row) => {
             const rowConflictSlots = conflictMap?.get(row.id) ?? [];
             const hasConflict = rowConflictSlots.length > 0;
@@ -472,20 +476,20 @@ export function EnhancedTimeline({
             return (
               <div
                 key={row.id}
-                className={`grid rounded-lg border transition-all ${
+                className={`grid rounded border transition-all ${
                   hasConflict
-                    ? "border-amber-200 bg-amber-50/30"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                    ? "border-amber-200 bg-amber-50/50"
+                    : "border-slate-200 bg-white hover:bg-slate-50/50"
                 }`}
                 style={{ gridTemplateColumns: templateColumns }}
               >
                 {/* Название ресурса */}
-                <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 bg-white">
+                <div className="flex items-center gap-2 rounded px-2 py-1.5 bg-white">
                   {row.avatarUrl ? (
                     <img
                       src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
                       alt={row.label}
-                      className="h-7 w-7 rounded-full object-cover border border-slate-200 shadow-sm flex-shrink-0"
+                      className="h-6 w-6 rounded-full object-cover border border-slate-200 flex-shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                         const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
@@ -496,22 +500,22 @@ export function EnhancedTimeline({
                     />
                   ) : null}
                   <div 
-                    className={`h-7 w-7 rounded-full flex items-center justify-center text-[0.7rem] font-bold text-white shadow-sm flex-shrink-0 bg-gradient-to-br ${
+                    className={`h-6 w-6 rounded-full flex items-center justify-center text-[0.65rem] font-semibold text-white flex-shrink-0 ${
                       row.type === "room" 
-                        ? "from-blue-500 to-blue-600" 
-                        : "from-indigo-500 to-purple-600"
+                        ? "bg-blue-500" 
+                        : "bg-indigo-500"
                     } ${row.avatarUrl ? "hidden" : ""}`}
                   >
                     {row.type === "room" ? "🏢" : row.label[0]?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-semibold truncate leading-tight ${
+                    <p className={`text-[0.7rem] font-semibold truncate ${
                       hasConflict ? "text-amber-900" : "text-slate-900"
                     }`}>
                       {row.label}
                     </p>
                     {row.meta && (
-                      <p className={`text-[0.65rem] truncate mt-0.5 leading-tight ${
+                      <p className={`text-[0.6rem] truncate mt-0.5 ${
                         hasConflict ? "text-amber-700" : "text-slate-500"
                       }`}>
                         {row.meta}
@@ -519,7 +523,7 @@ export function EnhancedTimeline({
                     )}
                   </div>
                   {hasConflict && (
-                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full text-[0.7rem] font-bold bg-amber-400 text-amber-900 border border-amber-500 flex-shrink-0 shadow-sm" title="Конфликт">
+                    <span className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[0.6rem] font-bold bg-amber-400 text-amber-900 flex-shrink-0" title="Конфликт">
                       !
                     </span>
                   )}
@@ -548,6 +552,13 @@ export function EnhancedTimeline({
                     const isSelected = selectionRange.start && selectionRange.end && 
                       slotStart >= selectionRange.start && slotEnd <= selectionRange.end;
 
+                    // Проверяем, находится ли слот в процессе выделения (предварительное выделение)
+                    const isBeingSelected = isSelecting && 
+                      selectionStart !== null && 
+                      currentSelectionSlot !== null && 
+                      slot.index >= Math.min(selectionStart, currentSelectionSlot) && 
+                      slot.index <= Math.max(selectionStart, currentSelectionSlot);
+
                     // Формируем tooltip для события с временем в московском времени
                     let tooltipText = "";
                     if (eventInSlot) {
@@ -559,21 +570,24 @@ export function EnhancedTimeline({
                       const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
                       tooltipText = `${eventInSlot.title} (${eventStartTime} - ${eventEndTime})`;
                     } else {
-                      tooltipText = state === "busy" ? "Занято" : isSelected ? "Выбрано" : "Доступно - кликните для выбора времени";
+                      tooltipText = state === "busy" ? "Занято" : isSelected ? "Выбрано" : isBeingSelected ? "Выделяется..." : "Доступно - кликните для выбора времени";
                     }
 
-                  // Легкая воздушная цветовая схема с скругленными ячейками и плавными эффектами
-                  let slotClassName = "h-8 rounded-lg transition-all duration-300 ease-out relative overflow-hidden group ";
+                  // Легкая воздушная цветовая схема
+                  let slotClassName = "h-7 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
-                    // Занято - легкий красный с прозрачностью, скругленный
-                    slotClassName += "bg-red-50/60 border border-red-200/60 cursor-not-allowed hover:bg-red-50/80 hover:border-red-300/70 hover:shadow-sm hover:shadow-red-100/40";
+                    // Занято - мягкий розовый
+                    slotClassName += "bg-rose-100 border border-rose-200 cursor-not-allowed hover:bg-rose-150";
+                  } else if (isBeingSelected) {
+                    // Предварительное выделение - яркий голубой с пунктирной рамкой
+                    slotClassName += "bg-indigo-100 border-2 border-dashed border-indigo-400 cursor-pointer";
                   } else if (isSelected) {
-                    // Выбранное - легкий голубой с прозрачностью, скругленный
-                    slotClassName += "bg-blue-50/70 border-2 border-blue-300/70 cursor-pointer hover:bg-blue-50/90 hover:border-blue-400/80 hover:shadow-md hover:shadow-blue-200/50";
+                    // Выбранное - мягкий голубой
+                    slotClassName += "bg-blue-100 border-2 border-blue-300 cursor-pointer hover:bg-blue-150";
                   } else {
-                    // Свободное - белый фон с легкой границей, скругленный, с плавными hover-эффектами
-                    slotClassName += "bg-white border border-slate-200/60 cursor-pointer hover:bg-slate-50 hover:border-slate-300/80 hover:shadow-sm hover:shadow-slate-200/30 active:bg-slate-100/60 active:scale-[0.98]";
+                    // Свободное - мягкий зеленый
+                    slotClassName += "bg-emerald-50 border border-emerald-200 cursor-pointer hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-150";
                   }
 
                   return (
@@ -590,32 +604,7 @@ export function EnhancedTimeline({
                         }
                       }}
                       title={tooltipText}
-                    >
-                      {/* Плавный декоративный эффект для свободных слотов при hover */}
-                      {state === "free" && !isSelected && (
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
-                          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/40 via-white/20 to-transparent rounded-lg"></div>
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-slate-300/40 to-transparent"></div>
-                        </div>
-                      )}
-                      
-                      {/* Плавный эффект для выбранных слотов */}
-                      {isSelected && (
-                        <div className="absolute inset-0 rounded-lg">
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/30 via-blue-50/20 to-transparent rounded-lg"></div>
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-gradient-to-r from-transparent via-blue-300/50 to-transparent rounded-full"></div>
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-gradient-to-r from-transparent via-blue-300/50 to-transparent rounded-full"></div>
-                        </div>
-                      )}
-                      
-                      {/* Плавный эффект для занятых слотов */}
-                      {state === "busy" && (
-                        <div className="absolute inset-0 opacity-60 group-hover:opacity-80 transition-opacity duration-300 ease-out rounded-lg">
-                          <div className="absolute inset-0 bg-gradient-to-br from-red-100/40 via-red-50/20 to-transparent rounded-lg"></div>
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-px bg-gradient-to-r from-transparent via-red-300/40 to-transparent rounded-full"></div>
-                        </div>
-                      )}
-                    </div>
+                    />
                   );
                   });
                 })()}

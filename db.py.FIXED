@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+from collections.abc import Generator
+from typing import Annotated
+
+from fastapi import Depends
+from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import event
+
+from app.core.config import settings
+
+# Импортируем все модели, чтобы они попали в метаданные SQLModel
+from app.models import (  # noqa: F401
+    AdminNotification,
+    AdminNotificationDismissal,
+    Calendar,
+    CalendarMember,
+    Department,
+    Event,
+    EventAttachment,
+    EventComment,
+    EventParticipant,
+    Notification,
+    Organization,
+    Room,
+    Ticket,
+    TicketAttachment,
+    TicketComment,
+    User,
+    UserDepartment,
+    UserOrganization,
+)
+
+
+def _build_engine():
+    if settings.DATABASE_URL.startswith("sqlite"):
+        # SQLite настройки для предотвращения блокировок (для dev/тестирования)
+        connect_args = {
+            "check_same_thread": False,
+            "timeout": 20.0,  # Таймаут для ожидания блокировки (20 секунд)
+        }
+        engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
+        # Включаем WAL mode для SQLite (улучшает параллельный доступ)
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.close()
+        return engine
+    else:
+        # PostgreSQL настройки с connection pooling
+        # pool_size - количество соединений в пуле
+        # max_overflow - максимальное количество дополнительных соединений
+        # pool_pre_ping - проверка соединений перед использованием
+        # pool_recycle - пересоздание соединений через 3600 секунд (1 час)
+        engine = create_engine(
+            settings.DATABASE_URL,
+            pool_size=20,  # Базовый размер пула (достаточно для 200 пользователей)
+            max_overflow=10,  # Дополнительные соединения при нагрузке
+            pool_pre_ping=True,  # Проверка соединений перед использованием
+            pool_recycle=3600,  # Пересоздание соединений через 1 час
+            echo=False,  # Логирование SQL запросов (False для продакшена)
+        )
+        return engine
+
+
+engine = _build_engine()
+
+
+def init_db() -> None:
+    """Create database tables in environments without migrations."""
+    # Проверяем, существует ли уже таблица tickets (созданная через миграции)
+    # Если да, то не создаем таблицы через create_all
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+    
+    # Если таблицы тикетов уже существуют (созданы через миграции), пропускаем create_all
+    if "tickets" in existing_tables:
+        return
+    
+    # Иначе создаем все таблицы (для новых установок без миграций)
+    SQLModel.metadata.create_all(bind=engine)
+
+
+def get_session() -> Generator[Session, None, None]:
+    with Session(engine) as session:
+        yield session
+
+
+SessionDep = Annotated[Session, Depends(get_session)]
+
+

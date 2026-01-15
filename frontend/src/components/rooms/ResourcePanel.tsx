@@ -37,6 +37,9 @@ interface ResourcePanelProps {
   accentColor?: string; // Цвет календаря для занятого времени
   events?: EventRecord[]; // События из основного массива для отображения как в основной сетке
   currentUserEmail?: string; // Email текущего пользователя
+  variant?: "default" | "modal";
+  editingEventId?: string; // ID редактируемого события
+  onNavigateDays?: (days: number) => void; // Функция навигации по дням
 }
 
 export function ResourcePanel({
@@ -65,6 +68,9 @@ export function ResourcePanel({
   accentColor = "#6366f1", // По умолчанию indigo-500
   events = [], // События из основного массива
   currentUserEmail, // Email текущего пользователя
+  variant = "default",
+  editingEventId, // ID редактируемого события
+  onNavigateDays, // Функция навигации по дням
 }: ResourcePanelProps) {
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
@@ -334,10 +340,11 @@ export function ResourcePanel({
     };
   }, [
     authFetch,
-    form.all_day,
+    isAllDay,
     selectedCalendarId,
     selectedParticipantProfiles,
     selectedDate, // Используем selectedDate вместо form.starts_at/ends_at для избежания лишних перезагрузок при редактировании
+    form.starts_at, // Добавляем starts_at для обновления при изменении даты
   ]);
 
   // Определяем участников с конфликтами
@@ -425,46 +432,64 @@ export function ResourcePanel({
     return map;
   }, [conflicts]);
 
+  const participantsCount = form.participant_ids.length;
+  const hasAnyConflicts = conflicts.length > 0;
+
   return (
-    <div className="flex flex-col gap-3">
-      {roomsLoading ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
-          <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500"></div>
-          Загрузка...
+    <div className={variant === "modal" ? "flex flex-col gap-3" : "flex flex-col gap-3"}>
+      {variant === "modal" && (
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5">
+          <div className="text-xs font-semibold text-slate-800">
+            Ресурсы <span className="font-normal text-slate-500">• Переговорка и занятость</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 border border-slate-200">
+              {participantsCount} уч.
+            </span>
+            {hasAnyConflicts && (
+              <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200">
+                ⚠
+              </span>
+            )}
+          </div>
         </div>
-      ) : (
-        <select
-          value={form.room_id || ""}
-          disabled={readOnly}
-          onChange={(e) =>
-            setForm((prev) => ({
-              ...prev,
-              room_id: e.target.value || null,
-            }))
-          }
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-300"
-        >
-          <option value="" className="bg-white text-slate-900">
-            Без переговорки
-          </option>
-          {rooms.length === 0 ? (
-            <option disabled className="bg-white text-slate-400">
-              Нет доступных переговорок
-            </option>
-          ) : (
-            rooms.map((room) => (
-              <option
-                key={room.id}
-                value={room.id}
-                className="bg-white text-slate-900"
-              >
-                {room.name}
-                {room.capacity > 1 ? ` (до ${room.capacity} чел.)` : ""}
-                {room.location ? ` — ${room.location}` : ""}
-              </option>
-            ))
-          )}
-        </select>
+      )}
+
+
+      {/* Навигация по дням */}
+      {variant === "modal" && onNavigateDays && (
+        <div className="flex items-center justify-center gap-3 py-2">
+          <button
+            type="button"
+            onClick={() => onNavigateDays(-1)}
+            className="rounded border border-slate-200 bg-white px-3 py-2 text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+            title="Предыдущий день"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <div className="px-6 py-2 text-base font-semibold text-slate-900 min-w-[200px] text-center bg-white rounded border border-slate-200">
+            {new Intl.DateTimeFormat('ru-RU', { 
+              weekday: 'short', 
+              day: 'numeric', 
+              month: 'short',
+              timeZone: MOSCOW_TIMEZONE 
+            }).format(selectedDate)}
+          </div>
+          
+          <button
+            type="button"
+            onClick={() => onNavigateDays(1)}
+            className="rounded border border-slate-200 bg-white px-3 py-2 text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+            title="Следующий день"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       )}
 
       <EnhancedTimeline
@@ -485,6 +510,7 @@ export function ResourcePanel({
         events={events}
         rooms={rooms}
         currentUserEmail={currentUserEmail}
+        editingEventId={editingEventId}
         onRemoveParticipant={(participantId) => {
           setForm((prev) => ({
             ...prev,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventDraft } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
 import type { UserProfile } from "@/types/user.types";
@@ -38,6 +38,24 @@ export function ParticipantSearch({
 }: ParticipantSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Закрываем dropdown при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+        setSearchQuery("");
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [isExpanded]);
 
   const membershipMap = useMemo(() => {
     const map = new Map<string, CalendarMember>();
@@ -153,7 +171,7 @@ export function ParticipantSearch({
 
         {/* Кнопка добавления участника */}
         {!readOnly && (
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
@@ -167,7 +185,7 @@ export function ParticipantSearch({
 
             {/* Результаты поиска */}
             {isExpanded && (
-              <div className="absolute z-20 mt-2 left-0 max-h-64 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+              <div className="absolute z-50 mt-2 left-0 max-h-64 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
                 <div className="p-2">
                   <input
                     type="text"
@@ -178,7 +196,6 @@ export function ParticipantSearch({
                     onFocus={() => setIsExpanded(true)}
                     placeholder="Поиск участников..."
                     className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 mb-2"
-                    autoFocus
                   />
                   {usersLoading || membersLoading ? (
                     <div className="p-4 text-center text-sm text-slate-500">Загрузка...</div>
@@ -328,7 +345,7 @@ export function ParticipantSearch({
 
       {/* Поиск */}
       {!readOnly && (
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <div className="relative">
             <svg
               className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
@@ -367,7 +384,7 @@ export function ParticipantSearch({
 
           {/* Результаты поиска */}
           {isExpanded && (searchQuery || filteredUsers.length > 0) && (
-            <div className="absolute z-10 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+            <div className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
               {usersLoading || membersLoading ? (
                 <div className="p-4 text-center text-sm text-slate-500">Загрузка...</div>
               ) : filteredUsers.length === 0 ? (

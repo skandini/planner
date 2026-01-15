@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { EventDraft, EventRecord, ConflictEntry } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
 import type { UserProfile, EventParticipant } from "@/types/user.types";
@@ -89,6 +89,10 @@ export function EventModalEnhanced({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [roomAvailability, setRoomAvailability] = useState<EventRecord[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  const titleId = useId();
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   
   // Передаем временные файлы в родительский компонент
   useEffect(() => {
@@ -111,6 +115,8 @@ export function EventModalEnhanced({
   const recurrenceControlsDisabled = isReadOnly || isSeriesParent || isSeriesChild;
 
   const selectedRoom = rooms.find((r) => r.id === form.room_id);
+
+  const calendarLabel = useMemo(() => calendarName || "Календарь", [calendarName]);
   
   // Получаем дату из формы, интерпретируя её как московское время
   // form.starts_at в формате "YYYY-MM-DDTHH:mm" содержит дату и время в московском времени
@@ -367,29 +373,70 @@ export function EventModalEnhanced({
     viewDate,  // Загружаем конфликты при изменении дня просмотра
   ]);
 
+  // UX: блокируем скролл страницы под модалкой, фокусируем первое поле, закрываем по Escape
+  useEffect(() => {
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // Фокус после монтирования (нужно немного времени, чтобы инпут появился в DOM)
+    const focusTimer = window.setTimeout(() => {
+      titleInputRef.current?.focus();
+    }, 0);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+      previouslyFocusedRef.current?.focus?.();
+    };
+  }, [handleClose]);
+
   return (
     <>
-      <div 
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 backdrop-blur-sm sm:items-center sm:p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             handleClose();
           }
         }}
+        aria-hidden="true"
       >
-      <div 
-        className="w-[80vw] h-[85vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl flex flex-col"
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="w-full max-w-6xl h-[92vh] sm:h-[85vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Компактный заголовок */}
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white flex-shrink-0">
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-slate-900">
-                {isEditing ? "Редактировать событие" : "Новое событие"}
-              </h2>
-              <span className="text-sm text-slate-500">•</span>
-              <span className="text-sm text-slate-500">{calendarName || "Новый календарь"}</span>
+              <span
+                className="h-3.5 w-3.5 rounded-full ring-4 ring-slate-100"
+                style={{ backgroundColor: accentColor }}
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <h2 id={titleId} className="text-xl font-bold text-slate-900 leading-tight">
+                  {isEditing ? "Редактировать событие" : "Новое событие"}
+                </h2>
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                  <span className="truncate">{calendarLabel}</span>
+                  <span aria-hidden="true">•</span>
+                  <span className="whitespace-nowrap">МСК</span>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {canManageEvents && onDelete && (
@@ -418,30 +465,33 @@ export function EventModalEnhanced({
         </div>
 
         {/* Контент - двухколоночный layout */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <form id="event-form" onSubmit={onSubmit} className="h-full flex flex-col">
-              {error && (
-                <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  <div className="flex items-center gap-2">
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    <span>{error}</span>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <form id="event-form" onSubmit={onSubmit} className="flex-1 min-h-0 flex flex-col">
+            {(error || isReadOnly) && (
+              <div className="px-6 pt-4 space-y-2">
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    <div className="flex items-center gap-2">
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      <span>{error}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {isReadOnly && (
-                <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  <span>У вас нет прав редактировать события в этом календаре</span>
-                </div>
-              )}
+                {isReadOnly && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    <span>У вас нет прав редактировать события в этом календаре</span>
+                  </div>
+                )}
+              </div>
+            )}
 
-              {/* Двухколоночный layout */}
-              <div className="flex-1 grid grid-cols-[400px,1fr] gap-6 p-6">
-                {/* Левая колонка - основная информация */}
-                <div className="space-y-4 overflow-y-auto">
+            {/* Двухколоночный layout */}
+            <div className="flex-1 min-h-0 grid grid-cols-1 gap-6 p-6 lg:grid-cols-[420px,1fr]">
+              {/* Левая колонка - основная информация */}
+              <div className="space-y-4 min-h-0 overflow-y-auto pr-1">
                   {/* Название и даты */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
                     <div>
@@ -449,6 +499,7 @@ export function EventModalEnhanced({
                         Название <span className="text-red-500">*</span>
                       </label>
                       <input
+                        ref={titleInputRef}
                         required
                         type="text"
                         disabled={isReadOnly}
@@ -474,7 +525,7 @@ export function EventModalEnhanced({
                           onChange={(e) =>
                             setForm((prev) => ({ ...prev, starts_at: e.target.value }))
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                         />
                       </div>
                       <div>
@@ -489,7 +540,7 @@ export function EventModalEnhanced({
                           onChange={(e) =>
                             setForm((prev) => ({ ...prev, ends_at: e.target.value }))
                           }
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                         />
                       </div>
                     </div>
@@ -714,7 +765,7 @@ export function EventModalEnhanced({
                                   recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
                                 }))
                               }
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                             >
                               <option value="daily">Каждый день</option>
                               <option value="weekly">Каждую неделю</option>
@@ -734,17 +785,17 @@ export function EventModalEnhanced({
                                   recurrence_interval: Math.max(1, Number(e.target.value)),
                                 }))
                               }
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                             />
                           </label>
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
+              </div>
 
-                {/* Правая колонка - Таймлайн и переговорки */}
-                <div className="flex flex-col space-y-3 overflow-y-auto">
+              {/* Правая колонка - Таймлайн и переговорки */}
+              <div className="flex flex-col space-y-3 min-h-0 overflow-y-auto pl-0 lg:pl-1">
                   {/* Навигация по дням */}
                   <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2">
                     <button
@@ -801,12 +852,12 @@ export function EventModalEnhanced({
                       accentColor={accentColor}
                       events={events}
                       currentUserEmail={currentUserEmail}
+                      variant="modal"
                     />
                   </div>
-                </div>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
 
           {/* Footer с кнопками */}
           <div className="flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4 flex items-center justify-end gap-3">

@@ -553,6 +553,7 @@ export function EventModal({
             conflicts={conflicts}
             conflictsLoading={conflictsLoading}
             conflictsError={conflictsError}
+            variant="modal"
           />
         </div>
       </div>

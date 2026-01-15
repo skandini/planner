@@ -9,10 +9,12 @@ if (-not (Test-Path node_modules)) {
     npm install
 }
 
-# Запуск dev-сервера
+# Удаляем кэш .next для чистого запуска (опционально)
+# Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+
+# Запуск dev-сервера на порту 3000
 Write-Host "Starting Next.js dev server on http://localhost:3000" -ForegroundColor Green
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Yellow
 Write-Host ""
 
 npm run dev
-

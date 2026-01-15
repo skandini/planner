@@ -280,27 +280,37 @@ export function CommentsSection({
     }
   };
 
-  // Форматирование даты
+  // Форматирование даты - показываем локальное время
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return "только что";
-    if (minutes < 60) return `${minutes} ${minutes === 1 ? "минуту" : minutes < 5 ? "минуты" : "минут"} назад`;
-    if (hours < 24) return `${hours} ${hours === 1 ? "час" : hours < 5 ? "часа" : "часов"} назад`;
-    if (days < 7) return `${days} ${days === 1 ? "день" : days < 5 ? "дня" : "дней"} назад`;
-
-    return date.toLocaleDateString("ru-RU", {
-      day: "numeric",
-      month: "long",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    
+    // Проверяем, сегодня ли это
+    const isToday = date.toDateString() === now.toDateString();
+    
+    // Проверяем, вчера ли это
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    // Форматируем время
+    const timeStr = date.toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
     });
+    
+    if (isToday) {
+      return `Сегодня в ${timeStr}`;
+    } else if (isYesterday) {
+      return `Вчера в ${timeStr}`;
+    } else {
+      // Показываем полную дату
+      return date.toLocaleDateString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+      }) + ` в ${timeStr}`;
+    }
   };
 
   // Автоматическое изменение высоты textarea
@@ -571,7 +581,7 @@ export function CommentsSection({
                   <div className="mt-2 pt-2 border-t border-slate-200">
                     <div className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wide mb-1">Организации</div>
                     <div className="flex flex-wrap gap-1">
-                      {userOrgs.map(org => (
+                      {userOrgs.map(org => org && (
                         <span key={org.id} className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                           🏢 {org.name}
                         </span>

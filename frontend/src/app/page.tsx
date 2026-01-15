@@ -32,7 +32,7 @@ import { DayView } from "@/components/calendar/DayView";
 import { UpcomingEvents } from "@/components/calendar/UpcomingEvents";
 import { ParticipantStatusItem } from "@/components/participants/ParticipantStatusItem";
 import { ResourcePanel } from "@/components/rooms/ResourcePanel";
-import { EventModalEnhanced as EventModal } from "@/components/events/EventModalEnhanced";
+import { EventModalModern as EventModal } from "@/components/events/EventModalModern";
 import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { UserAvailabilityWeekModal } from "@/components/availability/UserAvailabilityWeekModal";
