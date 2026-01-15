@@ -545,10 +545,35 @@ export function EventModalModern({
                             apiBaseUrl={apiBaseUrl}
                             isRecurring={recurrenceInfo?.isSeriesChild || recurrenceInfo?.isSeriesParent || false}
                             onUpdateStatusSeries={async (eventId, userId, status, applyTo) => {
-                              // Здесь нужно обработать применение к серии событий
-                              // Пока просто вызываем обычный обработчик
-                              if (onUpdateParticipantStatus) {
+                              if (!onUpdateParticipantStatus) return;
+                              
+                              if (applyTo === "this") {
+                                // Обновляем только текущее событие
                                 await onUpdateParticipantStatus(eventId, userId, status);
+                              } else if (applyTo === "all") {
+                                // Находим все события серии
+                                const currentEvent = editingEvent || events.find(e => e.id === eventId);
+                                if (!currentEvent) {
+                                  await onUpdateParticipantStatus(eventId, userId, status);
+                                  return;
+                                }
+                                
+                                // Определяем ID родительского события
+                                const parentId = currentEvent.recurrence_parent_id || currentEvent.id;
+                                
+                                // Находим все события серии (включая родительское и все дочерние)
+                                const seriesEvents = events.filter(e => 
+                                  e.id === parentId || e.recurrence_parent_id === parentId
+                                );
+                                
+                                // Обновляем статус для всех событий серии
+                                for (const event of seriesEvents) {
+                                  try {
+                                    await onUpdateParticipantStatus(event.id, userId, status);
+                                  } catch (err) {
+                                    console.error(`Failed to update status for event ${event.id}:`, err);
+                                  }
+                                }
                               }
                             }}
                           />
