@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin_notifications, auth, availability_slots, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, push, room_access, rooms, statistics, ticket_attachments, ticket_comments, tickets, user_availability, users, user_avatars
+from app.api.v1 import admin_notifications, auth, availability_slots, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, push, room_access, rooms, statistics, ticket_attachments, ticket_comments, tickets, user_availability, users, user_avatars, websocket
 
 
 api_router = APIRouter()
@@ -14,6 +14,7 @@ api_router.include_router(event_comments.router, prefix="", tags=["event-comment
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(admin_notifications.router, prefix="/admin-notifications", tags=["admin-notifications"])
 api_router.include_router(push.router, prefix="/push", tags=["push"])
+api_router.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 api_router.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
 api_router.include_router(room_access.router, prefix="", tags=["room-access"])
 api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])

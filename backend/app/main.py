@@ -153,8 +153,26 @@ def create_application() -> FastAPI:
     app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
     @app.on_event("startup")
-    def _startup() -> None:
+    async def _startup() -> None:
         init_db()
+        # Start Redis Pub/Sub listener for WebSocket real-time notifications
+        try:
+            from app.services.redis_pubsub import redis_pubsub
+            await redis_pubsub.connect()
+            print("[INFO] Redis Pub/Sub listener started for WebSocket notifications")
+        except Exception as e:
+            print(f"[WARNING] Failed to start Redis Pub/Sub listener: {e}")
+            print("[WARNING] WebSocket real-time notifications will not work")
+    
+    @app.on_event("shutdown")
+    async def _shutdown() -> None:
+        # Stop Redis Pub/Sub listener
+        try:
+            from app.services.redis_pubsub import redis_pubsub
+            await redis_pubsub.disconnect()
+            print("[INFO] Redis Pub/Sub listener stopped")
+        except Exception as e:
+            print(f"[WARNING] Error stopping Redis Pub/Sub listener: {e}")
 
     return app
 
