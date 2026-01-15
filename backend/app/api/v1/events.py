@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, User, UserAvailabilitySchedule
+from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, Notification, User, UserAvailabilitySchedule
 from app.schemas import (
     EventCreate,
     EventRead,
