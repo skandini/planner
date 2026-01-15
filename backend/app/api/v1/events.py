@@ -978,6 +978,19 @@ def update_event(
             session.add(target)
 
         session.commit()
+        
+        # Уведомляем участников об изменении серии
+        updater_name = current_user.full_name or current_user.email
+        for target in series_events:
+            participant_ids = _get_event_participant_ids(session, target.id)
+            for participant_id in participant_ids:
+                if participant_id != current_user.id:
+                    notify_event_updated_task.delay(
+                        user_id=str(participant_id),
+                        event_id=str(target.id),
+                        updater_name=updater_name,
+                    )
+        
         session.refresh(event)
         return _serialize_event_with_participants(session, event)
 
@@ -1206,13 +1219,23 @@ def delete_event(
                         event_id=str(event.id),
                         canceller_name=canceller_name,
                     )
+            # Сначала удаляем уведомления (foreign key constraint)
+            session.exec(
+                delete(Notification).where(Notification.event_id.in_(series_ids))
+            )
+            # Потом участников
             session.exec(
                 delete(EventParticipant).where(
                     EventParticipant.event_id.in_(series_ids)
                 )
             )
+            # И наконец события
             session.exec(delete(Event).where(Event.id.in_(series_ids)))
         else:
+            # Удаляем уведомления перед удалением события
+            session.exec(
+                delete(Notification).where(Notification.event_id == event.id)
+            )
             session.delete(event)
     else:
         # Notify participants (асинхронно через Celery)
@@ -1223,9 +1246,15 @@ def delete_event(
                     event_id=str(event_id),
                     canceller_name=canceller_name,
                 )
+        # Сначала удаляем уведомления (foreign key constraint)
+        session.exec(
+            delete(Notification).where(Notification.event_id == event_id)
+        )
+        # Потом участников
         session.exec(
             delete(EventParticipant).where(EventParticipant.event_id == event_id)
         )
+        # И наконец само событие
         session.delete(event)
 
     session.commit()
