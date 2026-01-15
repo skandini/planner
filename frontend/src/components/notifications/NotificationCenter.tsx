@@ -63,8 +63,10 @@ export function NotificationCenter({
   };
 
   const formatDate = (dateString: string) => {
-    // Парсим дату как UTC, если она в формате ISO
-    const date = new Date(dateString);
+    // Парсим дату - сервер возвращает UTC время
+    // Если нет 'Z' в конце, добавляем его для правильного парсинга
+    const isoString = dateString.includes('Z') ? dateString : `${dateString}Z`;
+    const date = new Date(isoString);
     const now = new Date();
     
     // Проверяем, что дата валидна

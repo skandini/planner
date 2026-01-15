@@ -134,7 +134,14 @@ def schedule_reminders_for_event(
     event: Event,
     reminder_minutes: list[int] | None = None,
 ) -> None:
-    """Schedule reminder notifications for all event participants."""
+    """
+    Schedule reminder notifications for all event participants.
+    
+    NOTE: Reminders are created when:
+    - Event start time - reminder_minutes > current time
+    - This function should be called periodically (e.g., every minute)
+      to create reminders for upcoming events
+    """
     from sqlmodel import select
     from app.models import EventParticipant
     
@@ -145,17 +152,23 @@ def schedule_reminders_for_event(
     statement = select(EventParticipant).where(EventParticipant.event_id == event.id)
     participants = session.exec(statement).all()
     
+    # Все времена в БД хранятся как naive datetime (без timezone)
+    # Они представляют московское время
     event_start = event.starts_at
     if event_start.tzinfo:
         event_start = event_start.replace(tzinfo=None)
     
-    now = datetime.utcnow()
+    # Текущее московское время (UTC+3)
+    # Важно: используем московское время для сравнения!
+    from datetime import timezone
+    moscow_tz = timezone(timedelta(hours=3))
+    now_moscow = datetime.now(moscow_tz).replace(tzinfo=None)
     
     for participant in participants:
         for reminder_mins in reminder_minutes:
             reminder_time = event_start - timedelta(minutes=reminder_mins)
-            # Only schedule if reminder time is in the future
-            if reminder_time > now:
+            # Only schedule if reminder time is in the future (Moscow time)
+            if reminder_time > now_moscow:
                 create_reminder_notification(
                     session=session,
                     user_id=participant.user_id,
