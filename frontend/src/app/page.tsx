@@ -2375,11 +2375,11 @@ export default function Home() {
           </aside>
 
           <section className="order-1 flex flex-1 flex-col gap-3 lg:order-2 lg:min-w-0 overflow-hidden">
-            <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-lg flex-shrink-0">
-              <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-semibold">
+                    <h2 className="text-lg font-semibold">
                 {selectedCalendar ? selectedCalendar.name : "Календарь не выбран"}
               </h2>
                     {selectedRole && (
