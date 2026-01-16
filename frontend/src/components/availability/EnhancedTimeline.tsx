@@ -233,6 +233,44 @@ export function EnhancedTimeline({
     return { slotStart, slotEnd };
   }, [baseDate, timeSlots]);
 
+  // Определяем участников, недоступных в выбранное время (для визуального выделения)
+  const unavailableParticipants = useMemo(() => {
+    const unavailable = new Set<string>();
+    
+    // Проверяем только если есть выбранное время
+    if (!selectionRange.start || !selectionRange.end) {
+      return unavailable;
+    }
+    
+    resourceRows.forEach((row) => {
+      // Только для участников
+      if (row.type !== "participant") return;
+      
+      // Получаем события участника
+      const rowEvents = getFilteredEventsForRow(row);
+      const availabilityEvents = row.availability || [];
+      const allEvents = [...rowEvents, ...availabilityEvents];
+      
+      // Проверяем, есть ли пересечение с выбранным временем
+      const hasConflict = allEvents.some((event) => {
+        if (editingEventId && event.id === editingEventId) return false;
+        if (event.status === "available") return false;
+        
+        const eventStart = parseUTC(event.starts_at);
+        const eventEnd = parseUTC(event.ends_at);
+        
+        // Проверяем пересечение: событие начинается до конца выбранного времени И заканчивается после начала
+        return eventStart < selectionRange.end! && eventEnd > selectionRange.start!;
+      });
+      
+      if (hasConflict) {
+        unavailable.add(row.id);
+      }
+    });
+    
+    return unavailable;
+  }, [resourceRows, selectionRange, getFilteredEventsForRow, editingEventId]);
+  
   // ОПТИМИЗАЦИЯ: Построим карту занятости один раз для всех слотов и ресурсов
   // Вместо пересчета для каждой ячейки (72 × N участников раз!)
   const slotOccupancyMap = useMemo(() => {
@@ -457,6 +495,12 @@ export function EnhancedTimeline({
           <div className="h-2 w-8 rounded border border-blue-300 bg-blue-100" />
           <span className="text-[0.7rem] font-medium text-slate-600">Выбрано</span>
         </div>
+        {unavailableParticipants.size > 0 && (
+          <div className="flex items-center gap-2 ml-2 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200">
+            <span className="text-orange-600 font-bold">⚠</span>
+            <span className="text-[0.7rem] font-semibold text-orange-900">Недоступен в выбранное время</span>
+          </div>
+        )}
       </div>
 
       {/* Легкий воздушный таймлайн */}
@@ -489,12 +533,15 @@ export function EnhancedTimeline({
           {resourceRows.map((row) => {
             const rowConflictSlots = conflictMap?.get(row.id) ?? [];
             const hasConflict = rowConflictSlots.length > 0;
+            const isUnavailable = unavailableParticipants.has(row.id);
             
             return (
               <div
                 key={row.id}
                 className={`grid rounded border transition-all ${
-                  hasConflict
+                  isUnavailable
+                    ? "border-orange-300 bg-orange-50/70 ring-1 ring-orange-200"
+                    : hasConflict
                     ? "border-amber-200 bg-amber-50/50"
                     : "border-slate-200 bg-white hover:bg-slate-50/50"
                 }`}
@@ -527,19 +574,24 @@ export function EnhancedTimeline({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-[0.7rem] font-semibold truncate ${
-                      hasConflict ? "text-amber-900" : "text-slate-900"
+                      isUnavailable ? "text-orange-900" : hasConflict ? "text-amber-900" : "text-slate-900"
                     }`}>
                       {row.label}
                     </p>
                     {row.meta && (
                       <p className={`text-[0.6rem] truncate mt-0.5 ${
-                        hasConflict ? "text-amber-700" : "text-slate-500"
+                        isUnavailable ? "text-orange-700" : hasConflict ? "text-amber-700" : "text-slate-500"
                       }`}>
                         {row.meta}
                       </p>
                     )}
                   </div>
-                  {hasConflict && (
+                  {isUnavailable && (
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full text-[0.65rem] font-bold bg-orange-500 text-white flex-shrink-0 shadow-sm" title="Недоступен в выбранное время">
+                      ⚠
+                    </span>
+                  )}
+                  {!isUnavailable && hasConflict && (
                     <span className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[0.6rem] font-bold bg-amber-400 text-amber-900 flex-shrink-0" title="Конфликт">
                       !
                     </span>
