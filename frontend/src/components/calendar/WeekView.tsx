@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, addDaysInMoscow, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { addDays, addDaysInMoscow, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 import { calculateEventLayout, getEventPositionStyles, getPastelColor } from "@/lib/utils/eventLayout";
 
@@ -41,14 +41,14 @@ export function WeekView({
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 60; // Высота одного часа в пикселях (увеличено для более крупного отображения)
   const DAY_HEIGHT = 24 * HOUR_HEIGHT; // Высота для полного дня (0:00-23:59)
-  const todayKey = new Date().toDateString();
+  const moscowToday = getCurrentMoscowDate();
   const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
   const draggingRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
   // Состояние для отслеживания текущего времени (обновляется каждую секунду)
-  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState(() => getCurrentMoscowDate());
   
   // Состояние для диалога повторяемых событий
   const [showRecurringDialog, setShowRecurringDialog] = useState(false);
@@ -111,7 +111,7 @@ export function WeekView({
   // Обновляем текущее время каждую секунду для плавного движения красной линии
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getCurrentMoscowDate());
     }, 1000); // Обновляем каждую секунду для плавного движения
     
     return () => clearInterval(interval);
@@ -262,10 +262,9 @@ export function WeekView({
   // Автоскролл к текущему времени при монтировании компонента (если сегодня в сетке)
   useEffect(() => {
     if (scrollContainerRef.current) {
-      const now = new Date();
+      const now = getCurrentMoscowDate();
       const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
-      const todayKey = new Date().toDateString();
-      const isTodayInView = days.some(day => day.toDateString() === todayKey);
+      const isTodayInView = days.some(day => isSameDayInMoscow(day, now));
       
       if (isTodayInView) {
         // Прокручиваем к текущему времени в московском часовом поясе
@@ -371,10 +370,10 @@ export function WeekView({
           dayStartMoscow, // Сохраняем компоненты дня в московском времени
           events: dayEvents,
           eventLayoutMap, // Добавляем информацию о layout
-          isToday: date.toDateString() === todayKey,
+          isToday: isSameDayInMoscow(date, moscowToday),
         };
       }),
-    [days, events, todayKey],
+    [days, events, moscowToday],
   );
 
   const handleDragStart = (
