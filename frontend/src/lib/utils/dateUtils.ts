@@ -407,3 +407,13 @@ export const getCurrentMoscowDate = (): Date => {
   return new Date(moscowDateStr);
 };
 
+// Сравнивает две даты по дню в московском времени (игнорирует время)
+export const isSameDayInMoscow = (date1: Date, date2: Date): boolean => {
+  const components1 = getTimeInTimeZone(date1, MOSCOW_TIMEZONE);
+  const components2 = getTimeInTimeZone(date2, MOSCOW_TIMEZONE);
+  
+  return components1.year === components2.year &&
+         components1.month === components2.month &&
+         components1.day === components2.day;
+};
+
