@@ -431,9 +431,10 @@ export function WeekViewEnhanced({
                   
                   // Реальная длительность события
                   const realDurationMinutes = (eventEnd.getTime() - eventStart.getTime()) / 60000;
-                  // Уровни отображения:
-                  const isShortEvent = realDurationMinutes <= 30; // Только название
-                  const isMediumEvent = realDurationMinutes > 30 && realDurationMinutes < 60; // Название + время (31-59 минут)
+                  // Уровни отображения (как в Google Calendar):
+                  const isVeryShort = realDurationMinutes < 30;        // < 30 мин: только название
+                  const isShort = realDurationMinutes >= 30 && realDurationMinutes < 60; // 30-59 мин: название + время
+                  // >= 60 мин: полная информация
 
                   const participantCount = event.participants?.length || 0;
                   const hasRoom = Boolean(event.room_id);
@@ -496,27 +497,25 @@ export function WeekViewEnhanced({
                         borderColor: accent,
                       }}
                     >
-                      {/* Компактный вид для коротких событий (ТОЛЬКО название слева) */}
-                      {isShortEvent ? (
+                      {/* Очень короткие события (< 30 мин): только название */}
+                      {isVeryShort ? (
                         <div className="h-full flex items-center justify-start px-2">
                           <p className="text-xs font-bold text-slate-900 leading-tight truncate">
                             {event.title}
                           </p>
                         </div>
-                      ) : isMediumEvent ? (
-                        /* Средний вид для событий 40-59 минут (название + время на двух строках) */
-                        <div className="h-full flex flex-col justify-start px-2 py-1">
-                          <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                      ) : isShort ? (
+                        /* Короткие события (30-59 мин): название + время */
+                        <div className="h-full flex flex-col justify-start px-0.5 pt-0.5">
+                          <p className="text-xs font-bold text-slate-900 truncate leading-none">
                             {event.title}
                           </p>
-                          <p className="text-xs text-slate-600 leading-tight mt-0.5">
+                          <p className="text-[0.65rem] text-slate-600 leading-none truncate mt-0.5">
                             {eventStart.toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
                               timeZone: "Europe/Moscow",
-                            })}
-                            {" - "}
-                            {eventEnd.toLocaleTimeString("ru-RU", {
+                            })}—{eventEnd.toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
                               timeZone: "Europe/Moscow",

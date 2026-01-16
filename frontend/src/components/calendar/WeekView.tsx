@@ -782,11 +782,13 @@ export function WeekView({
                   
                   // Реальная длительность события в минутах (до округления)
                   const realDurationMinutes = endMinutes - startMinutes;
-                  // Уровни отображения:
-                  const isShortEvent = realDurationMinutes <= 30; // Только название
-                  const isMediumEvent = realDurationMinutes > 30 && realDurationMinutes < 60; // Название + время (31-59 минут)
-                  // Минимальная высота для отображения - 30 минут
-                  const displayDurationMinutes = Math.max(displayEndMinutes - displayStartMinutes, 30);
+                  // Уровни отображения (как в Google Calendar):
+                  const isVeryShort = realDurationMinutes < 30;        // < 30 мин: только название
+                  const isShort = realDurationMinutes >= 30 && realDurationMinutes < 60; // 30-59 мин: название + время
+                  // >= 60 мин: полная информация
+                  // Минимальная высота для отображения - 30 минут (или 40 для коротких с 2 строками)
+                  const minHeight = isShort ? 40 : 30; // Для 2 строк нужно больше места
+                  const displayDurationMinutes = Math.max(displayEndMinutes - displayStartMinutes, minHeight);
                   const topPx = (displayStartMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const heightPx = (displayDurationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
@@ -903,27 +905,25 @@ export function WeekView({
                           : undefined,
                       }}
                     >
-                      {/* Компактный вид для коротких событий (ТОЛЬКО название слева) */}
-                      {isShortEvent ? (
+                      {/* Очень короткие события (< 30 мин): только название */}
+                      {isVeryShort ? (
                         <div className="flex items-center justify-start h-full px-1.5">
                           <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
                             {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                           </p>
                         </div>
-                      ) : isMediumEvent ? (
-                        /* Средний вид для событий 40-59 минут (название + время на двух строках) */
-                        <div className="flex flex-col justify-start h-full px-1.5 py-1">
-                          <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                      ) : isShort ? (
+                        /* Короткие события (30-59 мин): название + время */
+                        <div className="flex flex-col justify-start h-full px-0.5 pt-0.5">
+                          <p className={`text-xs font-semibold truncate leading-none ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
                             {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                           </p>
-                          <p className="text-xs text-slate-600 leading-tight mt-0.5">
+                          <p className="text-[0.65rem] text-slate-600 leading-none truncate mt-0.5">
                             {eventStart.toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
                               timeZone: "Europe/Moscow",
-                            })}
-                            {" - "}
-                            {eventEnd.toLocaleTimeString("ru-RU", {
+                            })}—{eventEnd.toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
                               timeZone: "Europe/Moscow",
@@ -989,8 +989,8 @@ export function WeekView({
                           )}
                         </>
                       )}
-                      {/* Индикатор что требуется ответ - только для длинных событий */}
-                      {!isShortEvent && onUpdateParticipantStatus && currentUserEmail && event.participants && (() => {
+                      {/* Индикатор что требуется ответ - только для длинных событий (>= 60 минут) */}
+                      {!isVeryShort && !isShort && onUpdateParticipantStatus && currentUserEmail && event.participants && (() => {
                         const currentParticipant = event.participants?.find(
                           (p) => p.email === currentUserEmail
                         );
