@@ -243,8 +243,11 @@ export function EnhancedTimeline({
 
     // Получаем события для этого ресурса и дня из основного массива
     const rowEvents = getFilteredEventsForRow(row);
+    
+    // Для участников также проверяем их доступность (события из ВСЕХ их календарей)
+    const availabilityEvents = row.type === "participant" && row.availability ? row.availability : [];
 
-    // Проверяем, есть ли событие в этом слоте
+    // Проверяем, есть ли событие в этом слоте (из основного календаря)
     const eventInSlot = rowEvents.find((event) => {
       // Исключаем текущее редактируемое событие из проверки занятости
       if (editingEventId && event.id === editingEventId) {
@@ -254,9 +257,25 @@ export function EnhancedTimeline({
       const eventEnd = parseUTC(event.ends_at);
       return eventStart < slotEnd && eventEnd > slotStart;
     });
+    
+    // Проверяем, есть ли событие в этом слоте (из доступности участника)
+    const availabilityEventInSlot = availabilityEvents.find((event) => {
+      // Исключаем текущее редактируемое событие из проверки занятости
+      if (editingEventId && event.id === editingEventId) {
+        return false;
+      }
+      const eventStart = parseUTC(event.starts_at);
+      const eventEnd = parseUTC(event.ends_at);
+      return eventStart < slotEnd && eventEnd > slotStart;
+    });
 
-    // Если есть событие (кроме available статуса), слот занят
+    // Если есть событие в основном календаре (кроме available статуса), слот занят
     if (eventInSlot && eventInSlot.status !== "available") {
+      return "busy";
+    }
+    
+    // Если есть событие в доступности участника (кроме available статуса), слот занят
+    if (availabilityEventInSlot && availabilityEventInSlot.status !== "available") {
       return "busy";
     }
     
@@ -421,7 +440,7 @@ export function EnhancedTimeline({
   }, [isSelecting, handleMouseMove, handleMouseUp]);
 
   const templateColumns = useMemo(
-    () => `150px repeat(${timeSlots.length}, minmax(8px, 1fr))`,
+    () => `150px repeat(${timeSlots.length}, minmax(4px, 1fr))`, // Компактные ячейки для 10-минутных слотов
     [timeSlots.length],
   );
 
@@ -458,8 +477,9 @@ export function EnhancedTimeline({
               const moscowTime = getTimeInTimeZone(slotDate, MOSCOW_TIMEZONE);
               const timeLabel = `${String(moscowTime.hour).padStart(2, "0")}:${String(moscowTime.minute).padStart(2, "0")}`;
               
-              return slot.minute === 0 ? (
-                <div key={slot.index} className="text-center text-xs font-semibold text-slate-600 py-2">
+              // Показываем метки времени каждые 30 минут для читаемости при 10-минутных слотах
+              return slot.minute === 0 || slot.minute === 30 ? (
+                <div key={slot.index} className="text-center text-[0.65rem] font-semibold text-slate-600 py-2">
                   {timeLabel}
                 </div>
               ) : (
@@ -533,12 +553,21 @@ export function EnhancedTimeline({
                 {(() => {
                   // Мемоизируем события для строки один раз, а не для каждого слота (оптимизация производительности)
                   const rowEvents = getFilteredEventsForRow(row);
+                  const availabilityEvents = row.type === "participant" && row.availability ? row.availability : [];
+                  
                   return timeSlots.map((slot) => {
                     const state = getSlotState(row, slot.index);
                     const { slotStart, slotEnd } = buildSlotTimes(slot.index);
                     
-                    // Ищем событие в этом слоте
+                    // Ищем событие в этом слоте (из основного календаря)
                     const eventInSlot = rowEvents.find((event) => {
+                      const eventStart = parseUTC(event.starts_at);
+                      const eventEnd = parseUTC(event.ends_at);
+                      return eventStart < slotEnd && eventEnd > slotStart;
+                    });
+                    
+                    // Ищем событие в доступности участника
+                    const availabilityEventInSlot = availabilityEvents.find((event) => {
                       const eventStart = parseUTC(event.starts_at);
                       const eventEnd = parseUTC(event.ends_at);
                       return eventStart < slotEnd && eventEnd > slotStart;
@@ -559,22 +588,25 @@ export function EnhancedTimeline({
                       slot.index >= Math.min(selectionStart, currentSelectionSlot) && 
                       slot.index <= Math.max(selectionStart, currentSelectionSlot);
 
+                    // Приоритет для tooltip: событие из основного календаря, затем из доступности
+                    const displayEvent = eventInSlot || availabilityEventInSlot;
+                    
                     // Формируем tooltip для события с временем в московском времени
                     let tooltipText = "";
-                    if (eventInSlot) {
-                      const eventStart = parseUTC(eventInSlot.starts_at);
-                      const eventEnd = parseUTC(eventInSlot.ends_at);
+                    if (displayEvent) {
+                      const eventStart = parseUTC(displayEvent.starts_at);
+                      const eventEnd = parseUTC(displayEvent.ends_at);
                       const eventStartMoscow = getTimeInTimeZone(eventStart, MOSCOW_TIMEZONE);
                       const eventEndMoscow = getTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE);
                       const eventStartTime = `${String(eventStartMoscow.hour).padStart(2, "0")}:${String(eventStartMoscow.minute).padStart(2, "0")}`;
                       const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
-                      tooltipText = `${eventInSlot.title} (${eventStartTime} - ${eventEndTime})`;
+                      tooltipText = `${displayEvent.title} (${eventStartTime} - ${eventEndTime})`;
                     } else {
                       tooltipText = state === "busy" ? "Занято" : isSelected ? "Выбрано" : isBeingSelected ? "Выделяется..." : "Доступно - кликните для выбора времени";
                     }
 
-                  // Легкая воздушная цветовая схема
-                  let slotClassName = "h-7 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
+                  // Легкая воздушная цветовая схема с компактными ячейками
+                  let slotClassName = "h-6 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
                     // Занято - мягкий розовый

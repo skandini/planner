@@ -26,7 +26,7 @@ export const ROLE_LABELS: Record<CalendarRole, string> = {
 };
 export const WORKDAY_START_HOUR = 8;
 export const WORKDAY_END_HOUR = 20;
-export const SLOT_DURATION_MINUTES = 30;
+export const SLOT_DURATION_MINUTES = 10; // Детальная сетка: 10-минутные интервалы
 
 export const DEFAULT_FORM_STATE: CalendarDraft = {
   name: "",
