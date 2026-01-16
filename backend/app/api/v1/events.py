@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, Notification, User, UserAvailabilitySchedule
+from app.models import Calendar, Event, EventAttachment, EventComment, EventParticipant, EventGroupParticipant, Notification, User, UserAvailabilitySchedule, Department, Organization
 from app.schemas import (
     EventCreate,
     EventRead,
@@ -21,6 +21,7 @@ from app.schemas import (
     RecurrenceRule,
 )
 from app.schemas.event_attachment import EventAttachmentRead
+from app.schemas.event_group_participant import EventGroupParticipantWithDetails
 from app.services.notifications import schedule_reminders_for_event
 from app.tasks.notifications import (
     notify_event_cancelled_task,
@@ -142,6 +143,66 @@ def _attach_participants(
             session.add(participant)
 
 
+def _attach_group_participants(
+    session: SessionDep, 
+    event_id: UUID, 
+    group_participants: List,
+    added_by: UUID
+) -> None:
+    """
+    Добавляет групповых участников к событию.
+    """
+    from app.schemas.event import GroupParticipantInput
+    
+    for group_input in group_participants:
+        # Проверяем, не добавлена ли уже эта группа
+        existing = session.exec(
+            select(EventGroupParticipant).where(
+                EventGroupParticipant.event_id == event_id,
+                EventGroupParticipant.group_type == group_input.group_type,
+                EventGroupParticipant.group_id == group_input.group_id,
+            )
+        ).one_or_none()
+        if not existing:
+            group_participant = EventGroupParticipant(
+                event_id=event_id,
+                group_type=group_input.group_type,
+                group_id=group_input.group_id,
+                added_by=added_by,
+            )
+            session.add(group_participant)
+
+
+def _get_group_member_ids(
+    session: SessionDep,
+    group_type: str,
+    group_id: UUID
+) -> List[UUID]:
+    """
+    Получает список ID всех пользователей в группе (отделе или организации).
+    """
+    from app.models import UserDepartment, UserOrganization
+    
+    if group_type == "department":
+        # Получаем всех пользователей отдела через связующую таблицу
+        user_ids = session.exec(
+            select(UserDepartment.user_id).where(
+                UserDepartment.department_id == group_id
+            )
+        ).all()
+        return list(user_ids)
+    elif group_type == "organization":
+        # Получаем всех пользователей организации через связующую таблицу
+        user_ids = session.exec(
+            select(UserOrganization.user_id).where(
+                UserOrganization.organization_id == group_id
+            )
+        ).all()
+        return list(user_ids)
+    else:
+        return []
+
+
 def _load_event_attachments(
     session: SessionDep, event_id: UUID
 ) -> List[EventAttachmentRead]:
@@ -153,11 +214,72 @@ def _load_event_attachments(
     return [EventAttachmentRead.model_validate(att) for att in attachments]
 
 
+def _load_event_group_participants(
+    session: SessionDep, event_id: UUID
+) -> List[EventGroupParticipantWithDetails]:
+    """Загрузить групповых участников события с дополнительными данными."""
+    group_participants = session.exec(
+        select(EventGroupParticipant).where(
+            EventGroupParticipant.event_id == event_id
+        )
+    ).all()
+    
+    result = []
+    for gp in group_participants:
+        # Получаем название группы и количество участников
+        group_name = "Unknown"
+        member_count = 0
+        
+        if gp.group_type == "department":
+            dept = session.get(Department, gp.group_id)
+            if dept:
+                group_name = dept.name
+                # Считаем количество участников отдела
+                from app.models import UserDepartment
+                member_count = session.exec(
+                    select(func.count(UserDepartment.user_id)).where(
+                        UserDepartment.department_id == gp.group_id
+                    )
+                ).one() or 0
+        elif gp.group_type == "organization":
+            org = session.get(Organization, gp.group_id)
+            if org:
+                group_name = org.name
+                # Считаем количество участников организации
+                from app.models import UserOrganization
+                member_count = session.exec(
+                    select(func.count(UserOrganization.user_id)).where(
+                        UserOrganization.organization_id == gp.group_id
+                    )
+                ).one() or 0
+        
+        # Получаем имя пользователя, добавившего группу
+        added_by_user = session.get(User, gp.added_by)
+        added_by_name = added_by_user.full_name or added_by_user.email if added_by_user else "Unknown"
+        
+        result.append(
+            EventGroupParticipantWithDetails(
+                id=gp.id,
+                event_id=gp.event_id,
+                group_type=gp.group_type,
+                group_id=gp.group_id,
+                added_by=gp.added_by,
+                created_at=gp.created_at,
+                group_name=group_name,
+                member_count=member_count,
+                added_by_name=added_by_name,
+            )
+        )
+    
+    return result
+
+
 def _serialize_event_with_participants(
     session: SessionDep, event: Event
 ) -> EventRead:
     participants = _load_event_participants(session, event.id)
     attachments = _load_event_attachments(session, event.id)
+    group_participants = _load_event_group_participants(session, event.id)
     
     # Get department color from the first participant (or calendar owner)
     department_color = None
@@ -199,6 +321,7 @@ def _serialize_event_with_participants(
     return EventRead.model_validate(event).model_copy(
         update={
             "participants": participants,
+            "group_participants": group_participants if group_participants else None,
             "attachments": attachments,
             "department_color": department_color,
             "room_online_meeting_url": room_online_meeting_url,
@@ -400,7 +523,15 @@ def _ensure_no_conflicts(
     participant_ids: list[UUID],
     exclude_event_id: UUID | None = None,
     skip_availability_check_for: list[UUID] | None = None,
+    skip_all_availability_checks: bool = False,
 ) -> None:
+    """
+    Проверяет конфликты для события.
+    
+    Args:
+        skip_all_availability_checks: Если True, полностью пропускает проверку занятости
+                                      (для пользователей с can_override_availability)
+    """
     filters = [
         Event.calendar_id == calendar_id,
         Event.starts_at < ends_at,
@@ -418,6 +549,10 @@ def _ensure_no_conflicts(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Переговорка занята событием «{room_conflict.title}».",
             )
+
+    # Если создатель имеет право игнорировать занятость, пропускаем все проверки
+    if skip_all_availability_checks:
+        return
 
     if participant_ids:
         # Получаем список участников, которые уже подтвердили участие в событии (если это обновление)
@@ -823,12 +958,19 @@ def create_event(
         )
 
     participant_ids = payload.participant_ids or []
-    data = payload.model_dump(exclude={"participant_ids"})
+    group_participants = payload.group_participants or []
+    
+    # Проверяем право на игнорирование проверки занятости
+    skip_all_availability_checks = current_user.can_override_availability
+    
+    data = payload.model_dump(exclude={"participant_ids", "group_participants"})
     if recurrence_rule:
         data["recurrence_rule"] = recurrence_rule.model_dump(exclude_none=True)
     else:
         data.pop("recurrence_rule", None)
 
+    # Для групповых участников НЕ проверяем занятость (согласно спецификации)
+    # Проверяем занятость только для индивидуальных участников (если нет права override)
     _ensure_no_conflicts(
         session,
         calendar_id=payload.calendar_id,
@@ -836,13 +978,20 @@ def create_event(
         ends_at=data["ends_at"],
         room_id=data.get("room_id"),
         participant_ids=participant_ids,
+        skip_all_availability_checks=skip_all_availability_checks,
     )
 
     event = Event(**data)
     session.add(event)
     session.flush()
+    
+    # Добавляем индивидуальных участников
     if participant_ids:
         _attach_participants(session, event.id, participant_ids)
+    
+    # Добавляем групповых участников
+    if group_participants:
+        _attach_group_participants(session, event.id, group_participants, current_user.id)
 
     duration = data["ends_at"] - data["starts_at"]
 
@@ -859,6 +1008,7 @@ def create_event(
                 ends_at=occurrence_end,
                 room_id=data.get("room_id"),
                 participant_ids=participant_ids,
+                skip_all_availability_checks=skip_all_availability_checks,
             )
             child_event = Event(
                 calendar_id=event.calendar_id,
@@ -877,8 +1027,10 @@ def create_event(
             session.flush()
             if participant_ids:
                 _attach_participants(session, child_event.id, participant_ids)
+            if group_participants:
+                _attach_group_participants(session, child_event.id, group_participants, current_user.id)
 
-    # Create notifications for participants (асинхронно через Celery)
+    # Уведомления индивидуальным участникам (асинхронно через Celery)
     if participant_ids:
         inviter_name = current_user.full_name or current_user.email
         for participant_id in participant_ids:
@@ -888,9 +1040,24 @@ def create_event(
                     event_id=str(event.id),
                     inviter_name=inviter_name,
                 )
+    
+    # Уведомления групповым участникам (всем членам группы)
+    if group_participants:
+        inviter_name = current_user.full_name or current_user.email
+        for group_input in group_participants:
+            member_ids = _get_group_member_ids(session, group_input.group_type, group_input.group_id)
+            for member_id in member_ids:
+                if member_id != current_user.id:  # Don't notify yourself
+                    notify_event_invited_task.delay(
+                        user_id=str(member_id),
+                        event_id=str(event.id),
+                        inviter_name=inviter_name,
+                    )
 
-    # Schedule reminders
-    schedule_reminders_for_event(session, event)
+    # TODO: Реализовать правильную логику напоминаний через Celery Beat
+    # Сейчас schedule_reminders_for_event создает напоминания СРАЗУ, а не за N минут до события
+    # Нужна периодическая задача которая проверяет события и создает напоминания в нужное время
+    # schedule_reminders_for_event(session, event)
 
     session.commit()
     session.refresh(event)
@@ -1165,6 +1332,51 @@ def update_participant_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update participant status: {str(e)}"
         )
+
+
+@router.get(
+    "/{event_id}/group-participants",
+    response_model=List[EventGroupParticipantWithDetails],
+    summary="Get group participants for event"
+)
+def get_event_group_participants(
+    event_id: UUID,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> List[EventGroupParticipantWithDetails]:
+    """Получить список групповых участников события."""
+    event = session.get(Event, event_id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+    
+    # Проверяем доступ к событию
+    calendar = session.get(Calendar, event.calendar_id)
+    if not calendar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Calendar not found",
+        )
+    
+    # Проверяем, является ли пользователь владельцем календаря или участником события
+    is_owner = calendar.owner_id == current_user.id
+    participant = session.exec(
+        select(EventParticipant).where(
+            EventParticipant.event_id == event_id,
+            EventParticipant.user_id == current_user.id,
+        )
+    ).one_or_none()
+    is_participant = participant is not None
+    
+    if not is_owner and not is_participant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to event denied",
+        )
+    
+    return _load_event_group_participants(session, event_id)
 
 
 @router.delete(
