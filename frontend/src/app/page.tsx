@@ -563,12 +563,34 @@ export default function Home() {
   // Все участники календаря (viewer, editor, owner) могут создавать события
   const canManageEvents = selectedRole !== null; // Любая роль позволяет создавать события
 
-  const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
+  const weekStart = useMemo(() => {
+    const start = startOfWeek(selectedDate);
+    console.log('[DEBUG page.tsx] selectedDate:', selectedDate.toISOString(), 
+      'weekStart:', start.toISOString(),
+      'formatted selectedDate:', new Intl.DateTimeFormat('ru-RU', { 
+        timeZone: 'Europe/Moscow', 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      }).format(selectedDate));
+    return start;
+  }, [selectedDate]);
+  
   const weekEnd = useMemo(() => addDaysInMoscow(weekStart, 7), [weekStart]);
-  const weekDays = useMemo(
-    () => Array.from({ length: 7 }, (_, idx) => addDaysInMoscow(weekStart, idx)),
-    [weekStart],
-  );
+  
+  const weekDays = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, idx) => addDaysInMoscow(weekStart, idx));
+    console.log('[DEBUG page.tsx] weekDays:', days.map(d => ({
+      iso: d.toISOString(),
+      formatted: new Intl.DateTimeFormat('ru-RU', { 
+        timeZone: 'Europe/Moscow', 
+        weekday: 'short', 
+        day: 'numeric', 
+        month: 'short' 
+      }).format(d)
+    })));
+    return days;
+  }, [weekStart]);
 
   const monthGridDays = useMemo(
     () => getMonthGridDays(selectedDate),
