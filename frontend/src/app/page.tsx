@@ -26,7 +26,7 @@ import type { EventRecord, EventDraft, ConflictEntry } from "@/types/event.types
 import type { UserProfile } from "@/types/user.types";
 import type { Room } from "@/types/room.types";
 import type { ViewMode, PendingMoveContext, RecurrenceRule } from "@/types/common.types";
-import { WeekView } from "@/components/calendar/WeekView";
+import { WeekViewEnhanced } from "@/components/calendar/WeekViewEnhanced";
 import { MonthView } from "@/components/calendar/MonthView";
 import { DayView } from "@/components/calendar/DayView";
 import { UpcomingEvents } from "@/components/calendar/UpcomingEvents";
@@ -2514,7 +2514,7 @@ export default function Home() {
                 className="rounded-2xl bg-slate-100/50 p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex-1 overflow-hidden min-h-0 transition-opacity duration-300"
                 style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
               >
-            <WeekView
+            <WeekViewEnhanced
               days={weekDays}
               events={showMyAvailability ? [...events, ...myAvailabilitySchedule] : events}
               loading={eventsLoading || myAvailabilityLoading}
