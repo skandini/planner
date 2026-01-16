@@ -20,6 +20,7 @@ class UserBase(BaseModel):
     access_org_structure: bool = True
     access_tickets: bool = True
     access_availability_slots: bool = False
+    can_override_availability: bool = False
     # Настройки проекта
     show_local_time: bool = True
     show_moscow_time: bool = True
@@ -52,6 +53,7 @@ class UserUpdate(BaseModel):
     access_org_structure: Optional[bool] = None
     access_tickets: Optional[bool] = None
     access_availability_slots: Optional[bool] = None
+    can_override_availability: Optional[bool] = None
     # Password update (admin only)
     password: Optional[str] = Field(default=None, min_length=8, max_length=128)
     # Настройки проекта
