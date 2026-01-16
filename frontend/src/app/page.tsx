@@ -61,6 +61,7 @@ import {
   toUTCDateISO,
   getTimeInTimeZone,
   getCurrentMoscowDate,
+  isSameDayInMoscow,
 } from "@/lib/utils/dateUtils";
 import {
   API_BASE_URL,
@@ -1031,7 +1032,7 @@ export default function Home() {
 
   const handleNavigate = (direction: "prev" | "next" | "today") => {
     if (direction === "today") {
-      setSelectedDate(new Date());
+      setSelectedDate(getCurrentMoscowDate());
       return;
     }
 
@@ -1922,13 +1923,10 @@ export default function Home() {
                 });
                 const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
                 const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const today = getCurrentMoscowDate();
 
                 const isToday = (date: Date) => {
-                  const d = new Date(date);
-                  d.setHours(0, 0, 0, 0);
-                  return d.getTime() === today.getTime();
+                  return isSameDayInMoscow(date, today);
                 };
 
                 const isSelected = (date: Date) => {

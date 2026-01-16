@@ -213,7 +213,7 @@ export const getMonthGridDays = (date: Date) => {
 };
 
 export const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat("ru-RU", options).format(date);
+  new Intl.DateTimeFormat("ru-RU", { ...options, timeZone: MOSCOW_TIMEZONE }).format(date);
 
 // Простая функция: парсит UTC строку в Date (явно указываем UTC)
 export const parseUTC = (utcStr: string): Date => {
