@@ -5,6 +5,7 @@ import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
 import { addDays, addDaysInMoscow, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
+import { calculateEventLayout, getEventPositionStyles, getPastelColor } from "@/lib/utils/eventLayout";
 
 interface WeekViewProps {
   days: Date[];
@@ -125,6 +126,9 @@ export function WeekView({
   const eventCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const mousePositionRef = useRef<{ x: number; y: number } | null>(null);
   
+  // Состояние для отслеживания события над которым курсор (для z-index)
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  
   const handleEventMouseMove = useCallback((event: EventRecord, e: React.MouseEvent<HTMLDivElement>) => {
     if (!hoveredEvent || hoveredEvent.event.id !== event.id) {
       return;
@@ -168,6 +172,9 @@ export function WeekView({
   }, [hoveredEvent]);
   
   const handleEventMouseEnter = useCallback((event: EventRecord, element: HTMLDivElement, e?: React.MouseEvent<HTMLDivElement>) => {
+    // Устанавливаем z-index для события под курсором
+    setHoveredEventId(event.id);
+    
     // Проверяем, не показывается ли уже окно для этого события
     if (hoveredEvent?.event.id === event.id) {
       return;
@@ -227,6 +234,9 @@ export function WeekView({
   }, [hoveredEvent]);
   
   const handleEventMouseLeave = useCallback(() => {
+    // Сбрасываем z-index
+    setHoveredEventId(null);
+    
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
@@ -344,6 +354,15 @@ export function WeekView({
           // Событие попадает в день, если его начало до следующего дня и конец после начала текущего дня
           return eventStartKey < nextDayKey && eventEndKey >= dayKey;
         });
+        
+        // Рассчитываем layout для пересекающихся событий
+        const eventLayoutMap = calculateEventLayout(
+          dayEvents.map(event => ({
+            id: event.id,
+            start: parseUTC(event.starts_at),
+            end: parseUTC(event.ends_at),
+          }))
+        );
 
         return {
           date,
@@ -351,6 +370,7 @@ export function WeekView({
           dayEnd,
           dayStartMoscow, // Сохраняем компоненты дня в московском времени
           events: dayEvents,
+          eventLayoutMap, // Добавляем информацию о layout
           isToday: date.toDateString() === todayKey,
         };
       }),
@@ -672,7 +692,7 @@ export function WeekView({
             </div>
           </div>
 
-          {dayColumns.map(({ date, dayStart, dayEnd, events: dayEvents, isToday }, idx) => {
+          {dayColumns.map(({ date, dayStart, dayEnd, events: dayEvents, eventLayoutMap, isToday }, idx) => {
             const isSelecting = selection?.columnIndex === idx && selection.isActive;
             const selectionStartY = isSelecting ? Math.min(selection.startY, selection.endY) : 0;
             const selectionEndY = isSelecting ? Math.max(selection.startY, selection.endY) : 0;
@@ -735,7 +755,16 @@ export function WeekView({
                   />
                 )}
 
-                {dayEvents.map((event) => {
+                {dayEvents.filter((event) => {
+                  // Скрываем отклоненные события
+                  if (currentUserEmail && event.participants) {
+                    const userParticipant = event.participants.find((p) => p.email === currentUserEmail);
+                    if (userParticipant?.response_status === "declined") {
+                      return false; // Не показываем отклоненные
+                    }
+                  }
+                  return true;
+                }).map((event) => {
                   const eventStart = parseUTC(event.starts_at);
                   const eventEnd = parseUTC(event.ends_at);
                   
@@ -753,12 +782,24 @@ export function WeekView({
                   
                   // Реальная длительность события в минутах (до округления)
                   const realDurationMinutes = endMinutes - startMinutes;
-                  const isShortEvent = realDurationMinutes < 30; // Событие меньше 30 минут
+                  // Уровни отображения:
+                  const isShortEvent = realDurationMinutes <= 30; // Только название
+                  const isMediumEvent = realDurationMinutes >= 40 && realDurationMinutes <= 59; // Название + время
                   // Минимальная высота для отображения - 30 минут
                   const displayDurationMinutes = Math.max(displayEndMinutes - displayStartMinutes, 30);
                   const topPx = (displayStartMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const heightPx = (displayDurationMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
                   const isStartingSoon = isEventStartingSoon(event);
+                  
+                  // Получаем информацию о позиционировании для пересекающихся событий
+                  const layout = eventLayoutMap?.get(event.id);
+                  const positionStyles = layout 
+                    ? getEventPositionStyles(layout, { 
+                        cascadeOffset: 10,      // Смещение каскада
+                        minWidth: 80,           // Минимальная ширина
+                        useClassicCascade: true // Классическое наслоение
+                      })
+                    : { left: '2px', width: 'calc(100% - 4px)', zIndex: 10 };
                   
                   // Проверяем статус текущего пользователя для события
                   const userParticipant = currentUserEmail && event.participants
@@ -794,6 +835,9 @@ export function WeekView({
                         }
                       }}
                       onMouseEnter={(e) => {
+                        // Сразу выводим событие на передний план
+                        setHoveredEventId(event.id);
+                        
                         // Не показываем всплывающее окно для событий расписания доступности и забронированных слотов
                         if (!isUnavailable && !isAvailable && !isBookedSlot) {
                           const hasContent = (event.participants && event.participants.length > 0) ||
@@ -804,7 +848,11 @@ export function WeekView({
                           }
                         }
                       }}
-                      onMouseLeave={handleEventMouseLeave}
+                      onMouseLeave={() => {
+                        // Сразу убираем с переднего плана
+                        setHoveredEventId(null);
+                        handleEventMouseLeave();
+                      }}
                       draggable={Boolean(onEventMove) && !event.all_day && !isUnavailable && !isAvailable && !isBookedSlot}
                       onDragStart={(dragEvent) => {
                         if (!isUnavailable && !isAvailable && !isBookedSlot) {
@@ -812,7 +860,7 @@ export function WeekView({
                         }
                       }}
                       onDragEnd={handleDragEnd}
-                      className={`absolute left-0.5 right-0.5 rounded-lg border p-1.5 text-xs shadow-md transition ${
+                      className={`absolute rounded-lg border p-1.5 text-xs shadow-md transition ${
                         isUnavailable
                           ? "cursor-default border-slate-300 bg-slate-100 z-5"
                           : isAvailable
@@ -828,6 +876,9 @@ export function WeekView({
                       style={{
                         top: `${topPx}px`,
                         height: `${heightPx}px`,
+                        left: positionStyles.left,
+                        width: positionStyles.width,
+                        zIndex: hoveredEventId === event.id ? 100 : positionStyles.zIndex, // При hover - на передний план
                         background: isUnavailable
                           ? "rgba(148, 163, 184, 0.3)"
                           : isAvailable
@@ -840,55 +891,87 @@ export function WeekView({
                                   : `${accent}40`
                                 : needsAction
                                   ? "white"
-                                  : event.department_color
-                                    ? `${event.department_color}20`
-                                    : `${accent}20`,
+                                  : isAccepted
+                                    ? event.department_color
+                                      ? getPastelColor(event.department_color) // Пастельный оттенок цвета отдела
+                                      : getPastelColor(accent) // Пастельный оттенок accent
+                                    : event.department_color
+                                      ? `${event.department_color}20`
+                                      : `${accent}20`,
                         borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
                           ? event.department_color
                           : undefined,
                       }}
                     >
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="flex-1 min-w-0">
+                      {/* Компактный вид для коротких событий (ТОЛЬКО название слева) */}
+                      {isShortEvent ? (
+                        <div className="flex items-center justify-start h-full px-1.5">
                           <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
                             {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                           </p>
+                        </div>
+                      ) : isMediumEvent ? (
+                        /* Средний вид для событий 40-59 минут (название + время на двух строках) */
+                        <div className="flex flex-col justify-start h-full px-1.5 py-1">
+                          <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                            {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
+                          </p>
+                          <p className="text-xs text-slate-600 leading-tight mt-0.5">
+                            {eventStart.toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "Europe/Moscow",
+                            })}
+                            {" - "}
+                            {eventEnd.toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "Europe/Moscow",
+                            })}
+                          </p>
+                        </div>
+                      ) : (
+                        /* Полный вид для длинных событий */
+                        <>
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                                {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
+                              </p>
+                              {isAvailable && event.description && event.description !== event.title && (
+                                <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
+                                  {event.description}
+                                </p>
+                              )}
+                            </div>
+                            {/* Индикаторы вложений и комментариев */}
+                            {!isUnavailable && !isAvailable && !isBookedSlot && (
+                              <div className="flex items-center gap-0.5 flex-shrink-0">
+                                {event.attachments && event.attachments.length > 0 && (
+                                  <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                                    <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                )}
+                                {event.comments_count !== undefined && event.comments_count > 0 && (
+                                  <div className="w-3 h-3 rounded-full bg-red-500/80 flex items-center justify-center" title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
+                                    <span className="text-[0.65rem] font-semibold text-white leading-none">{event.comments_count}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                           {isAvailable && event.description && event.description !== event.title && (
                             <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
                               {event.description}
                             </p>
                           )}
-                        </div>
-                        {/* Индикаторы вложений и комментариев */}
-                        {!isUnavailable && !isAvailable && !isBookedSlot && (
-                          <div className="flex items-center gap-0.5 flex-shrink-0">
-                            {event.attachments && event.attachments.length > 0 && (
-                              <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
-                                <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                            )}
-                            {event.comments_count !== undefined && event.comments_count > 0 && (
-                              <div className="w-3 h-3 rounded-full bg-red-500/80 flex items-center justify-center" title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
-                                <span className="text-[0.65rem] font-semibold text-white leading-none">{event.comments_count}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {isAvailable && event.description && event.description !== event.title && (
-                        <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
-                          {event.description}
-                        </p>
-                      )}
-                      {isBookedSlot && event.description && event.description !== event.title && (
-                        <p className="text-[0.65rem] text-orange-600 leading-tight truncate mt-0.5">
-                          {event.description}
-                        </p>
-                      )}
-                      {!isShortEvent && (
-                        <>
+                          {isBookedSlot && event.description && event.description !== event.title && (
+                            <p className="text-[0.65rem] text-orange-600 leading-tight truncate mt-0.5">
+                              {event.description}
+                            </p>
+                          )}
                           <p className="text-[0.65rem] text-slate-600 leading-tight">
                             {formatTimeInTimeZone(eventStart, MOSCOW_TIMEZONE)}{" "}
                             —{" "}
@@ -906,94 +989,24 @@ export function WeekView({
                           )}
                         </>
                       )}
-                      {onUpdateParticipantStatus && currentUserEmail && event.participants && (() => {
+                      {/* Индикатор что требуется ответ - только для длинных событий */}
+                      {!isShortEvent && onUpdateParticipantStatus && currentUserEmail && event.participants && (() => {
                         const currentParticipant = event.participants?.find(
                           (p) => p.email === currentUserEmail
                         );
-                        // Показываем кнопки только если статус needs_action, pending или null
-                        // НЕ показываем если уже accepted или declined
                         const needsAction = currentParticipant && 
                           (currentParticipant.response_status === "needs_action" || 
                            currentParticipant.response_status === "pending" ||
                            !currentParticipant.response_status);
+                        
                         if (!needsAction) return null;
                         
-                        // Если событие слишком короткое (меньше 60px), показываем компактное меню
-                        const isShortEvent = heightPx < 60;
-                        
-                        if (isShortEvent) {
-                          // Компактная версия - одна кнопка с выпадающим меню при hover
-                          return (
-                            <div className="group/buttons mt-1 relative" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                type="button"
-                                className="w-full rounded bg-gradient-to-r from-lime-500 to-emerald-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:from-lime-600 hover:to-emerald-600 shadow-sm"
-                                title="Ответить на приглашение"
-                              >
-                                Ответить
-                              </button>
-                              {/* Выпадающее меню при hover */}
-                              <div className="absolute top-full left-0 right-0 mt-1 opacity-0 invisible group-hover/buttons:opacity-100 group-hover/buttons:visible transition-all z-50 bg-white rounded-lg border border-slate-200 shadow-lg p-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (currentParticipant) {
-                                      handleUpdateParticipantStatus(event, currentParticipant.user_id, "accepted");
-                                    }
-                                  }}
-                                  className="w-full rounded bg-lime-500 px-2 py-1 text-[0.65rem] font-semibold text-white transition hover:bg-lime-600 mb-1 flex items-center justify-center gap-1"
-                                  title="Принять"
-                                >
-                                  <span>✓</span> Принять
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (currentParticipant) {
-                                      handleUpdateParticipantStatus(event, currentParticipant.user_id, "declined");
-                                    }
-                                  }}
-                                  className="w-full rounded bg-red-500 px-2 py-1 text-[0.65rem] font-semibold text-white transition hover:bg-red-600 flex items-center justify-center gap-1"
-                                  title="Отклонить"
-                                >
-                                  <span>✕</span> Отклонить
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        // Для длинных событий показываем все три кнопки
                         return (
-                          <div className="mt-1 flex gap-1" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (currentParticipant) {
-                                  handleUpdateParticipantStatus(event, currentParticipant.user_id, "accepted");
-                                }
-                              }}
-                              className="flex-1 rounded bg-lime-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:bg-lime-400"
-                              title="Принять"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (currentParticipant) {
-                                  handleUpdateParticipantStatus(event, currentParticipant.user_id, "declined");
-                                }
-                              }}
-                              className="flex-1 rounded bg-red-500 px-1 py-0.5 text-[0.6rem] font-semibold text-white transition hover:bg-red-400"
-                              title="Отклонить"
-                            >
-                              ✕
-                            </button>
+                          <div className="mt-0.5">
+                            <div className="text-[0.6rem] text-amber-600 font-semibold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Требуется ответ
+                            </div>
                           </div>
                         );
                       })()}
@@ -1007,7 +1020,7 @@ export function WeekView({
       </div>
     </div>
       
-      {/* Всплывающее окно с деталями события - вынесено за пределы цикла по дням, чтобы показывалось только один раз */}
+          {/* Всплывающее окно с деталями события - вынесено за пределы цикла по дням, чтобы показывалось только один раз */}
       {hoveredEvent && (
         <div
           className="fixed z-50 rounded-xl border border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)] p-4 pointer-events-auto overflow-hidden flex flex-col"
@@ -1030,6 +1043,53 @@ export function WeekView({
               {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
             </p>
           </div>
+          
+          {/* Кнопки ответа на приглашение */}
+          {onUpdateParticipantStatus && currentUserEmail && hoveredEvent.event.participants && (() => {
+            const currentParticipant = hoveredEvent.event.participants.find(
+              (p) => p.email === currentUserEmail
+            );
+            const needsAction = currentParticipant && 
+              (currentParticipant.response_status === "needs_action" || 
+               currentParticipant.response_status === "pending" ||
+               !currentParticipant.response_status);
+            
+            if (!needsAction) return null;
+            
+            return (
+              <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
+                <p className="text-xs font-semibold text-slate-700 mb-2">Ответить на приглашение</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (currentParticipant) {
+                        handleUpdateParticipantStatus(hoveredEvent.event, currentParticipant.user_id, "accepted");
+                        setHoveredEvent(null);
+                      }
+                    }}
+                    className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:from-lime-600 hover:to-emerald-600 shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <span className="text-sm">✓</span> Принять
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (currentParticipant) {
+                        handleUpdateParticipantStatus(hoveredEvent.event, currentParticipant.user_id, "declined");
+                        setHoveredEvent(null);
+                      }
+                    }}
+                    className="flex-1 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:from-red-600 hover:to-red-700 shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <span className="text-sm">✕</span> Отклонить
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
           
           {/* Описание события */}
           {hoveredEvent.event.description && hoveredEvent.event.description.trim().length > 0 && (
