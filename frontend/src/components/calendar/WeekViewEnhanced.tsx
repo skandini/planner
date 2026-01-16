@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, formatDate, parseUTC } from "@/lib/utils/dateUtils";
+import { addDays, formatDate, parseUTC, getCurrentMoscowDate } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 import { calculateEventLayout, getEventPositionStyles, getPastelColor } from "@/lib/utils/eventLayout";
 
@@ -35,12 +35,12 @@ export function WeekViewEnhanced({
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 48; // Увеличена высота часа для лучшей читаемости
   const DAY_HEIGHT = 24 * HOUR_HEIGHT; // 1152px
-  const todayKey = new Date().toDateString();
+  const todayKey = getCurrentMoscowDate().toDateString();
   const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
   const draggingRef = useRef(false);
   
-  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState(() => getCurrentMoscowDate());
   const [hoveredEvent, setHoveredEvent] = useState<{
     event: EventRecord;
     position: { top: number; left: number };
@@ -60,7 +60,7 @@ export function WeekViewEnhanced({
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getCurrentMoscowDate());
     }, 1000);
     return () => clearInterval(interval);
   }, []);
