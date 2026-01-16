@@ -433,7 +433,7 @@ export function WeekViewEnhanced({
                   const realDurationMinutes = (eventEnd.getTime() - eventStart.getTime()) / 60000;
                   // Уровни отображения:
                   const isShortEvent = realDurationMinutes <= 30; // Только название
-                  const isMediumEvent = realDurationMinutes >= 40 && realDurationMinutes <= 59; // Название + время
+                  const isMediumEvent = realDurationMinutes > 30 && realDurationMinutes < 60; // Название + время (31-59 минут)
 
                   const participantCount = event.participants?.length || 0;
                   const hasRoom = Boolean(event.room_id);

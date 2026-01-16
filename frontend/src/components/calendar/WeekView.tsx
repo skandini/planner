@@ -784,7 +784,7 @@ export function WeekView({
                   const realDurationMinutes = endMinutes - startMinutes;
                   // Уровни отображения:
                   const isShortEvent = realDurationMinutes <= 30; // Только название
-                  const isMediumEvent = realDurationMinutes >= 40 && realDurationMinutes <= 59; // Название + время
+                  const isMediumEvent = realDurationMinutes > 30 && realDurationMinutes < 60; // Название + время (31-59 минут)
                   // Минимальная высота для отображения - 30 минут
                   const displayDurationMinutes = Math.max(displayEndMinutes - displayStartMinutes, 30);
                   const topPx = (displayStartMinutes / MINUTES_IN_DAY) * DAY_HEIGHT;
