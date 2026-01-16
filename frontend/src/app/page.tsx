@@ -133,7 +133,7 @@ export default function Home() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<Array<{id: string; name: string; slug: string}>>([]);
-  const [departments, setDepartments] = useState<Array<{id: string; name: string}>>([]);
+  const [departments, setDepartments] = useState<Array<{id: string; name: string; description?: string | null; parent_id?: string | null}>>([]);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [userOrganization, setUserOrganization] = useState<{logo_url: string | null; primary_color: string | null; secondary_color: string | null; name: string} | null>(null);
@@ -389,10 +389,10 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         // Функция для рекурсивного извлечения всех отделов из дерева
-        const flatten = (depts: any[]): Array<{id: string; name: string}> => {
-          const result: Array<{id: string; name: string}> = [];
+        const flatten = (depts: any[]): Array<{id: string; name: string; description?: string | null; parent_id?: string | null}> => {
+          const result: Array<{id: string; name: string; description?: string | null; parent_id?: string | null}> = [];
           depts.forEach((d) => {
-            result.push({ id: d.id, name: d.name });
+            result.push({ id: d.id, name: d.name, description: d.description, parent_id: d.parent_id });
             if (d.children?.length) {
               result.push(...flatten(d.children));
             }
@@ -2375,11 +2375,11 @@ export default function Home() {
           </aside>
 
           <section className="order-1 flex flex-1 flex-col gap-3 lg:order-2 lg:min-w-0 overflow-hidden">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-lg flex-shrink-0">
+              <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">
+                    <h2 className="text-base font-semibold">
                 {selectedCalendar ? selectedCalendar.name : "Календарь не выбран"}
               </h2>
                     {selectedRole && (
@@ -2702,6 +2702,7 @@ export default function Home() {
             recurrenceInfo={editingRecurrenceInfo}
             editingEvent={editingEventId ? events.find((e) => e.id === editingEventId) : undefined}
             organizations={organizations}
+            departments={departments}
             getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
             apiBaseUrl={API_BASE_URL.replace('/api/v1', '')}
             accentColor={selectedCalendar?.color || "#6366f1"}

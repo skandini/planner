@@ -229,7 +229,7 @@ export function getEventPositionStyles(
       zIndex: 10 + column, // Каждое следующее событие выше предыдущего
     };
   } else {
-    // Режим колонок (оригинальный алгоритм)
+    // Режим колонок - события впритык, каждое в своей колонке
     // Рассчитываем ширину одной колонки в процентах
     const columnWidthPercent = 100 / totalColumns;
     
@@ -239,9 +239,9 @@ export function getEventPositionStyles(
     // Рассчитываем ширину события с учетом отступов
     const widthPercent = columnWidthPercent;
     
-    // Применяем отступы в пикселях
-    const leftPx = column === 0 ? 1 : 2;
-    const rightPx = column === totalColumns - 1 ? 1 : 2;
+    // Минимальные отступы для визуального разделения (1px между событиями)
+    const leftPx = column === 0 ? 1 : 1;
+    const rightPx = column === totalColumns - 1 ? 1 : 1;
     
     return {
       left: `calc(${leftPercent}% + ${leftPx}px)`,
