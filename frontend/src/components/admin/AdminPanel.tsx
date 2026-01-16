@@ -41,6 +41,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
     access_org_structure: true,
     access_tickets: true,
     access_availability_slots: false,
+    can_override_availability: false,
   });
 
   const flattenedDepartments = useMemo(() => departments, [departments]);
@@ -109,6 +110,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
         access_org_structure: form.access_org_structure,
         access_tickets: form.access_tickets,
         access_availability_slots: form.access_availability_slots,
+        can_override_availability: form.can_override_availability,
       };
       const url = bootstrapMode
         ? `${API_BASE_URL}/users/bootstrap-admin`
@@ -134,6 +136,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
         access_org_structure: true,
         access_tickets: true,
         access_availability_slots: false,
+        can_override_availability: false,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка создания пользователя");
@@ -151,6 +154,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       if (typeof changes.access_org_structure === "boolean") payload.access_org_structure = changes.access_org_structure;
       if (typeof changes.access_tickets === "boolean") payload.access_tickets = changes.access_tickets;
       if (typeof changes.access_availability_slots === "boolean") payload.access_availability_slots = changes.access_availability_slots;
+      if (typeof changes.can_override_availability === "boolean") payload.can_override_availability = changes.can_override_availability;
       if (changes.department_id !== undefined) payload.department_id = changes.department_id;
 
       const res = await authFetch(`${USERS_ENDPOINT}${user.id}`, {
@@ -396,6 +400,17 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
               Доступ к предложениям слотов
             </label>
           </div>
+          <div className="md:col-span-2">
+            <label className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+              <input
+                type="checkbox"
+                checked={form.can_override_availability}
+                onChange={(e) => setForm({ ...form, can_override_availability: e.target.checked })}
+              />
+              <span className="font-medium">⚠️ Игнорировать занятость участников</span>
+              <span className="text-xs text-amber-600">(может назначать встречи в любое время)</span>
+            </label>
+          </div>
         </div>
         <div className="mt-3">
           <button
@@ -484,6 +499,15 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                           onChange={(e) => handleUpdate(u, { access_availability_slots: e.target.checked })}
                         />
                         Предложения слотов
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-amber-700 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={u.can_override_availability === true}
+                          disabled={savingId === u.id}
+                          onChange={(e) => handleUpdate(u, { can_override_availability: e.target.checked })}
+                        />
+                        ⚠️ Игнор. занятости
                       </label>
                     </div>
                   </td>

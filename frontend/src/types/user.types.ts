@@ -17,6 +17,7 @@ export type UserProfile = {
   access_org_structure?: boolean;
   access_tickets?: boolean;
   access_availability_slots?: boolean;
+  can_override_availability?: boolean;  // Право игнорировать проверку занятости при создании событий
   // Many-to-many relationships
   department_ids?: string[];  // All departments user belongs to
   organization_ids?: string[];  // All organizations user belongs to
