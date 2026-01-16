@@ -443,11 +443,11 @@ export function WeekViewEnhanced({
                   const layout = eventLayoutMap?.get(event.id);
                   const positionStyles = layout 
                     ? getEventPositionStyles(layout, { 
-                        cascadeOffset: 10,      // Смещение каскада
-                        minWidth: 80,           // Минимальная ширина
+                        cascadeOffset: 6,       // Уменьшенное смещение для более плотного прилегания
+                        minWidth: 70,           // Минимальная ширина
                         useClassicCascade: true // Классическое наслоение
                       })
-                    : { left: '4px', width: 'calc(100% - 8px)', zIndex: 10 };
+                    : { left: '2px', width: 'calc(100% - 4px)', zIndex: 10 };
 
                   return (
                     <div
@@ -478,7 +478,7 @@ export function WeekViewEnhanced({
                       draggable={Boolean(onEventMove) && !event.all_day}
                       onDragStart={(dragEvent) => handleDragStart(dragEvent, event)}
                       onDragEnd={handleDragEnd}
-                      className={`absolute cursor-pointer rounded-lg border-l-4 shadow-lg transition-all hover:shadow-xl hover:scale-[1.02] z-10 ${
+                      className={`absolute cursor-pointer rounded-lg border-l-[3px] shadow-md transition-all hover:shadow-lg hover:scale-[1.01] z-10 ${
                         isStartingSoon 
                           ? "border-lime-500 border-2 animate-pulse" 
                           : "border-lime-400"
@@ -499,14 +499,14 @@ export function WeekViewEnhanced({
                     >
                       {/* Очень короткие события (< 30 мин): только название */}
                       {isVeryShort ? (
-                        <div className="h-full flex items-center justify-start px-2">
+                        <div className="h-full flex items-center justify-start px-1.5">
                           <p className="text-xs font-bold text-slate-900 leading-tight truncate">
                             {event.title}
                           </p>
                         </div>
                       ) : isShort ? (
                         /* Короткие события (30-59 мин): название + время */
-                        <div className="h-full flex flex-col justify-start px-0.5 pt-0.5">
+                        <div className="h-full flex flex-col justify-start px-1 pt-0.5">
                           <p className="text-xs font-bold text-slate-900 truncate leading-none">
                             {event.title}
                           </p>
@@ -524,7 +524,7 @@ export function WeekViewEnhanced({
                         </div>
                       ) : (
                         /* Полный вид для длинных событий */
-                        <div className="h-full p-2 flex flex-col justify-between">
+                        <div className="h-full p-1.5 flex flex-col justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-1">
                               <p className="text-xs font-bold text-slate-900 leading-tight truncate mb-0.5 flex-1">
