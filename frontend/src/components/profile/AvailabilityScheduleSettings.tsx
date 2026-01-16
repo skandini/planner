@@ -247,23 +247,6 @@ export function AvailabilityScheduleSettings({
                         </svg>
                       </button>
                     </div>
-                    <div>
-                      <label className="block text-xs text-slate-600 mb-1">
-                        Описание доступности (видно коллегам)
-                      </label>
-                      <input
-                        type="text"
-                        value={slot.label || ""}
-                        onChange={(e) =>
-                          updateTimeSlot(day.key, index, "label", e.target.value)
-                        }
-                        placeholder="Например: Доступен по задачам отдела продаж"
-                        className="w-full rounded border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 outline-none"
-                      />
-                      <p className="text-xs text-slate-500 mt-1">
-                        Это описание будет видно коллегам при создании встречи
-                      </p>
-                    </div>
                   </div>
                 ))}
               </div>
