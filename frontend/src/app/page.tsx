@@ -2017,6 +2017,18 @@ export default function Home() {
                         const dayDate = day.date;
                         const dayIsToday = isToday(dayDate);
                         const dayIsSelected = isSelected(dayDate);
+                        
+                        // DEBUG: Логируем дни которые считаются "сегодня"
+                        if (dayIsToday) {
+                          console.log('[Mini Calendar DEBUG] Found today:', dayDate.toISOString(), 
+                            'formatted:', new Intl.DateTimeFormat('ru-RU', { 
+                              timeZone: 'Europe/Moscow', 
+                              weekday: 'long', 
+                              day: 'numeric', 
+                              month: 'long' 
+                            }).format(dayDate),
+                            'today:', today.toISOString());
+                        }
 
                         return (
                           <button

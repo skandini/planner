@@ -356,6 +356,7 @@ export function DayView({
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+      timeZone: MOSCOW_TIMEZONE,
     }).format(day);
   }, [day]);
   
