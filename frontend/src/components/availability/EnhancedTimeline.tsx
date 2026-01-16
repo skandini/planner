@@ -233,55 +233,52 @@ export function EnhancedTimeline({
     return { slotStart, slotEnd };
   }, [baseDate, timeSlots]);
 
-  // Упрощенная логика: только два состояния - занят или доступен
-  // Используем события из основного массива events (как в WeekView)
+  // ОПТИМИЗАЦИЯ: Построим карту занятости один раз для всех слотов и ресурсов
+  // Вместо пересчета для каждой ячейки (72 × N участников раз!)
+  const slotOccupancyMap = useMemo(() => {
+    const map = new Map<string, Set<number>>(); // key: row.id, value: Set занятых слотов
+    
+    resourceRows.forEach((row) => {
+      const occupiedSlots = new Set<number>();
+      
+      // Получаем события для ресурса
+      const rowEvents = getFilteredEventsForRow(row);
+      const availabilityEvents = row.type === "participant" && row.availability ? row.availability : [];
+      const allEvents = [...rowEvents, ...availabilityEvents];
+      
+      // Для каждого события находим какие слоты оно занимает
+      allEvents.forEach((event) => {
+        // Пропускаем редактируемое событие и available статус
+        if ((editingEventId && event.id === editingEventId) || event.status === "available") {
+          return;
+        }
+        
+        const eventStart = parseUTC(event.starts_at);
+        const eventEnd = parseUTC(event.ends_at);
+        
+        // Проверяем каждый слот, попадает ли в него событие
+        timeSlots.forEach((slot) => {
+          const { slotStart, slotEnd } = buildSlotTimes(slot.index);
+          if (eventStart < slotEnd && eventEnd > slotStart) {
+            occupiedSlots.add(slot.index);
+          }
+        });
+      });
+      
+      map.set(row.id, occupiedSlots);
+    });
+    
+    return map;
+  }, [resourceRows, getFilteredEventsForRow, editingEventId, timeSlots, buildSlotTimes]);
+  
+  // Быстрая проверка занятости слота (O(1) вместо O(N))
   const getSlotState = useCallback((
     row: TimelineRowData,
     slotIndex: number,
   ): "free" | "busy" => {
-    const { slotStart, slotEnd } = buildSlotTimes(slotIndex);
-
-    // Получаем события для этого ресурса и дня из основного массива
-    const rowEvents = getFilteredEventsForRow(row);
-    
-    // Для участников также проверяем их доступность (события из ВСЕХ их календарей)
-    const availabilityEvents = row.type === "participant" && row.availability ? row.availability : [];
-
-    // Проверяем, есть ли событие в этом слоте (из основного календаря)
-    const eventInSlot = rowEvents.find((event) => {
-      // Исключаем текущее редактируемое событие из проверки занятости
-      if (editingEventId && event.id === editingEventId) {
-        return false;
-      }
-      const eventStart = parseUTC(event.starts_at);
-      const eventEnd = parseUTC(event.ends_at);
-      return eventStart < slotEnd && eventEnd > slotStart;
-    });
-    
-    // Проверяем, есть ли событие в этом слоте (из доступности участника)
-    const availabilityEventInSlot = availabilityEvents.find((event) => {
-      // Исключаем текущее редактируемое событие из проверки занятости
-      if (editingEventId && event.id === editingEventId) {
-        return false;
-      }
-      const eventStart = parseUTC(event.starts_at);
-      const eventEnd = parseUTC(event.ends_at);
-      return eventStart < slotEnd && eventEnd > slotStart;
-    });
-
-    // Если есть событие в основном календаре (кроме available статуса), слот занят
-    if (eventInSlot && eventInSlot.status !== "available") {
-      return "busy";
-    }
-    
-    // Если есть событие в доступности участника (кроме available статуса), слот занят
-    if (availabilityEventInSlot && availabilityEventInSlot.status !== "available") {
-      return "busy";
-    }
-    
-    // Иначе слот доступен
-    return "free";
-  }, [buildSlotTimes, getFilteredEventsForRow, editingEventId]);
+    const occupiedSlots = slotOccupancyMap.get(row.id);
+    return occupiedSlots?.has(slotIndex) ? "busy" : "free";
+  }, [slotOccupancyMap]);
 
   const isSlotBusy = useCallback((slotIndex: number): boolean => {
     if (slotIndex < 0 || slotIndex >= timeSlots.length) return true;
