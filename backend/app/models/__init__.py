@@ -6,6 +6,7 @@ from .event import Event
 from .event_attachment import EventAttachment
 from .event_comment import EventComment
 from .event_participant import EventParticipant
+from .event_group_participant import EventGroupParticipant
 from .notification import Notification
 from .organization import Organization
 from .room import Room
@@ -30,6 +31,7 @@ __all__ = [
     "EventAttachment",
     "EventComment",
     "EventParticipant",
+    "EventGroupParticipant",
     "Notification",
     "Organization",
     "Room",

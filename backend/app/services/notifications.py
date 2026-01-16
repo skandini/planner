@@ -137,10 +137,13 @@ def schedule_reminders_for_event(
     """
     Schedule reminder notifications for all event participants.
     
-    NOTE: Reminders are created when:
-    - Event start time - reminder_minutes > current time
-    - This function should be called periodically (e.g., every minute)
-      to create reminders for upcoming events
+    NOTE: This function is DEPRECATED and should NOT be called directly.
+    Reminder notifications are now automatically created by Celery Beat task:
+    - Task: app.tasks.reminders.send_event_reminders
+    - Schedule: Every minute
+    - Logic: Finds events starting in 5 minutes and creates reminders
+    
+    This function remains here for reference but should not be used.
     """
     from sqlmodel import select
     from app.models import EventParticipant

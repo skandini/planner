@@ -31,8 +31,15 @@ class EventBase(BaseModel):
         return ends_at
 
 
+class GroupParticipantInput(BaseModel):
+    """Входные данные для группового участника"""
+    group_type: Literal["department", "organization"]
+    group_id: UUID
+
+
 class EventCreate(EventBase):
     participant_ids: Optional[List[UUID]] = None
+    group_participants: Optional[List[GroupParticipantInput]] = None
 
 
 class EventUpdate(BaseModel):
@@ -73,6 +80,7 @@ class EventRead(EventBase):
     created_at: datetime
     updated_at: datetime
     participants: List[EventParticipantRead] = []
+    group_participants: Optional[List["EventGroupParticipantWithDetails"]] = None
     recurrence_parent_id: Optional[UUID] = None
     attachments: Optional[List["EventAttachmentRead"]] = None
     department_color: Optional[str] = None  # Color from the first participant's department
@@ -112,10 +120,6 @@ EventUpdate.model_rebuild()
 
 # Импортируем для forward reference
 from app.schemas.event_attachment import EventAttachmentRead  # noqa: E402
-
-EventRead.model_rebuild()
-
-# Импортируем для forward reference
-from app.schemas.event_attachment import EventAttachmentRead  # noqa: E402
+from app.schemas.event_group_participant import EventGroupParticipantWithDetails  # noqa: E402
 
 EventRead.model_rebuild()

@@ -16,7 +16,7 @@ celery_app = Celery(
     "planner",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.tasks.notifications"],
+    include=["app.tasks.notifications", "app.tasks.reminders"],
 )
 
 # Celery configuration
@@ -41,8 +41,13 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,  # Restart worker after 1000 tasks
 )
 
-# Optional: Periodic tasks (for future use)
+# Periodic tasks
 celery_app.conf.beat_schedule = {
+    # Отправка напоминаний о событиях (каждую минуту)
+    "send-event-reminders": {
+        "task": "app.tasks.reminders.send_event_reminders",
+        "schedule": 60.0,  # Каждые 60 секунд (1 минута)
+    },
     # Example: Cleanup old notifications daily at 3 AM
     # "cleanup-old-notifications": {
     #     "task": "app.tasks.notifications.cleanup_old_notifications",

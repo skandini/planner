@@ -5,6 +5,13 @@ import type { EventDraft } from "@/types/event.types";
 import type { CalendarMember } from "@/types/calendar.types";
 import type { UserProfile } from "@/types/user.types";
 
+interface Department {
+  id: string;
+  name: string;
+  description?: string | null;
+  parent_id?: string | null;
+}
+
 interface ParticipantSearchProps {
   form: EventDraft;
   setForm: (form: EventDraft | ((prev: EventDraft) => EventDraft)) => void;
@@ -15,6 +22,7 @@ interface ParticipantSearchProps {
   membersLoading: boolean;
   readOnly: boolean;
   organizations?: Array<{id: string; name: string; slug: string}>;
+  departments?: Department[];
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   apiBaseUrl?: string;
   currentUserEmail?: string;
@@ -31,6 +39,7 @@ export function ParticipantSearch({
   membersLoading,
   readOnly,
   organizations = [],
+  departments = [],
   getUserOrganizationAbbreviation,
   apiBaseUrl = "http://localhost:8000",
   currentUserEmail,
@@ -38,6 +47,7 @@ export function ParticipantSearch({
 }: ParticipantSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<"users" | "departments" | "organizations">("users");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Закрываем dropdown при клике вне его
@@ -103,6 +113,72 @@ export function ParticipantSearch({
     setIsExpanded(false);
   };
 
+  const addDepartment = (departmentId: string) => {
+    if (readOnly) return;
+    
+    // Добавляем отдел как группового участника
+    setForm((prev) => {
+      const existingGroups = prev.group_participants || [];
+      // Проверяем, не добавлен ли уже этот отдел
+      const alreadyAdded = existingGroups.some(
+        g => g.group_type === "department" && g.group_id === departmentId
+      );
+      
+      if (alreadyAdded) {
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        group_participants: [
+          ...existingGroups,
+          { group_type: "department" as const, group_id: departmentId }
+        ],
+      };
+    });
+    
+    setSearchQuery("");
+    setIsExpanded(false);
+  };
+
+  const addOrganization = (organizationId: string) => {
+    if (readOnly) return;
+    
+    // Добавляем организацию как группового участника
+    setForm((prev) => {
+      const existingGroups = prev.group_participants || [];
+      // Проверяем, не добавлена ли уже эта организация
+      const alreadyAdded = existingGroups.some(
+        g => g.group_type === "organization" && g.group_id === organizationId
+      );
+      
+      if (alreadyAdded) {
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        group_participants: [
+          ...existingGroups,
+          { group_type: "organization" as const, group_id: organizationId }
+        ],
+      };
+    });
+    
+    setSearchQuery("");
+    setIsExpanded(false);
+  };
+
+  const removeGroupParticipant = (groupType: "department" | "organization", groupId: string) => {
+    if (readOnly) return;
+    setForm((prev) => ({
+      ...prev,
+      group_participants: (prev.group_participants || []).filter(
+        g => !(g.group_type === groupType && g.group_id === groupId)
+      ),
+    }));
+  };
+
   const removeParticipant = (userId: string) => {
     if (readOnly) return;
     setForm((prev) => ({
@@ -113,6 +189,44 @@ export function ParticipantSearch({
 
   const isCurrentUser = (user: UserProfile) => {
     return currentUserEmail && user.email === currentUserEmail;
+  };
+
+  // Фильтрация отделов и организаций по поисковому запросу
+  const filteredDepartments = useMemo(() => {
+    if (!searchQuery.trim()) return departments;
+    const query = searchQuery.toLowerCase();
+    return departments.filter(dept => 
+      dept.name.toLowerCase().includes(query) ||
+      dept.description?.toLowerCase().includes(query)
+    );
+  }, [departments, searchQuery]);
+
+  const filteredOrganizations = useMemo(() => {
+    if (!searchQuery.trim()) return organizations;
+    const query = searchQuery.toLowerCase();
+    return organizations.filter(org => 
+      org.name.toLowerCase().includes(query) ||
+      org.slug.toLowerCase().includes(query)
+    );
+  }, [organizations, searchQuery]);
+
+  // Групповые участники
+  const selectedGroupParticipants = form.group_participants || [];
+  
+  const getGroupInfo = (groupType: "department" | "organization", groupId: string) => {
+    if (groupType === "department") {
+      const dept = departments.find(d => d.id === groupId);
+      const memberCount = users.filter(u => 
+        u.department_ids?.includes(groupId) || u.department_id === groupId
+      ).length;
+      return { name: dept?.name || "Unknown Department", memberCount };
+    } else {
+      const org = organizations.find(o => o.id === groupId);
+      const memberCount = users.filter(u => 
+        u.organization_ids?.includes(groupId) || u.organization_id === groupId
+      ).length;
+      return { name: org?.name || "Unknown Organization", memberCount };
+    }
   };
 
   if (compact) {
@@ -168,6 +282,39 @@ export function ParticipantSearch({
             </div>
           );
         })}
+        
+        {/* Групповые участники - компактные чипсы */}
+        {selectedGroupParticipants.map((group) => {
+          const groupInfo = getGroupInfo(group.group_type, group.group_id);
+          const icon = group.group_type === "department" ? "👥" : "🏛️";
+          
+          return (
+            <div
+              key={`${group.group_type}-${group.group_id}`}
+              className="group flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 pr-1.5 transition hover:border-indigo-300 hover:bg-indigo-100"
+            >
+              <span className="text-xs">{icon}</span>
+              <span className="text-xs font-medium text-slate-900 max-w-[120px] truncate">
+                {groupInfo.name}
+              </span>
+              <span className="rounded-full bg-indigo-200 px-1 py-0.5 text-[0.55rem] font-semibold text-indigo-700">
+                {groupInfo.memberCount}
+              </span>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => removeGroupParticipant(group.group_type, group.group_id)}
+                  className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:bg-indigo-200 hover:text-slate-600"
+                  title="Удалить группу"
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          );
+        })}
 
         {/* Кнопка добавления участника */}
         {!readOnly && (
@@ -185,8 +332,54 @@ export function ParticipantSearch({
 
             {/* Результаты поиска */}
             {isExpanded && (
-              <div className="absolute z-50 mt-2 left-0 max-h-64 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
-                <div className="p-2">
+              <div className="absolute z-50 mt-2 left-0 max-h-96 w-96 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+                {/* Вкладки */}
+                <div className="flex border-b border-slate-200 bg-slate-50 px-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("users")}
+                    className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                      activeTab === "users"
+                        ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Участники
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("departments")}
+                    className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                      activeTab === "departments"
+                        ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Отделы
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("organizations")}
+                    className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                      activeTab === "organizations"
+                        ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <svg className="w-4 h-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Организации
+                  </button>
+                </div>
+
+                <div className="p-2 max-h-80 overflow-y-auto">
                   <input
                     type="text"
                     value={searchQuery}
@@ -194,20 +387,27 @@ export function ParticipantSearch({
                       setSearchQuery(e.target.value);
                     }}
                     onFocus={() => setIsExpanded(true)}
-                    placeholder="Поиск участников..."
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 mb-2"
+                    placeholder={
+                      activeTab === "users" ? "Поиск участников..." :
+                      activeTab === "departments" ? "Поиск отделов..." :
+                      "Поиск организаций..."
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 mb-2"
                   />
-                  {usersLoading || membersLoading ? (
-                    <div className="p-4 text-center text-sm text-slate-500">Загрузка...</div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-slate-500">
-                      {searchQuery ? "Ничего не найдено" : "Все участники уже добавлены"}
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {filteredUsers.map((user) => {
-                        const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
-                        const avatarUrl = getAvatarUrl(user);
+                  
+                  {/* Список участников */}
+                  {activeTab === "users" && (
+                    usersLoading || membersLoading ? (
+                      <div className="p-4 text-center text-sm text-slate-500">Загрузка...</div>
+                    ) : filteredUsers.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-slate-500">
+                        {searchQuery ? "Ничего не найдено" : "Все участники уже добавлены"}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {filteredUsers.map((user) => {
+                          const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(user.id) : "";
+                          const avatarUrl = getAvatarUrl(user);
                         return (
                           <button
                             key={user.id}
@@ -248,6 +448,86 @@ export function ParticipantSearch({
                         );
                       })}
                     </div>
+                    )
+                  )}
+                  
+                  {/* Список отделов */}
+                  {activeTab === "departments" && (
+                    filteredDepartments.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-slate-500">
+                        {searchQuery ? "Отделы не найдены" : "Нет доступных отделов"}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {filteredDepartments.map((dept) => {
+                          const deptUserCount = users.filter(u => 
+                            u.department_ids?.includes(dept.id) || u.department_id === dept.id
+                          ).length;
+                          
+                          return (
+                            <button
+                              key={dept.id}
+                              type="button"
+                              onClick={() => addDepartment(dept.id)}
+                              className="w-full flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 text-left transition hover:border-indigo-300 hover:bg-indigo-50"
+                            >
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 flex-shrink-0">
+                                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-slate-900 truncate">{dept.name}</p>
+                                {dept.description && (
+                                  <p className="text-[0.65rem] text-slate-500 truncate">{dept.description}</p>
+                                )}
+                                <p className="text-[0.65rem] text-indigo-600 font-medium mt-0.5">
+                                  {deptUserCount} {deptUserCount === 1 ? "участник" : deptUserCount < 5 ? "участника" : "участников"}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
+                  )}
+                  
+                  {/* Список организаций */}
+                  {activeTab === "organizations" && (
+                    filteredOrganizations.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-slate-500">
+                        {searchQuery ? "Организации не найдены" : "Нет доступных организаций"}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {filteredOrganizations.map((org) => {
+                          const orgUserCount = users.filter(u => 
+                            u.organization_ids?.includes(org.id) || u.organization_id === org.id
+                          ).length;
+                          
+                          return (
+                            <button
+                              key={org.id}
+                              type="button"
+                              onClick={() => addOrganization(org.id)}
+                              className="w-full flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 text-left transition hover:border-indigo-300 hover:bg-indigo-50"
+                            >
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 flex-shrink-0">
+                                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-slate-900 truncate">{org.name}</p>
+                                <p className="text-[0.65rem] text-indigo-600 font-medium mt-0.5">
+                                  {orgUserCount} {orgUserCount === 1 ? "участник" : orgUserCount < 5 ? "участника" : "участников"}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
                   )}
                 </div>
               </div>
@@ -340,6 +620,49 @@ export function ParticipantSearch({
               </div>
             );
           })}
+        </div>
+      )}
+      
+      {/* Групповые участники */}
+      {selectedGroupParticipants.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-slate-700">Группы:</h4>
+          <div className="flex flex-wrap gap-2">
+            {selectedGroupParticipants.map((group) => {
+              const groupInfo = getGroupInfo(group.group_type, group.group_id);
+              const icon = group.group_type === "department" ? "👥" : "🏛️";
+              
+              return (
+                <div
+                  key={`${group.group_type}-${group.group_id}`}
+                  className="group flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 pr-2 transition hover:border-indigo-300 hover:bg-indigo-100"
+                >
+                  <span className="text-sm">{icon}</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {groupInfo.name}
+                  </span>
+                  <span className="rounded-full bg-indigo-200 px-2 py-0.5 text-[0.65rem] font-semibold text-indigo-700">
+                    {groupInfo.memberCount} {groupInfo.memberCount === 1 ? "участник" : groupInfo.memberCount < 5 ? "участника" : "участников"}
+                  </span>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => removeGroupParticipant(group.group_type, group.group_id)}
+                      className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-indigo-200 hover:text-slate-600"
+                      title="Удалить группу"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            ⚠️ Группы: уведомления будут отправлены всем участникам, без проверки занятости
+          </p>
         </div>
       )}
 

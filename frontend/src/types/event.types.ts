@@ -12,6 +12,23 @@ export type EventAttachment = {
   created_at: string;
 };
 
+export type GroupParticipantInput = {
+  group_type: "department" | "organization";
+  group_id: string;
+};
+
+export type EventGroupParticipant = {
+  id: string;
+  event_id: string;
+  group_type: "department" | "organization";
+  group_id: string;
+  added_by: string;
+  created_at: string;
+  group_name: string;
+  member_count: number;
+  added_by_name: string;
+};
+
 export type EventRecord = {
   id: string;
   calendar_id: string;
@@ -27,6 +44,7 @@ export type EventRecord = {
   created_at: string;
   updated_at: string;
   participants?: EventParticipant[];
+  group_participants?: EventGroupParticipant[] | null;
   recurrence_rule?: RecurrenceRule | null;
   recurrence_parent_id?: string | null;
   attachments?: EventAttachment[];
@@ -60,6 +78,7 @@ export type EventDraft = {
   starts_at: string;
   ends_at: string;
   participant_ids: string[];
+  group_participants?: GroupParticipantInput[];
   recurrence_enabled: boolean;
   recurrence_frequency: "daily" | "weekly" | "monthly";
   recurrence_interval: number;
