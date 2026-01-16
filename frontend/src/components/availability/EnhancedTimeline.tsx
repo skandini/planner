@@ -330,9 +330,8 @@ export function EnhancedTimeline({
   const handleSlotMouseDown = useCallback((slotIndex: number, e: React.MouseEvent) => {
     if (!onTimeRangeSelect) return;
     
-    if (isSlotBusy(slotIndex)) {
-      return;
-    }
+    // Убрана блокировка занятых слотов - пользователь может выбирать любое время
+    // Занятость просто визуально показывается розовым цветом и оранжевым выделением участников
     
     e.preventDefault();
     e.stopPropagation();
@@ -341,7 +340,7 @@ export function EnhancedTimeline({
     setCurrentSelectionSlot(slotIndex);
     setMouseDownPos({ x: e.clientX, y: e.clientY });
     setIsSelecting(true);
-  }, [onTimeRangeSelect, isSlotBusy]);
+  }, [onTimeRangeSelect]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isSelecting || selectionStart === null || !timelineRef.current || !mouseDownPos) return;
@@ -383,31 +382,10 @@ export function EnhancedTimeline({
     if (targetSlot < 0) targetSlot = 0;
     if (targetSlot >= timeSlots.length) targetSlot = timeSlots.length - 1;
     
-    const direction = targetSlot > selectionStart ? 1 : -1;
-    let finalSlot = targetSlot;
-    
-    if (direction > 0) {
-      for (let i = selectionStart; i <= targetSlot; i++) {
-        if (isSlotBusy(i)) {
-          finalSlot = Math.max(selectionStart, i - 1);
-          break;
-        }
-      }
-    } else {
-      for (let i = selectionStart; i >= targetSlot; i--) {
-        if (isSlotBusy(i)) {
-          finalSlot = Math.min(selectionStart, i + 1);
-          break;
-        }
-      }
-    }
-    
-    if (!isSlotBusy(finalSlot)) {
-      setCurrentSelectionSlot(finalSlot);
-    } else {
-      setCurrentSelectionSlot(selectionStart);
-    }
-  }, [isSelecting, selectionStart, timeSlots.length, isSlotBusy, mouseDownPos]);
+    // Убрана блокировка занятых слотов - разрешаем выбор любого времени
+    // Пользователь может выбирать время через занятые слоты
+    setCurrentSelectionSlot(targetSlot);
+  }, [isSelecting, selectionStart, timeSlots.length, mouseDownPos]);
 
   const handleMouseUp = useCallback(() => {
     if (!isSelecting || selectionStart === null || !onTimeRangeSelect) {
@@ -651,15 +629,15 @@ export function EnhancedTimeline({
                       const eventEndTime = `${String(eventEndMoscow.hour).padStart(2, "0")}:${String(eventEndMoscow.minute).padStart(2, "0")}`;
                       tooltipText = `${displayEvent.title} (${eventStartTime} - ${eventEndTime})`;
                     } else {
-                      tooltipText = state === "busy" ? "Занято" : isSelected ? "Выбрано" : isBeingSelected ? "Выделяется..." : "Доступно - кликните для выбора времени";
+                      tooltipText = state === "busy" ? "Занято (можно выбрать)" : isSelected ? "Выбрано" : isBeingSelected ? "Выделяется..." : "Доступно - кликните для выбора времени";
                     }
 
                   // Легкая воздушная цветовая схема с компактными ячейками
                   let slotClassName = "h-6 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
-                    // Занято - мягкий розовый
-                    slotClassName += "bg-rose-100 border border-rose-200 cursor-not-allowed hover:bg-rose-150";
+                    // Занято - мягкий розовый, но можно выбрать (cursor-pointer)
+                    slotClassName += "bg-rose-100 border border-rose-200 cursor-pointer hover:bg-rose-150";
                   } else if (isBeingSelected) {
                     // Предварительное выделение - яркий голубой с пунктирной рамкой
                     slotClassName += "bg-indigo-100 border-2 border-dashed border-indigo-400 cursor-pointer";
@@ -676,11 +654,9 @@ export function EnhancedTimeline({
                       key={`${row.id}-${slot.index}`}
                       className={slotClassName}
                       onMouseDown={(e) => {
-                        if (state === "busy") {
-                          e.preventDefault();
-                          return;
-                        }
-                        if (!isSlotBusy(slot.index) && onTimeRangeSelect) {
+                        // Разрешаем выбор любого времени, даже занятого
+                        // Занятость показывается визуально, но не блокирует выбор
+                        if (onTimeRangeSelect) {
                           handleSlotMouseDown(slot.index, e);
                         }
                       }}
