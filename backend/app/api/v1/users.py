@@ -184,6 +184,8 @@ def update_user(
         user.access_tickets = payload_dict["access_tickets"]
     if "access_availability_slots" in payload_dict and payload_dict["access_availability_slots"] is not None:
         user.access_availability_slots = payload_dict["access_availability_slots"]
+    if "can_override_availability" in payload_dict and payload_dict["can_override_availability"] is not None:
+        user.can_override_availability = payload_dict["can_override_availability"]
     if "show_local_time" in payload_dict:
         user.show_local_time = payload_dict["show_local_time"]
     if "show_moscow_time" in payload_dict:
@@ -399,6 +401,7 @@ def admin_create_user(
         access_org_structure=payload.access_org_structure,
         access_tickets=payload.access_tickets,
         access_availability_slots=payload.access_availability_slots,
+        can_override_availability=payload.can_override_availability,
         show_local_time=payload.show_local_time,
         show_moscow_time=payload.show_moscow_time,
         birthday=payload.birthday,
