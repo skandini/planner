@@ -42,6 +42,17 @@ export function DayView({
   const DAY_HEIGHT = 24 * HOUR_HEIGHT;
   const moscowToday = getCurrentMoscowDate();
   const isToday = isSameDayInMoscow(day, moscowToday);
+  
+  // DEBUG: Логируем для дневного вида
+  console.log('[DayView DEBUG] day:', day.toISOString(), 
+    'moscowToday:', moscowToday.toISOString(),
+    'isToday:', isToday,
+    'formatted day:', new Intl.DateTimeFormat('ru-RU', { 
+      timeZone: 'Europe/Moscow', 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    }).format(day));
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
   const draggingRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
