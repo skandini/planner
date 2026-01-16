@@ -395,3 +395,15 @@ export const toTimeZoneString = (date: Date, timeZone: string): string => {
   return `${y}-${m}-${d}T${h}:${min}`;
 };
 
+// Получает текущую дату/время в московском часовом поясе
+export const getCurrentMoscowDate = (): Date => {
+  const now = new Date();
+  const { year, month, day, hour, minute, second } = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
+  
+  // Создаём дату в московском времени (UTC+3)
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const moscowDateStr = `${year}-${pad(month + 1)}-${pad(day)}T${pad(hour)}:${pad(minute)}:${pad(second)}+03:00`;
+  
+  return new Date(moscowDateStr);
+};
+

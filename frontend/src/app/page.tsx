@@ -60,6 +60,7 @@ import {
   toUTCString,
   toUTCDateISO,
   getTimeInTimeZone,
+  getCurrentMoscowDate,
 } from "@/lib/utils/dateUtils";
 import {
   API_BASE_URL,
@@ -93,9 +94,9 @@ export default function Home() {
     null,
   );
   const [viewMode, setViewMode] = useState<ViewMode>("week");
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => getCurrentMoscowDate());
   const [miniCalendarMonth, setMiniCalendarMonth] = useState<Date>(() => {
-    const date = new Date();
+    const date = getCurrentMoscowDate();
     date.setDate(1);
     return date;
   });
