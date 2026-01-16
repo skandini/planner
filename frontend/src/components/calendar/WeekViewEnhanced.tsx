@@ -36,18 +36,6 @@ export function WeekViewEnhanced({
   const HOUR_HEIGHT = 48; // Увеличена высота часа для лучшей читаемости
   const DAY_HEIGHT = 24 * HOUR_HEIGHT; // 1152px
   const moscowToday = getCurrentMoscowDate();
-  
-  // DEBUG: Логируем текущую московскую дату
-  console.log('[WeekView DEBUG] Moscow today:', moscowToday.toISOString(), 
-    'formatted:', new Intl.DateTimeFormat('ru-RU', { 
-      timeZone: 'Europe/Moscow', 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(moscowToday));
-  
   const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
   const draggingRef = useRef(false);
@@ -212,14 +200,6 @@ export function WeekViewEnhanced({
         );
 
         const isTodayCheck = isSameDayInMoscow(date, moscowToday);
-        
-        // DEBUG: Логируем сравнение для каждого дня
-        if (isTodayCheck) {
-          console.log('[WeekView DEBUG] Found today!', 
-            'date:', date.toISOString(),
-            'moscowToday:', moscowToday.toISOString(),
-            'formatted date:', formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' }));
-        }
         
         return {
           date,
