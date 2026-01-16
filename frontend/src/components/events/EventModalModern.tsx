@@ -45,6 +45,7 @@ interface EventModalModernProps {
   onEventUpdated?: () => void | Promise<void>;
   onPendingFilesReady?: (files: File[]) => void;
   organizations?: Array<{id: string; name: string; slug: string}>;
+  departments?: Array<{id: string; name: string; description?: string | null; parent_id?: string | null}>;
   getUserOrganizationAbbreviation?: (userId: string | null | undefined) => string;
   apiBaseUrl?: string;
   accentColor?: string;
@@ -80,6 +81,7 @@ export function EventModalModern({
   onEventUpdated,
   onPendingFilesReady,
   organizations = [],
+  departments = [],
   getUserOrganizationAbbreviation,
   apiBaseUrl,
   accentColor = "#6366f1",
@@ -102,7 +104,8 @@ export function EventModalModern({
   const isSeriesChild = Boolean(recurrenceInfo?.isSeriesChild);
   const recurrenceControlsDisabled = isReadOnly || isSeriesParent || isSeriesChild;
 
-  const selectedRoom = rooms.find((r) => r.id === form.room_id);
+  // Мемоизируем selectedRoom чтобы избежать пересчета на каждом рендере
+  const selectedRoom = useMemo(() => rooms.find((r) => r.id === form.room_id), [rooms, form.room_id]);
   const calendarLabel = useMemo(() => calendarName || "Календарь", [calendarName]);
   
   // Дата для таймлайна
@@ -501,6 +504,7 @@ export function EventModalModern({
                           membersLoading={membersLoading}
                           readOnly={isReadOnly}
                           organizations={organizations}
+                          departments={departments}
                           getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
                           apiBaseUrl={apiBaseUrl}
                           currentUserEmail={currentUserEmail}

@@ -486,7 +486,7 @@ export function EnhancedTimeline({
         <div className="min-w-full space-y-1.5 p-2">
           {/* Заголовок времени */}
           <div
-            className="grid rounded border-b border-slate-200 bg-slate-50 p-1.5"
+            className="grid items-center rounded border-b border-slate-200 bg-slate-50 p-1.5"
             style={{ gridTemplateColumns: templateColumns }}
           >
             <div className="px-2 py-1.5 text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider">Ресурс</div>
@@ -516,7 +516,7 @@ export function EnhancedTimeline({
             return (
               <div
                 key={row.id}
-                className={`grid rounded border transition-all ${
+                className={`grid items-center rounded border transition-all ${
                   isUnavailable
                     ? "border-orange-300 bg-orange-50/70 ring-1 ring-orange-200"
                     : hasConflict
