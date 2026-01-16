@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 
 interface DayViewProps {
@@ -40,14 +40,13 @@ export function DayView({
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 60;
   const DAY_HEIGHT = 24 * HOUR_HEIGHT;
-  const todayKey = new Date().toDateString();
-  const dayKey = day.toDateString();
-  const isToday = todayKey === dayKey;
+  const moscowToday = getCurrentMoscowDate();
+  const isToday = isSameDayInMoscow(day, moscowToday);
   const dragInfo = useRef<{ event: EventRecord; offsetMinutes: number } | null>(null);
   const draggingRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
-  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState(() => getCurrentMoscowDate());
   
   // Состояние для диалога повторяемых событий
   const [showRecurringDialog, setShowRecurringDialog] = useState(false);
@@ -102,7 +101,7 @@ export function DayView({
   
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getCurrentMoscowDate());
     }, 1000);
     
     return () => clearInterval(interval);
@@ -319,7 +318,7 @@ export function DayView({
   
   useEffect(() => {
     if (isToday && scrollContainerRef.current) {
-      const now = new Date();
+      const now = getCurrentMoscowDate();
       const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
       const scrollPosition = (moscowTime.hour * HOUR_HEIGHT) - 200;
       scrollContainerRef.current.scrollTop = Math.max(0, scrollPosition);
@@ -333,7 +332,7 @@ export function DayView({
   const getCurrentTimePosition = useMemo(() => {
     if (!isToday) return null;
     
-    const now = new Date();
+    const now = getCurrentMoscowDate();
     const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
     const position = (moscowTime.hour * HOUR_HEIGHT) + (moscowTime.minute / 60 * HOUR_HEIGHT);
     
@@ -451,7 +450,7 @@ export function DayView({
               
               const isStartingSoon = (() => {
                 const eventStart = parseUTC(event.starts_at);
-                const now = new Date();
+                const now = getCurrentMoscowDate();
                 const diff = eventStart.getTime() - now.getTime();
                 return diff > 0 && diff <= 15 * 60 * 1000;
               })();

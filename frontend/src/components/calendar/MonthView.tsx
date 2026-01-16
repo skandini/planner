@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
-import { addDays, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
+import { addDays, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 
 interface MonthViewProps {
@@ -216,7 +216,7 @@ export function MonthView({
           const key = day.toDateString();
           const dayEvents = eventsByDay.get(key) ?? [];
           const isCurrentMonth = day.getMonth() === currentMonth;
-          const isToday = new Date().toDateString() === key;
+          const isToday = isSameDayInMoscow(day, getCurrentMoscowDate());
 
           return (
             <button
