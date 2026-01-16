@@ -24,11 +24,14 @@ git push origin refactor/split-page-tsx:main
 ```bash
 ssh root@calendar.corestone.ru
 
-# Быстрый деплой
+# Быстрый деплой (только frontend)
 cd /opt/planner
 git pull origin main
 cd frontend && npm run build
-systemctl restart planner-frontend planner-backend
+systemctl restart planner-frontend
+
+# Если менялся backend - добавить:
+# systemctl restart planner-backend
 ```
 
 ---
@@ -157,13 +160,12 @@ systemctl restart planner-frontend
 
 ---
 
-## ⚡ ТОЛЬКО FRONTEND (если бэкенд не менялся)
+## ⚡ ТОЛЬКО FRONTEND (если бэкенд не менялся) - ИСПОЛЬЗУЙ ЭТО ЧАЩЕ
 
 ```bash
 cd /opt/planner
 git pull origin main
-cd frontend
-npm run build
+cd frontend && npm run build
 systemctl restart planner-frontend
 # НЕ перезапускаем backend!
 ```

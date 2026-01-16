@@ -51,8 +51,8 @@ cd /opt/planner
 cp backend/.env backend/.env.backup
 cp frontend/.env.local frontend/.env.local.backup
 
-# 4. Pull изменений
-git pull origin refactor/split-page-tsx
+# 4. Pull изменений из main (production ветка)
+git pull origin main
 
 # 5. ПРОВЕРИТЬ .env (должен быть PostgreSQL!)
 cat backend/.env | grep DATABASE_URL
