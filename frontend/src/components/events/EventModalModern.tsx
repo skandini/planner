@@ -270,216 +270,201 @@ export function EventModalModern({
                 {/* ========== ЛЕВАЯ КОЛОНКА ========== */}
                 <div className="space-y-3">
                   {/* Название, время и повторяемость */}
-                  <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <div className="space-y-2.5">
-                      {/* Название и время события */}
-                      <div className="rounded-lg border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 shadow-sm space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          <h3 className="text-sm font-bold text-emerald-900">Основная информация</h3>
-                        </div>
-                        
-                        <div>
-                          <label className="block mb-1.5 text-xs font-semibold text-emerald-900">
-                            Название события <span className="text-red-500">*</span>
-                          </label>
+                  <div className="space-y-3">
+                    {/* Название события */}
+                    <div>
+                      <label className="block mb-1.5 text-xs font-medium text-slate-600">
+                        Название события <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        disabled={isReadOnly}
+                        value={form.title}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, title: e.target.value }))
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                        placeholder="Введите название события..."
+                      />
+                    </div>
+
+                    {/* Время */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1.5 text-xs font-medium text-slate-600">
+                          Начало <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          required
+                          type="datetime-local"
+                          disabled={isReadOnly}
+                          value={form.starts_at}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, starts_at: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1.5 text-xs font-medium text-slate-600">
+                          Конец <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          required
+                          type="datetime-local"
+                          disabled={isReadOnly}
+                          value={form.ends_at}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, ends_at: e.target.value }))
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Повторяемость встреч */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowRecurrence(!showRecurrence)}
+                        disabled={recurrenceControlsDisabled}
+                        className="w-full flex items-center justify-between text-left transition-opacity disabled:opacity-60 py-1"
+                      >
+                        <div className="flex items-center gap-2">
                           <input
-                            required
-                            type="text"
-                            disabled={isReadOnly}
-                            value={form.title}
-                            onChange={(e) =>
-                              setForm((prev) => ({ ...prev, title: e.target.value }))
-                            }
-                            className="w-full rounded-lg border-2 border-emerald-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 placeholder-slate-400 transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                            placeholder="Введите название события..."
+                            type="checkbox"
+                            checked={form.recurrence_enabled}
+                            disabled={recurrenceControlsDisabled}
+                            onChange={(e) => {
+                              setForm((prev) => ({ ...prev, recurrence_enabled: e.target.checked }));
+                              if (e.target.checked) setShowRecurrence(true);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-500"
                           />
+                          <span className="text-xs font-medium text-slate-700">Повторять событие</span>
                         </div>
+                        <svg
+                          className={`h-4 w-4 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block mb-1.5 text-xs font-semibold text-emerald-900">
-                              ⏰ Начало <span className="text-red-500">*</span>
+                      {showRecurrence && form.recurrence_enabled && (
+                        <div className="mt-3 space-y-2.5">
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <label className="block">
+                              <span className="mb-1 block text-xs font-medium text-slate-600">Как часто</span>
+                              <select
+                                disabled={recurrenceControlsDisabled}
+                                value={form.recurrence_frequency}
+                                onChange={(e) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
+                                  }))
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                              >
+                                <option value="daily">Каждый день</option>
+                                <option value="weekly">Каждую неделю</option>
+                                <option value="monthly">Каждый месяц</option>
+                              </select>
                             </label>
-                            <input
-                              required
-                              type="datetime-local"
-                              disabled={isReadOnly}
-                              value={form.starts_at}
-                              onChange={(e) =>
-                                setForm((prev) => ({ ...prev, starts_at: e.target.value }))
-                              }
-                              className="w-full rounded-lg border-2 border-emerald-300 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                            />
-                          </div>
-                          <div>
-                            <label className="block mb-1.5 text-xs font-semibold text-emerald-900">
-                              ⏰ Конец <span className="text-red-500">*</span>
+                            <label className="block">
+                              <span className="mb-1 block text-xs font-medium text-slate-600">Интервал</span>
+                              <input
+                                type="number"
+                                min={1}
+                                value={form.recurrence_interval}
+                                disabled={recurrenceControlsDisabled}
+                                onChange={(e) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    recurrence_interval: Math.max(1, Number(e.target.value)),
+                                  }))
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                              />
                             </label>
-                            <input
-                              required
-                              type="datetime-local"
-                              disabled={isReadOnly}
-                              value={form.ends_at}
-                              onChange={(e) =>
-                                setForm((prev) => ({ ...prev, ends_at: e.target.value }))
-                              }
-                              className="w-full rounded-lg border-2 border-emerald-300 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                            />
                           </div>
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <label className="block">
+                              <span className="mb-1 block text-xs font-medium text-slate-600">Повторов</span>
+                              <input
+                                type="number"
+                                min={1}
+                                disabled={recurrenceControlsDisabled}
+                                value={form.recurrence_count ?? ""}
+                                onChange={(e) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    recurrence_count: e.target.value ? Number(e.target.value) : undefined,
+                                    recurrence_until: e.target.value ? "" : prev.recurrence_until,
+                                  }))
+                                }
+                                placeholder="10"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-xs font-medium text-slate-600">До даты</span>
+                              <input
+                                type="date"
+                                disabled={recurrenceControlsDisabled}
+                                value={form.recurrence_until}
+                                onChange={(e) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    recurrence_until: e.target.value,
+                                    recurrence_count: e.target.value ? undefined : prev.recurrence_count,
+                                  }))
+                                }
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                              />
+                            </label>
+                          </div>
+                          <p className="text-[0.65rem] text-slate-500">
+                            Завершится при достижении лимита или даты
+                          </p>
                         </div>
-                      </div>
+                      )}
+                    </div>
 
-                      {/* Повторяемость встреч */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setShowRecurrence(!showRecurrence)}
-                          disabled={recurrenceControlsDisabled}
-                          className="w-full flex items-center justify-between text-left transition-opacity disabled:opacity-60"
+                    {/* Описание (опционально, с раскрытием) */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowDescription(!showDescription)}
+                        className="w-full flex items-center justify-between text-left text-xs font-medium text-slate-700 hover:text-indigo-600 transition-colors py-1"
+                      >
+                        <span>Описание (опционально)</span>
+                        <svg
+                          className={`h-4 w-4 transition-transform ${showDescription ? "rotate-180" : ""}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
                         >
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={form.recurrence_enabled}
-                              disabled={recurrenceControlsDisabled}
-                              onChange={(e) => {
-                                setForm((prev) => ({ ...prev, recurrence_enabled: e.target.checked }));
-                                if (e.target.checked) setShowRecurrence(true);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-3.5 w-3.5 rounded border-indigo-500 text-indigo-500 focus:ring-indigo-500"
-                            />
-                            <span className="text-[0.7rem] font-bold text-slate-900">Повторять событие</span>
-                          </div>
-                          <svg
-                            className={`h-3.5 w-3.5 text-slate-400 transition-transform ${showRecurrence ? "rotate-180" : ""}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-
-                        {showRecurrence && form.recurrence_enabled && (
-                          <div className="mt-2 pt-2 border-t border-slate-200 space-y-2">
-                            <div className="grid grid-cols-2 gap-2">
-                              <label className="block">
-                                <span className="mb-1 block text-[0.65rem] font-semibold text-slate-700">Как часто</span>
-                                <select
-                                  disabled={recurrenceControlsDisabled}
-                                  value={form.recurrence_frequency}
-                                  onChange={(e) =>
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      recurrence_frequency: e.target.value as EventDraft["recurrence_frequency"],
-                                    }))
-                                  }
-                                  className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-                                >
-                                  <option value="daily">Каждый день</option>
-                                  <option value="weekly">Каждую неделю</option>
-                                  <option value="monthly">Каждый месяц</option>
-                                </select>
-                              </label>
-                              <label className="block">
-                                <span className="mb-1 block text-[0.65rem] font-semibold text-slate-700">Интервал</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={form.recurrence_interval}
-                                  disabled={recurrenceControlsDisabled}
-                                  onChange={(e) =>
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      recurrence_interval: Math.max(1, Number(e.target.value)),
-                                    }))
-                                  }
-                                  className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-                                />
-                              </label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <label className="block">
-                                <span className="mb-1 block text-[0.65rem] font-semibold text-slate-700">Количество повторов</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  disabled={recurrenceControlsDisabled}
-                                  value={form.recurrence_count ?? ""}
-                                  onChange={(e) =>
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      recurrence_count: e.target.value ? Number(e.target.value) : undefined,
-                                      recurrence_until: e.target.value ? "" : prev.recurrence_until,
-                                    }))
-                                  }
-                                  placeholder="Например, 10"
-                                  className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-                                />
-                              </label>
-                              <label className="block">
-                                <span className="mb-1 block text-[0.65rem] font-semibold text-slate-700">До даты</span>
-                                <input
-                                  type="date"
-                                  disabled={recurrenceControlsDisabled}
-                                  value={form.recurrence_until}
-                                  onChange={(e) =>
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      recurrence_until: e.target.value,
-                                      recurrence_count: e.target.value ? undefined : prev.recurrence_count,
-                                    }))
-                                  }
-                                  className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-                                />
-                              </label>
-                            </div>
-                            <p className="text-[0.6rem] text-slate-500">
-                              Серия завершится при достижении лимита или указанной даты (что наступит раньше)
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Описание (опционально, с раскрытием) */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setShowDescription(!showDescription)}
-                          className="w-full flex items-center justify-between text-left text-[0.7rem] font-semibold text-slate-700 hover:text-indigo-600 transition-colors"
-                        >
-                          <span>Описание (опционально)</span>
-                          <svg
-                            className={`h-3.5 w-3.5 transition-transform ${showDescription ? "rotate-180" : ""}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        {showDescription && (
-                          <textarea
-                            value={form.description}
-                            disabled={isReadOnly}
-                            onChange={(e) =>
-                              setForm((prev) => ({ ...prev, description: e.target.value }))
-                            }
-                            className="mt-2 w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                            rows={3}
-                            placeholder="Описание события..."
-                          />
-                        )}
-                      </div>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {showDescription && (
+                        <textarea
+                          value={form.description}
+                          disabled={isReadOnly}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, description: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 resize-none"
+                          rows={3}
+                          placeholder="Описание события..."
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -487,23 +472,18 @@ export function EventModalModern({
                 {/* ========== ПРАВАЯ КОЛОНКА - Участники ========== */}
                 <div className="space-y-3">
                   {/* Участники (статусы) */}
-                  <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <div className="flex items-center justify-between mb-3">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          Участники
-                        </h3>
-                        <p className="text-[0.65rem] text-slate-500 mt-0.5">
+                        <h3 className="text-sm font-semibold text-slate-900">Участники</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
                           {form.participant_ids.length > 0
-                            ? `${form.participant_ids.length} ${form.participant_ids.length === 1 ? "участник" : "участников"}`
+                            ? `${form.participant_ids.length} чел.`
                             : "Добавьте участников"}
                         </p>
                       </div>
                       {form.participant_ids.length > 0 && (
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white shadow-lg">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
                           {form.participant_ids.length}
                         </span>
                       )}
@@ -654,23 +634,15 @@ export function EventModalModern({
               </div>
 
               {/* ========== Переговорная комната ========== */}
-              <div className="rounded-lg border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="h-5 w-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                  <h3 className="text-sm font-bold text-indigo-900">Переговорная комната</h3>
-                </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  Переговорная комната
+                </label>
                 
                 {roomsLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-3 text-sm text-slate-500">
+                  <div className="flex items-center justify-center gap-2 py-3 text-sm text-slate-500 rounded-lg border border-slate-200 bg-slate-50">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500" />
-                    Загрузка переговорок…
+                    Загрузка...
                   </div>
                 ) : (
                   <select
@@ -682,10 +654,10 @@ export function EventModalModern({
                         room_id: e.target.value || null,
                       }))
                     }
-                    className="w-full appearance-none rounded-lg border-2 border-indigo-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 hover:border-indigo-400 disabled:bg-slate-50"
+                    className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 hover:border-slate-300 disabled:bg-slate-50"
                   >
                     <option value="" className="bg-white text-slate-900">
-                      🚫 Без переговорной комнаты
+                      Без переговорной
                     </option>
                     {rooms.length === 0 ? (
                       <option disabled className="bg-white text-slate-400">
@@ -698,7 +670,7 @@ export function EventModalModern({
                           value={room.id}
                           className="bg-white text-slate-900"
                         >
-                          🏢 {room.name}
+                          {room.name}
                           {room.capacity > 1 ? ` (до ${room.capacity} чел.)` : ""}
                           {room.location ? ` — ${room.location}` : ""}
                         </option>
@@ -708,9 +680,9 @@ export function EventModalModern({
                 )}
               </div>
 
-              {/* ========== Вложения на всю ширину ========== */}
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <h3 className="text-[0.7rem] font-bold text-slate-900 mb-2">Вложения</h3>
+              {/* ========== Вложения ========== */}
+              <div className="pt-4 border-t border-slate-100">
+                <h3 className="text-xs font-medium text-slate-600 mb-2.5">Вложения</h3>
                 <EventAttachments
                   eventId={editingEvent?.id || null}
                   attachments={editingEvent?.attachments || []}
@@ -722,9 +694,9 @@ export function EventModalModern({
                 />
               </div>
 
-              {/* ========== Комментарии на всю ширину ========== */}
+              {/* ========== Комментарии ========== */}
               {editingEvent?.id && (
-                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="pt-4 border-t border-slate-100">
                   <CommentsSection
                     eventId={editingEvent.id}
                     authFetch={authFetch}

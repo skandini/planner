@@ -2,48 +2,34 @@
 
 from __future__ import annotations
 
-import json
+# import json  # Not needed now
 import logging
 from uuid import UUID
 
-import redis
+# import redis  # WebSocket/Redis Pub/Sub disabled
 from sqlmodel import Session, select
 
 from app.celery_app import celery_app
 from app.core.config import settings
 from app.db import engine
 from app.models import Event, Notification, User
-from app.services.web_push import send_web_push_to_user
+# WebSocket and Web Push temporarily disabled - using HTTP polling
+# from app.services.web_push import send_web_push_to_user
 
 logger = logging.getLogger(__name__)
 
 # Redis client for Pub/Sub (synchronous version for Celery)
-redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+# redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
 def publish_notification_to_websocket(user_id: UUID, notification: Notification):
     """
     Publish notification to Redis Pub/Sub for WebSocket broadcast.
-    This provides INSTANT notifications to connected clients.
+    
+    TEMPORARILY DISABLED - using HTTP polling instead.
     """
-    try:
-        message = {
-            "user_id": str(user_id),
-            "notification": {
-                "id": str(notification.id),
-                "type": notification.type,
-                "title": notification.title,
-                "message": notification.message,
-                "event_id": str(notification.event_id) if notification.event_id else None,
-                "is_read": notification.is_read,
-                "created_at": notification.created_at.isoformat() if notification.created_at else None,
-            }
-        }
-        redis_client.publish("notifications", json.dumps(message))
-        logger.info(f"Published notification to WebSocket via Redis Pub/Sub for user {user_id}")
-    except Exception as e:
-        logger.error(f"Failed to publish notification to Redis: {e}")
-        # Don't fail the task if Redis publish fails
+    # Disabled for now - no Redis Pub/Sub for WebSocket
+    pass
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
@@ -87,8 +73,8 @@ def create_notification_task(
                 f"about event {event_id}"
             )
             
-            # Publish to WebSocket via Redis Pub/Sub (INSTANT delivery!)
-            publish_notification_to_websocket(UUID(user_id), notification)
+            # WebSocket temporarily disabled - using HTTP polling
+            # publish_notification_to_websocket(UUID(user_id), notification)
             
             return {
                 "success": True,
@@ -147,20 +133,20 @@ def notify_event_invited_task(
                 f"for user {user_id} about event {event_id}"
             )
             
-            # Publish to WebSocket via Redis Pub/Sub (INSTANT delivery!)
-            publish_notification_to_websocket(UUID(user_id), notification)
+            # WebSocket and Web Push temporarily disabled - using HTTP polling
+            # publish_notification_to_websocket(UUID(user_id), notification)
             
-            # Send Web Push notification
-            try:
-                send_web_push_to_user(
-                    user_id=UUID(user_id),
-                    title="📅 Приглашение на встречу",
-                    body=f"Вас пригласили на встречу «{event.title}»{inviter_text}",
-                    url=f"/?eventId={event_id}",
-                )
-            except Exception as e:
-                logger.error(f"Failed to send web push: {e}")
-                # Continue even if web push fails
+            # # Send Web Push notification
+            # try:
+            #     send_web_push_to_user(
+            #         user_id=UUID(user_id),
+            #         title="📅 Приглашение на встречу",
+            #         body=f"Вас пригласили на встречу «{event.title}»{inviter_text}",
+            #         url=f"/?eventId={event_id}",
+            #     )
+            # except Exception as e:
+            #     logger.error(f"Failed to send web push: {e}")
+            #     # Continue even if web push fails
             
             return {
                 "success": True,
@@ -220,19 +206,19 @@ def notify_event_updated_task(
                 f"for user {user_id} about event {event_id}"
             )
             
-            # Publish to WebSocket via Redis Pub/Sub (INSTANT delivery!)
-            publish_notification_to_websocket(UUID(user_id), notification)
+            # WebSocket and Web Push temporarily disabled - using HTTP polling
+            # publish_notification_to_websocket(UUID(user_id), notification)
             
-            # Send Web Push notification
-            try:
-                send_web_push_to_user(
-                    user_id=UUID(user_id),
-                    title="🔔 Встреча изменена",
-                    body=f"Встреча «{event.title}» была изменена{updater_text}",
-                    url=f"/?eventId={event_id}",
-                )
-            except Exception as e:
-                logger.error(f"Failed to send web push: {e}")
+            # # Send Web Push notification
+            # try:
+            #     send_web_push_to_user(
+            #         user_id=UUID(user_id),
+            #         title="🔔 Встреча изменена",
+            #         body=f"Встреча «{event.title}» была изменена{updater_text}",
+            #         url=f"/?eventId={event_id}",
+            #     )
+            # except Exception as e:
+            #     logger.error(f"Failed to send web push: {e}")
             
             return {
                 "success": True,
@@ -292,19 +278,19 @@ def notify_event_cancelled_task(
                 f"for user {user_id} about event {event_id}"
             )
             
-            # Publish to WebSocket via Redis Pub/Sub (INSTANT delivery!)
-            publish_notification_to_websocket(UUID(user_id), notification)
+            # WebSocket and Web Push temporarily disabled - using HTTP polling
+            # publish_notification_to_websocket(UUID(user_id), notification)
             
-            # Send Web Push notification
-            try:
-                send_web_push_to_user(
-                    user_id=UUID(user_id),
-                    title="❌ Встреча отменена",
-                    body=f"Встреча «{event.title}» была отменена{canceller_text}",
-                    url=f"/?eventId={event_id}",
-                )
-            except Exception as e:
-                logger.error(f"Failed to send web push: {e}")
+            # # Send Web Push notification
+            # try:
+            #     send_web_push_to_user(
+            #         user_id=UUID(user_id),
+            #         title="❌ Встреча отменена",
+            #         body=f"Встреча «{event.title}» была отменена{canceller_text}",
+            #         url=f"/?eventId={event_id}",
+            #     )
+            # except Exception as e:
+            #     logger.error(f"Failed to send web push: {e}")
             
             return {
                 "success": True,
@@ -377,19 +363,19 @@ def notify_participant_response_task(
                 f"for user {calendar_owner_id} about event {event_id}"
             )
             
-            # Publish to WebSocket via Redis Pub/Sub (INSTANT delivery!)
-            publish_notification_to_websocket(UUID(calendar_owner_id), notification)
+            # WebSocket and Web Push temporarily disabled - using HTTP polling
+            # publish_notification_to_websocket(UUID(calendar_owner_id), notification)
             
-            # Send Web Push notification
-            try:
-                send_web_push_to_user(
-                    user_id=UUID(calendar_owner_id),
-                    title="👥 Ответ на приглашение",
-                    body=message,
-                    url=f"/?eventId={event_id}",
-                )
-            except Exception as e:
-                logger.error(f"Failed to send web push: {e}")
+            # # Send Web Push notification
+            # try:
+            #     send_web_push_to_user(
+            #         user_id=UUID(calendar_owner_id),
+            #         title="👥 Ответ на приглашение",
+            #         body=message,
+            #         url=f"/?eventId={event_id}",
+            #     )
+            # except Exception as e:
+            #     logger.error(f"Failed to send web push: {e}")
             
             return {
                 "success": True,

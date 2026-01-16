@@ -294,63 +294,36 @@ export function ProfileSettings({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Заголовок */}
-          <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
-            <div className="px-6 py-5">
+          <div className="sticky top-0 z-10 border-b border-slate-100 bg-white">
+            <div className="px-5 py-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 shadow-lg shadow-indigo-500/30">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Настройки профиля</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Управление личными данными и принадлежностью
-                    </p>
-                  </div>
-                  
-                  {/* Tabs */}
-                  <div className="flex items-center gap-1 border-b border-slate-200 -mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("profile")}
-                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                        activeTab === "profile"
-                          ? "border-indigo-500 text-indigo-600"
-                          : "border-transparent text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      Профиль
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("availability")}
-                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                        activeTab === "availability"
-                          ? "border-indigo-500 text-indigo-600"
-                          : "border-transparent text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      Доступность
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("notifications")}
-                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                        activeTab === "notifications"
-                          ? "border-indigo-500 text-indigo-600"
-                          : "border-transparent text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      🔔 Уведомления
-                    </button>
-                  </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-slate-900">Личный кабинет</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {profile?.full_name || profile?.email || "Загрузка..."}
+                    {profile?.position && ` • ${profile.position}`}
+                  </p>
                 </div>
+                
+                {/* Быстрая статистика */}
+                {profile && (
+                  <div className="flex items-center gap-4 mr-4">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-slate-900">{profile.organization_ids?.length || 0}</div>
+                      <div className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Организ.</div>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200" />
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-slate-900">{profile.department_ids?.length || 0}</div>
+                      <div className="text-[0.65rem] text-slate-500 uppercase tracking-wide">Отделов</div>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+                  className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                   aria-label="Закрыть"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -359,13 +332,65 @@ export function ProfileSettings({
                 </button>
               </div>
               
-              {/* Кнопки действий - перемещены вверх */}
+              {/* Вкладки */}
+              <div className="flex items-center gap-1 border-b border-slate-100 -mb-px">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("profile")}
+                  className={`px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
+                    activeTab === "profile"
+                      ? "border-indigo-500 text-indigo-600 bg-indigo-50/50"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                  } rounded-t-lg`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Профиль
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("availability")}
+                  className={`px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
+                    activeTab === "availability"
+                      ? "border-indigo-500 text-indigo-600 bg-indigo-50/50"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                  } rounded-t-lg`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Расписание
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("notifications")}
+                  className={`px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
+                    activeTab === "notifications"
+                      ? "border-indigo-500 text-indigo-600 bg-indigo-50/50"
+                      : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                  } rounded-t-lg`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    Уведомления
+                  </span>
+                </button>
+              </div>
+              
+              {/* Кнопки действий */}
               {activeTab === "profile" && (
-                <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
+                <div className="flex gap-2 px-5 py-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                   >
                     Отмена
                   </button>
@@ -373,20 +398,9 @@ export function ProfileSettings({
                     type="submit"
                     form="profile-form"
                     disabled={saving || uploadingAvatar}
-                    className="flex-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-purple-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {saving || uploadingAvatar ? "Сохранение…" : "Сохранить"}
-                  </button>
-                </div>
-              )}
-              {activeTab === "availability" && (
-                <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                  >
-                    Закрыть
+                    {saving || uploadingAvatar ? "Сохранение…" : "Сохранить изменения"}
                   </button>
                 </div>
               )}
@@ -535,112 +549,91 @@ export function ProfileSettings({
 
                 {/* Принадлежность */}
                 <div className="space-y-4 border-b border-slate-200 pb-6">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Принадлежность</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Принадлежность</h3>
+                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                      Редактируется администратором
+                    </span>
+                  </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Организации
                     </label>
-                    <div className="max-h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
-                      {organizations.length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-4">Нет доступных организаций</p>
-                      ) : (
-                        organizations.map((org) => {
-                          const isChecked = formData.organization_ids.includes(org.id);
-                          return (
-                            <label 
+                    {formData.organization_ids.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                        <svg className="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <p className="text-sm text-slate-500">Не назначено ни одной организации</p>
+                        <p className="text-xs text-slate-400 mt-1">Обратитесь к администратору</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {organizations
+                          .filter(org => formData.organization_ids.includes(org.id))
+                          .map((org) => (
+                            <div 
                               key={org.id} 
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition cursor-pointer"
+                              className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white"
                             >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setFormData({
-                                      ...formData,
-                                      organization_ids: [...formData.organization_ids, org.id],
-                                    });
-                                  } else {
-                                    setFormData({
-                                      ...formData,
-                                      organization_ids: formData.organization_ids.filter(id => id !== org.id),
-                                    });
-                                  }
-                                }}
-                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
-                              />
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-lg">🏢</span>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium text-slate-900 truncate">
-                                    {org.name}
-                                  </div>
-                                  {org.description && (
-                                    <div className="text-xs text-slate-500 truncate">{org.description}</div>
-                                  )}
-                                </div>
+                              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
                               </div>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                  {org.name}
+                                </div>
+                                {org.description && (
+                                  <div className="text-xs text-slate-500 truncate mt-0.5">{org.description}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Отделы
                     </label>
-                    <div className="max-h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
-                      {flatDepartments.length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-4">Нет доступных отделов</p>
-                      ) : (
-                        flatDepartments.map((dept) => {
-                          const isChecked = formData.department_ids.includes(dept.id);
-                          return (
-                            <label 
+                    {formData.department_ids.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                        <svg className="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p className="text-sm text-slate-500">Не назначено ни одного отдела</p>
+                        <p className="text-xs text-slate-400 mt-1">Обратитесь к администратору</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {flatDepartments
+                          .filter(dept => formData.department_ids.includes(dept.id))
+                          .map((dept) => (
+                            <div 
                               key={dept.id} 
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition cursor-pointer"
+                              className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white"
                             >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setFormData({
-                                      ...formData,
-                                      department_ids: [...formData.department_ids, dept.id],
-                                    });
-                                  } else {
-                                    setFormData({
-                                      ...formData,
-                                      department_ids: formData.department_ids.filter(id => id !== dept.id),
-                                    });
-                                  }
-                                }}
-                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
-                              />
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-lg">🏢</span>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium text-slate-900 truncate">
-                                    {dept.name}
-                                  </div>
-                                  {dept.description && (
-                                    <div className="text-xs text-slate-500 truncate">{dept.description}</div>
-                                  )}
-                                </div>
+                              <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
                               </div>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                  {dept.name}
+                                </div>
+                                {dept.description && (
+                                  <div className="text-xs text-slate-500 truncate mt-0.5">{dept.description}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </form>

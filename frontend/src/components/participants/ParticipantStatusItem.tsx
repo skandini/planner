@@ -43,10 +43,29 @@ export function ParticipantStatusItem({
     needs_action: "bg-slate-100 text-slate-600 border-slate-300",
   };
 
-  const statusIcons: Record<string, string> = {
-    accepted: "✓",
-    declined: "✕",
-    needs_action: "⏱️",
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "accepted":
+        return (
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        );
+      case "declined":
+        return (
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        );
+      case "needs_action":
+        return (
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -192,7 +211,9 @@ export function ParticipantStatusItem({
                 className="flex items-center gap-1.5 rounded-lg bg-lime-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-lime-600 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                 title="Принять"
               >
-                <span>✓</span>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
                 <span>Принять</span>
               </button>
               <button
@@ -202,7 +223,9 @@ export function ParticipantStatusItem({
                 className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
                 title="Отклонить"
               >
-                <span>✕</span>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
                 <span>Отклонить</span>
               </button>
             </div>
@@ -218,7 +241,7 @@ export function ParticipantStatusItem({
             >
               {Object.entries(statusLabels).map(([value, label]) => (
                 <option key={value} value={value}>
-                  {statusIcons[value]} {label}
+                  {label}
                 </option>
               ))}
             </select>
@@ -228,7 +251,7 @@ export function ParticipantStatusItem({
           <div className={`flex items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-xs font-semibold ${
             statusColors[currentStatus]
           }`}>
-            <span>{statusIcons[currentStatus]}</span>
+            {getStatusIcon(currentStatus)}
             <span>{statusLabels[currentStatus]}</span>
           </div>
         )}
