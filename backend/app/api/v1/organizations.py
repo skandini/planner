@@ -200,6 +200,14 @@ def delete_organization(
             detail="Organization not found",
         )
     
+    # Delete all departments of this organization (cascade)
+    org_departments = session.exec(
+        select(Department).where(Department.organization_id == organization_id)
+    ).all()
+    
+    for dept in org_departments:
+        session.delete(dept)
+    
     session.delete(organization)
     session.commit()
     return {"message": "Organization deleted successfully"}

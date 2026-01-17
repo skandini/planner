@@ -307,6 +307,10 @@ def delete_department(
             detail="Department not found",
         )
 
+    # Save organization_id before deletion (for cleanup)
+    org_id = department.organization_id
+    is_root = department.parent_id is None
+    
     # Каскадно удаляем подотделы
     def delete_children(dept_id: UUID):
         children = session.exec(select(Department).where(Department.parent_id == dept_id)).all()
@@ -316,6 +320,19 @@ def delete_department(
 
     delete_children(department_id)
     session.delete(department)
+    
+    # If this was a root department, check if organization has any departments left
+    # If not, delete the organization too
+    if is_root and org_id:
+        remaining_depts = session.exec(
+            select(Department).where(Department.organization_id == org_id)
+        ).first()
+        
+        if not remaining_depts:
+            org = session.get(Organization, org_id)
+            if org:
+                session.delete(org)
+    
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
