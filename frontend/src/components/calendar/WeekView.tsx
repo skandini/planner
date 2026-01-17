@@ -6,6 +6,24 @@ import type { Room } from "@/types/room.types";
 import { addDays, addDaysInMoscow, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
 import { calculateEventLayout, getEventPositionStyles, getPastelColor, getCascadeColorVariation } from "@/lib/utils/eventLayout";
+import { useTheme } from "@/context/ThemeContext";
+
+// Яркие градиенты для событий в тёмной теме (вдохновлено Bybit)
+const DARK_EVENT_COLORS = [
+  { bg: "linear-gradient(135deg, rgba(14, 203, 129, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)", border: "#0ecb81", text: "#34d399" }, // Бирюзовый
+  { bg: "linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%)", border: "#818cf8", text: "#a5b4fc" }, // Индиго
+  { bg: "linear-gradient(135deg, rgba(252, 213, 53, 0.2) 0%, rgba(245, 158, 11, 0.12) 100%)", border: "#fcd535", text: "#fde047" }, // Золотой
+  { bg: "linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(244, 114, 182, 0.15) 100%)", border: "#ec4899", text: "#f9a8d4" }, // Розовый
+  { bg: "linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%)", border: "#06b6d4", text: "#67e8f9" }, // Циан
+  { bg: "linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(251, 146, 60, 0.15) 100%)", border: "#f97316", text: "#fdba74" }, // Оранжевый
+];
+
+// Функция получения цвета события для тёмной темы
+function getDarkEventColor(eventId: string, index: number) {
+  // Используем hash от id события для стабильного цвета
+  const hash = eventId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return DARK_EVENT_COLORS[(hash + index) % DARK_EVENT_COLORS.length];
+}
 
 interface WeekViewProps {
   days: Date[];
@@ -38,6 +56,8 @@ export function WeekView({
   apiBaseUrl = "http://localhost:8000",
   getUserOrganizationAbbreviation,
 }: WeekViewProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 60; // Высота одного часа в пикселях (увеличено для более крупного отображения)
   const DAY_HEIGHT = 24 * HOUR_HEIGHT; // Высота для полного дня (0:00-23:59)
@@ -638,24 +658,38 @@ export function WeekView({
         </div>
       )}
       
-    <div className="h-full flex flex-col rounded-2xl border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.12)] overflow-hidden">
-      <div className="sticky top-0 z-10 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-slate-50 text-sm flex-shrink-0">
-        <div className="p-2 text-right text-[0.65rem] uppercase tracking-[0.3em] text-slate-500 bg-slate-50">
+    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden ${
+      isDark 
+        ? "border-[#2b3139] bg-[#0b0e11] shadow-[0_4px_20px_rgba(0,0,0,0.4)]" 
+        : "border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.12)]"
+    }`}>
+      <div className={`sticky top-0 z-10 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b text-sm flex-shrink-0 ${
+        isDark 
+          ? "border-[#2b3139] bg-[#181a20]" 
+          : "border-slate-200 bg-slate-50"
+      }`}>
+        <div className={`p-2 text-right text-[0.65rem] uppercase tracking-[0.3em] ${
+          isDark ? "text-[#848e9c] bg-[#181a20]" : "text-slate-500 bg-slate-50"
+        }`}>
           Время
         </div>
         {dayColumns.map(({ date, isToday }) => (
           <div
             key={`head-${date.toISOString()}`}
-            className={`border-l border-slate-200 p-2 bg-slate-50 ${isToday ? "bg-lime-50" : ""}`}
+            className={`border-l p-2 ${
+              isDark 
+                ? `border-[#2b3139] bg-[#181a20] ${isToday ? "bg-[#1a1d23]" : ""}` 
+                : `border-slate-200 bg-slate-50 ${isToday ? "bg-lime-50" : ""}`
+            }`}
           >
-            <p className="uppercase text-[0.65rem] tracking-[0.3em] text-slate-400">
+            <p className={`uppercase text-[0.65rem] tracking-[0.3em] ${isDark ? "text-[#848e9c]" : "text-slate-400"}`}>
               {new Intl.DateTimeFormat("ru-RU", { 
                 weekday: "short",
                 timeZone: MOSCOW_TIMEZONE 
               }).format(date)}
             </p>
             <div className="mt-0.5 flex items-baseline gap-1.5">
-              <p className="text-base font-semibold">
+              <p className={`text-base font-semibold ${isDark ? "text-[#eaecef]" : ""}`}>
                 {new Intl.DateTimeFormat("ru-RU", {
                   day: "numeric",
                   month: "short",
@@ -663,7 +697,11 @@ export function WeekView({
                 }).format(date)}
               </p>
               {isToday && (
-                <span className="rounded-full bg-lime-100 px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase text-lime-600">
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase ${
+                  isDark 
+                    ? "bg-[#fcd535]/20 text-[#fcd535]" 
+                    : "bg-lime-100 text-lime-600"
+                }`}>
                   сегодня
                 </span>
               )}
@@ -675,14 +713,14 @@ export function WeekView({
       <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
           <div
-            className="border-r border-slate-200 bg-white"
+            className={`border-r ${isDark ? "border-[#2b3139] bg-[#0b0e11]" : "border-slate-200 bg-white"}`}
             style={{ height: `${DAY_HEIGHT}px` }}
           >
-            <div className="flex h-full flex-col justify-between text-right text-xs text-slate-500">
+            <div className={`flex h-full flex-col justify-between text-right text-xs ${isDark ? "text-slate-500" : "text-slate-500"}`}>
               {hours.map((hour) => (
                 <div
                   key={`label-${hour}`}
-                  className="pr-1.5 text-[0.6rem] uppercase tracking-wide"
+                  className={`pr-1.5 text-[0.6rem] uppercase tracking-wide ${isDark ? "text-[#848e9c]" : ""}`}
                   style={{ height: `${HOUR_HEIGHT}px` }}
                 >
                   {hour.toString().padStart(2, "0")}:00
@@ -700,8 +738,10 @@ export function WeekView({
             return (
               <div
                 key={`grid-${date.toISOString()}`}
-                className={`relative border-l border-slate-200 ${idx === dayColumns.length - 1 ? "border-r border-slate-200" : ""} ${
-                  isToday ? "bg-lime-50" : "bg-white"
+                className={`relative ${
+                  isDark 
+                    ? `border-l border-[#2b3139] ${idx === dayColumns.length - 1 ? "border-r border-[#2b3139]" : ""} ${isToday ? "bg-[#1a1d23]" : "bg-[#0b0e11]"}`
+                    : `border-l border-slate-200 ${idx === dayColumns.length - 1 ? "border-r border-slate-200" : ""} ${isToday ? "bg-lime-50" : "bg-white"}`
                 } ${onTimeSlotClick ? "cursor-crosshair" : ""}`}
                 style={{ height: `${DAY_HEIGHT}px` }}
                 ref={(el) => {
@@ -714,7 +754,7 @@ export function WeekView({
                 {hours.map((hour) => (
                   <div
                     key={`line-${date.toISOString()}-${hour}`}
-                    className="absolute left-0 right-0 border-b border-slate-100"
+                    className={`absolute left-0 right-0 border-b ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}
                     style={{ top: `${hour * HOUR_HEIGHT}px` }}
                   />
                 ))}
@@ -746,7 +786,11 @@ export function WeekView({
                 {/* Визуальное выделение диапазона времени */}
                 {isSelecting && selectionHeight > 0 && (
                   <div
-                    className="absolute left-0 right-0 rounded-lg border-2 border-lime-500 bg-lime-100/30 pointer-events-none z-20"
+                    className={`absolute left-0 right-0 rounded-lg border-2 pointer-events-none z-20 ${
+                      isDark 
+                        ? "border-[#fcd535] bg-[#fcd535]/10" 
+                        : "border-lime-500 bg-lime-100/30"
+                    }`}
                     style={{
                       top: `${selectionStartY}px`,
                       height: `${selectionHeight}px`,
@@ -817,6 +861,9 @@ export function WeekView({
                   const isAvailable = event.status === "available";
                   const isBookedSlot = event.status === "booked_slot";
                   
+                  // Получаем цвет для тёмной темы (яркие градиенты)
+                  const darkColor = isDark ? getDarkEventColor(event.id, layout?.column || 0) : null;
+                  
                   return (
                     <div
                       key={event.id}
@@ -861,57 +908,111 @@ export function WeekView({
                         }
                       }}
                       onDragEnd={handleDragEnd}
-                      className={`absolute rounded-lg border p-1.5 text-xs shadow-md transition ${
+                      className={`absolute rounded-lg border p-1.5 text-xs shadow-md transition-all duration-200 ${
                         isUnavailable
-                          ? "cursor-default border-slate-300 bg-slate-100 z-5"
+                          ? isDark 
+                            ? "cursor-default border-slate-600 z-5" 
+                            : "cursor-default border-slate-300 bg-slate-100 z-5"
                           : isAvailable
-                            ? "cursor-default border-green-300 bg-green-50 z-15"
+                            ? isDark
+                              ? "cursor-default border-emerald-500/50 z-15"
+                              : "cursor-default border-green-300 bg-green-50 z-15"
                             : isBookedSlot
-                              ? "cursor-default border-orange-400 bg-orange-100 z-10"
+                              ? isDark
+                                ? "cursor-default border-orange-500/50 z-10"
+                                : "cursor-default border-orange-400 bg-orange-100 z-10"
                               : isStartingSoon 
-                              ? "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg" 
-                              : needsAction
-                                ? "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
-                                : "border-slate-200 cursor-pointer hover:shadow-lg"
+                                ? isDark
+                                  ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                                  : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
+                                : needsAction
+                                  ? isDark
+                                    ? "border-2 border-slate-500 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                                    : "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
+                                  : isDark
+                                    ? "border-l-[3px] cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                                    : "border-slate-200 cursor-pointer hover:shadow-lg"
                       }`}
                       style={{
                         top: `${topPx}px`,
                         height: `${heightPx}px`,
                         left: positionStyles.left,
                         width: positionStyles.width,
-                        zIndex: hoveredEventId === event.id ? 100 : positionStyles.zIndex, // При hover - на передний план
-                        background: isUnavailable
-                          ? "rgba(148, 163, 184, 0.3)"
-                          : isAvailable
-                            ? "rgba(34, 197, 94, 0.2)"
-                            : isBookedSlot
-                              ? "rgba(249, 115, 22, 0.2)"
-                              : isStartingSoon 
-                                ? event.department_color 
-                                  ? `${event.department_color}40`
-                                  : `${accent}40`
-                                : needsAction
-                                  ? "white"
-                                  : isAccepted
-                                    ? event.department_color
-                                      ? (layout && layout.column > 0 
-                                          ? getCascadeColorVariation(event.department_color, layout.column) 
-                                          : getPastelColor(event.department_color)) // Вариация цвета для каскада
-                                      : (layout && layout.column > 0 
-                                          ? getCascadeColorVariation(accent, layout.column) 
-                                          : getPastelColor(accent))
-                                    : event.department_color
-                                      ? `${event.department_color}20`
-                                      : `${accent}20`,
-                        borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
-                          ? event.department_color
-                          : undefined,
+                        zIndex: hoveredEventId === event.id ? 100 : positionStyles.zIndex,
+                        // Тёмная тема: яркие градиенты
+                        ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && darkColor ? {
+                          background: darkColor.bg,
+                          borderColor: darkColor.border,
+                          boxShadow: `0 4px 15px ${darkColor.border}30`,
+                        } : {}),
+                        // Светлая тема: оригинальные стили
+                        ...(!isDark ? {
+                          background: isUnavailable
+                            ? "rgba(148, 163, 184, 0.3)"
+                            : isAvailable
+                              ? "rgba(34, 197, 94, 0.2)"
+                              : isBookedSlot
+                                ? "rgba(249, 115, 22, 0.2)"
+                                : isStartingSoon 
+                                  ? event.department_color 
+                                    ? `${event.department_color}40`
+                                    : `${accent}40`
+                                  : needsAction
+                                    ? "white"
+                                    : isAccepted
+                                      ? event.department_color
+                                        ? (layout && layout.column > 0 
+                                            ? getCascadeColorVariation(event.department_color, layout.column) 
+                                            : getPastelColor(event.department_color))
+                                        : (layout && layout.column > 0 
+                                            ? getCascadeColorVariation(accent, layout.column) 
+                                            : getPastelColor(accent))
+                                      : event.department_color
+                                        ? `${event.department_color}20`
+                                        : `${accent}20`,
+                          borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
+                            ? event.department_color
+                            : undefined,
+                        } : {}),
+                        // Специальные состояния в тёмной теме
+                        ...(isDark && isUnavailable ? {
+                          background: "rgba(100, 116, 139, 0.3)",
+                        } : {}),
+                        ...(isDark && isAvailable ? {
+                          background: "rgba(16, 185, 129, 0.2)",
+                        } : {}),
+                        ...(isDark && isBookedSlot ? {
+                          background: "rgba(249, 115, 22, 0.25)",
+                          borderColor: "#f97316",
+                        } : {}),
+                        ...(isDark && isStartingSoon && darkColor ? {
+                          borderColor: "#fcd535",
+                          background: "linear-gradient(135deg, rgba(252, 213, 53, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)",
+                          boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
+                        } : {}),
+                        ...(isDark && needsAction ? {
+                          background: "rgba(71, 85, 105, 0.4)",
+                          borderColor: "#94a3b8",
+                        } : {}),
                       }}
                     >
                       {/* Очень короткие события (< 30 мин): только название */}
                       {isVeryShort ? (
                         <div className="flex items-center justify-between h-full px-1.5 gap-1">
-                          <p className={`text-xs font-semibold leading-tight truncate flex-1 min-w-0 ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                          <p 
+                            className={`text-xs font-semibold leading-tight truncate flex-1 min-w-0 ${
+                              isUnavailable 
+                                ? isDark ? "text-slate-400" : "text-slate-600" 
+                                : isAvailable 
+                                  ? isDark ? "text-emerald-400" : "text-green-700" 
+                                  : isBookedSlot 
+                                    ? isDark ? "text-orange-400" : "text-orange-700" 
+                                    : isDark 
+                                      ? "text-white" 
+                                      : "text-slate-900"
+                            }`}
+                            style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                          >
                             {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                           </p>
                           {/* Индикаторы для очень коротких событий */}
@@ -934,7 +1035,20 @@ export function WeekView({
                         /* Короткие события (30-59 мин): название + время */
                         <div className="flex flex-col justify-start h-full px-0.5 pt-0.5">
                           <div className="flex items-start justify-between gap-1">
-                            <p className={`text-xs font-semibold truncate leading-none flex-1 min-w-0 ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                            <p 
+                              className={`text-xs font-semibold truncate leading-none flex-1 min-w-0 ${
+                                isUnavailable 
+                                  ? isDark ? "text-slate-400" : "text-slate-600" 
+                                  : isAvailable 
+                                    ? isDark ? "text-emerald-400" : "text-green-700" 
+                                    : isBookedSlot 
+                                      ? isDark ? "text-orange-400" : "text-orange-700" 
+                                      : isDark 
+                                        ? "text-white" 
+                                        : "text-slate-900"
+                              }`}
+                              style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                            >
                               {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                             </p>
                             {/* Индикаторы для коротких событий */}
@@ -953,7 +1067,7 @@ export function WeekView({
                               )}
                             </div>
                           </div>
-                          <p className="text-[0.65rem] text-slate-600 leading-none truncate mt-0.5">
+                          <p className={`text-[0.65rem] leading-none truncate mt-0.5 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                             {eventStart.toLocaleTimeString("ru-RU", {
                               hour: "2-digit",
                               minute: "2-digit",
@@ -970,11 +1084,24 @@ export function WeekView({
                         <>
                           <div className="flex items-start justify-between gap-1">
                             <div className="flex-1 min-w-0">
-                              <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                              <p 
+                                className={`text-xs font-semibold leading-tight truncate ${
+                                  isUnavailable 
+                                    ? isDark ? "text-slate-400" : "text-slate-600" 
+                                    : isAvailable 
+                                      ? isDark ? "text-emerald-400" : "text-green-700" 
+                                      : isBookedSlot 
+                                        ? isDark ? "text-orange-400" : "text-orange-700" 
+                                        : isDark 
+                                          ? "text-white" 
+                                          : "text-slate-900"
+                                }`}
+                                style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                              >
                                 {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                               </p>
                               {isAvailable && event.description && event.description !== event.title && (
-                                <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
+                                <p className={`text-[0.65rem] leading-tight truncate mt-0.5 ${isDark ? "text-emerald-400/80" : "text-green-600"}`}>
                                   {event.description}
                                 </p>
                               )}
@@ -982,41 +1109,41 @@ export function WeekView({
                             {/* Индикаторы вложений и комментариев */}
                             <div className="flex items-center gap-0.5 flex-shrink-0 ml-auto">
                               {event.attachments && event.attachments.length > 0 && (
-                                <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center flex-shrink-0" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                                <div className={`w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-blue-400" : "bg-blue-500/80"}`} title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
                                   <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
                                   </svg>
                                 </div>
                               )}
                               {event.comments_count !== undefined && event.comments_count > 0 && (
-                                <div className="w-3 h-3 rounded-full bg-red-500/80 flex items-center justify-center flex-shrink-0" title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
+                                <div className={`w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-red-400" : "bg-red-500/80"}`} title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
                                   <span className="text-[0.65rem] font-semibold text-white leading-none">{event.comments_count}</span>
                                 </div>
                               )}
                             </div>
                           </div>
                           {isAvailable && event.description && event.description !== event.title && (
-                            <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
+                            <p className={`text-[0.65rem] leading-tight truncate mt-0.5 ${isDark ? "text-emerald-400/80" : "text-green-600"}`}>
                               {event.description}
                             </p>
                           )}
                           {isBookedSlot && event.description && event.description !== event.title && (
-                            <p className="text-[0.65rem] text-orange-600 leading-tight truncate mt-0.5">
+                            <p className={`text-[0.65rem] leading-tight truncate mt-0.5 ${isDark ? "text-orange-400/80" : "text-orange-600"}`}>
                               {event.description}
                             </p>
                           )}
-                          <p className="text-[0.65rem] text-slate-600 leading-tight">
+                          <p className={`text-[0.65rem] leading-tight ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                             {formatTimeInTimeZone(eventStart, MOSCOW_TIMEZONE)}{" "}
                             —{" "}
                             {formatTimeInTimeZone(eventEnd, MOSCOW_TIMEZONE)}
                           </p>
                           {event.room_id && (
-                            <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500 truncate">
+                            <p className={`mt-0.5 text-[0.6rem] font-semibold uppercase tracking-wide truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                               🏢 {rooms.find((r) => r.id === event.room_id)?.name || "Переговорка"}
                             </p>
                           )}
                           {event.location && !event.room_id && (
-                            <p className="mt-0.5 text-[0.6rem] uppercase tracking-wide text-slate-500 truncate">
+                            <p className={`mt-0.5 text-[0.6rem] uppercase tracking-wide truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                               {event.location}
                             </p>
                           )}
@@ -1036,8 +1163,8 @@ export function WeekView({
                         
                         return (
                           <div className="mt-0.5">
-                            <div className="text-[0.6rem] text-amber-600 font-semibold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            <div className={`text-[0.6rem] font-semibold flex items-center gap-1 ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isDark ? "bg-amber-400" : "bg-amber-500"}`} />
                               Требуется ответ
                             </div>
                           </div>
@@ -1056,7 +1183,11 @@ export function WeekView({
           {/* Всплывающее окно с деталями события - вынесено за пределы цикла по дням, чтобы показывалось только один раз */}
       {hoveredEvent && (
         <div
-          className="fixed z-50 rounded-xl border border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)] p-4 pointer-events-auto overflow-hidden flex flex-col"
+          className={`fixed z-50 rounded-xl border p-4 pointer-events-auto overflow-hidden flex flex-col ${
+            isDark 
+              ? "border-[#2b3139] bg-[#181a20] shadow-[0_10px_40px_rgba(0,0,0,0.5)]" 
+              : "border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)]"
+          }`}
           style={{
             top: `${hoveredEvent.position.top}px`,
             left: `${hoveredEvent.position.left}px`,
@@ -1068,9 +1199,9 @@ export function WeekView({
           onMouseLeave={handleTooltipMouseLeave}
         >
           {/* Заголовок события */}
-          <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
-            <p className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2 break-words">{hoveredEvent.event.title}</p>
-            <p className="text-xs text-slate-500">
+          <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
+            <p className={`text-sm font-semibold mb-1 line-clamp-2 break-words ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>{hoveredEvent.event.title}</p>
+            <p className={`text-xs ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
               {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), MOSCOW_TIMEZONE)}{" "}
               —{" "}
               {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
@@ -1090,8 +1221,8 @@ export function WeekView({
             if (!needsAction) return null;
             
             return (
-              <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
-                <p className="text-xs font-semibold text-slate-700 mb-2">Ответить на приглашение</p>
+              <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
+                <p className={`text-xs font-semibold mb-2 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Ответить на приглашение</p>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -1102,7 +1233,11 @@ export function WeekView({
                         setHoveredEvent(null);
                       }
                     }}
-                    className="flex-1 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:from-lime-600 hover:to-emerald-600 shadow-sm flex items-center justify-center gap-1.5"
+                    className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white transition shadow-sm flex items-center justify-center gap-1.5 ${
+                      isDark 
+                        ? "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400" 
+                        : "bg-gradient-to-r from-lime-500 to-emerald-500 hover:from-lime-600 hover:to-emerald-600"
+                    }`}
                   >
                     <span className="text-sm">✓</span> Принять
                   </button>
@@ -1126,9 +1261,9 @@ export function WeekView({
           
           {/* Описание события */}
           {hoveredEvent.event.description && hoveredEvent.event.description.trim().length > 0 && (
-            <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">Описание</p>
-              <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 break-words">
+            <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
+              <p className={`text-xs font-semibold mb-1.5 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Описание</p>
+              <p className={`text-xs leading-relaxed line-clamp-3 break-words ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
                 {hoveredEvent.event.description}
               </p>
             </div>
@@ -1136,16 +1271,18 @@ export function WeekView({
           
           {/* Переговорка */}
           {hoveredEvent.event.room_id && (
-            <div className="mb-3 border-b border-slate-100 pb-3 flex-shrink-0">
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">Переговорка</p>
-              <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2">
+            <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
+              <p className={`text-xs font-semibold mb-1.5 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Переговорка</p>
+              <div className={`flex items-center gap-2 rounded-lg border p-2 ${
+                isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-100 bg-slate-50"
+              }`}>
                 <span className="text-lg flex-shrink-0">🏢</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-slate-900 truncate">
+                  <p className={`text-xs font-semibold truncate ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>
                     {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.name || "Переговорка"}
                   </p>
                   {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.location && (
-                    <p className="text-[0.65rem] text-slate-500 mt-0.5 truncate">
+                    <p className={`text-[0.65rem] mt-0.5 truncate ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
                       {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.location}
                     </p>
                   )}
@@ -1174,7 +1311,7 @@ export function WeekView({
           {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 ? (
             <div className="flex-1 min-h-0 flex flex-col">
               <div className="mb-2 flex-shrink-0">
-                <p className="text-xs font-semibold text-slate-700 mb-2">
+                <p className={`text-xs font-semibold mb-2 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>
                   Участники ({hoveredEvent.event.participants.length})
                 </p>
                 {/* Аватарки участников в кружочках - показываем максимум 12 */}
@@ -1195,7 +1332,9 @@ export function WeekView({
                           <img
                             src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
                             alt={displayName}
-                            className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer"
+                            className={`w-8 h-8 rounded-full object-cover border-2 shadow-sm hover:scale-110 transition-transform cursor-pointer ${
+                              isDark ? "border-[#2b3139]" : "border-white"
+                            }`}
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                               const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
@@ -1203,7 +1342,11 @@ export function WeekView({
                             }}
                           />
                         ) : null}
-                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center border-2 border-white shadow-sm hover:scale-110 transition-transform cursor-pointer ${avatarUrl ? 'hidden' : ''}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm hover:scale-110 transition-transform cursor-pointer ${avatarUrl ? 'hidden' : ''} ${
+                          isDark 
+                            ? "bg-gradient-to-br from-slate-600 to-slate-700 border-[#2b3139]" 
+                            : "bg-gradient-to-br from-slate-300 to-slate-400 border-white"
+                        }`}>
                           <span className="text-[0.65rem] font-semibold text-white">
                             {initials}
                           </span>
@@ -1229,8 +1372,10 @@ export function WeekView({
                     );
                   })}
                   {hoveredEvent.event.participants.length > 12 ? (
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm">
-                      <span className="text-[0.65rem] font-semibold text-slate-600">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm ${
+                      isDark ? "bg-[#2b3139] border-[#2b3139]" : "bg-slate-200 border-white"
+                    }`}>
+                      <span className={`text-[0.65rem] font-semibold ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
                         +{hoveredEvent.event.participants.length - 12}
                       </span>
                     </div>
@@ -1245,7 +1390,12 @@ export function WeekView({
                     pending: "Нет ответа",
                     needs_action: "Нет ответа",
                   };
-                  const statusColors: Record<string, string> = {
+                  const statusColors: Record<string, string> = isDark ? {
+                    accepted: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+                    declined: "bg-red-500/20 text-red-400 border-red-500/30",
+                    pending: "bg-slate-600/30 text-slate-400 border-slate-600",
+                    needs_action: "bg-slate-600/30 text-slate-400 border-slate-600",
+                  } : {
                     accepted: "bg-lime-100 text-lime-700 border-lime-300",
                     declined: "bg-red-100 text-red-700 border-red-300",
                     pending: "bg-slate-100 text-slate-600 border-slate-300",
@@ -1257,21 +1407,25 @@ export function WeekView({
                   return (
                     <div
                       key={participant.user_id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2"
+                      className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${
+                        isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-100 bg-slate-50"
+                      }`}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-semibold text-slate-900 truncate">
+                          <p className={`text-xs font-semibold truncate ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>
                             {participant.full_name || participant.email}
                           </p>
                           {orgAbbr ? (
-                            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[0.6rem] font-semibold text-slate-700 flex-shrink-0">
+                            <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-semibold flex-shrink-0 ${
+                              isDark ? "bg-[#2b3139] text-[#848e9c]" : "bg-slate-200 text-slate-700"
+                            }`}>
                               {orgAbbr}
                             </span>
                           ) : null}
                         </div>
                         {participant.full_name ? (
-                          <p className="text-[0.65rem] text-slate-500 truncate">
+                          <p className={`text-[0.65rem] truncate ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
                             {participant.email}
                           </p>
                         ) : null}
@@ -1287,7 +1441,7 @@ export function WeekView({
                   );
                 })}
                 {hoveredEvent.event.participants.length > 8 ? (
-                  <p className="text-[0.65rem] text-slate-500 text-center pt-1">
+                  <p className={`text-[0.65rem] text-center pt-1 ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
                     и ещё {hoveredEvent.event.participants.length - 8} участников
                   </p>
                 ) : null}
