@@ -757,11 +757,11 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
             </div>
 
             {d.children && d.children.length > 0 && (() => {
-              // Цвета линий в зависимости от темы
-              const lineColor = isDark ? '#6b7280' : '#94a3b8';
-              const lineColorEnd = isDark ? '#4b5563' : '#64748b';
+              // Цвета линий в зависимости от темы - яркие для темной темы
+              const lineColor = isDark ? '#fcd535' : '#94a3b8';
+              const lineColorEnd = isDark ? '#f0b90b' : '#64748b';
               const dotColor = isDark ? '#fcd535' : '#64748b';
-              const glowColor = isDark ? 'rgba(252, 213, 53, 0.3)' : 'rgba(100, 116, 139, 0.3)';
+              const glowColor = isDark ? 'rgba(252, 213, 53, 0.5)' : 'rgba(100, 116, 139, 0.3)';
               
               return (
                 <div className="mt-4 flex flex-col items-center relative">
