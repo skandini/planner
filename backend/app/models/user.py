@@ -42,5 +42,7 @@ class User(SQLModel, table=True):
     show_moscow_time: bool = Field(default=True)
     # День рождения
     birthday: Optional[date] = Field(default=None, nullable=True)
+    # Последняя активность (для индикатора онлайн)
+    last_activity: Optional[datetime] = Field(default=None, nullable=True, index=True)
 
 

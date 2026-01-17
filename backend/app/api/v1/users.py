@@ -438,4 +438,54 @@ def admin_create_user(
     return UserRead(**user_dict)
 
 
+@router.get("/online/", summary="Get online users statistics")
+def get_online_users_stats(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    Get statistics about online users.
+    A user is considered online if their last_activity was within the last 5 minutes.
+    """
+    from datetime import timedelta
+    from sqlmodel import func
+    
+    # Define "online" as activity within the last 5 minutes
+    online_threshold = datetime.utcnow() - timedelta(minutes=5)
+    
+    # Count online users
+    online_count = session.exec(
+        select(func.count(User.id)).where(
+            User.is_active == True,
+            User.last_activity != None,
+            User.last_activity >= online_threshold
+        )
+    ).one()
+    
+    # Count total active users
+    total_users = session.exec(
+        select(func.count(User.id)).where(User.is_active == True)
+    ).one()
+    
+    return {
+        "online_count": online_count,
+        "total_users": total_users,
+        "last_updated": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post("/activity/", status_code=status.HTTP_204_NO_CONTENT, summary="Update user activity")
+def update_user_activity(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """
+    Update the current user's last activity timestamp.
+    Called periodically by the frontend to track online status.
+    """
+    current_user.last_activity = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    return None
+
 

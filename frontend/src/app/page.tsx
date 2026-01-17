@@ -45,6 +45,9 @@ import { TicketTracker } from "@/components/support/TicketTracker";
 import { AdminPanel } from "@/components/admin/AdminPanel";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AvailabilitySlotsManager } from "@/components/availability/AvailabilitySlotsManager";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
+import { OnlineUsersIndicator } from "@/components/common/OnlineUsersIndicator";
+import { useTheme } from "@/context/ThemeContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   startOfWeek,
@@ -155,6 +158,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
   const { accessToken, userEmail, logout, refreshAccessToken } = useAuth();
+  const { theme } = useTheme();
   const isAuthenticated = Boolean(accessToken);
   const router = useRouter();
   
@@ -1636,16 +1640,28 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900 overflow-hidden">
+    <div className={`h-screen overflow-hidden transition-colors duration-300 ${
+      theme === "dark"
+        ? "bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-100"
+        : "bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900"
+    }`}>
       {/* Админские уведомления - toast в правом верхнем углу */}
       <AdminNotifications authFetch={authFetch} />
       <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-3 px-4 py-3">
         <header 
-          className="relative overflow-hidden rounded-xl border border-slate-200/50 backdrop-blur-sm px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex-shrink-0"
+          className={`relative overflow-hidden rounded-xl border backdrop-blur-sm px-3 py-2 flex-shrink-0 transition-colors duration-300 ${
+            theme === "dark"
+              ? "border-slate-700/50 shadow-[0_1px_3px_rgba(0,0,0,0.3)]"
+              : "border-slate-200/50 shadow-[0_1px_3px_rgba(0,0,0,0.05)]"
+          }`}
           style={{
-            background: userOrganization?.primary_color 
-              ? `linear-gradient(to right, ${userOrganization.primary_color}15, ${userOrganization.secondary_color || userOrganization.primary_color}08, ${userOrganization.primary_color}15)`
-              : "linear-gradient(to right, white, rgb(248 250 252 / 0.5), white)",
+            background: theme === "dark"
+              ? userOrganization?.primary_color 
+                ? `linear-gradient(to right, ${userOrganization.primary_color}20, ${userOrganization.secondary_color || userOrganization.primary_color}10, ${userOrganization.primary_color}20)`
+                : "linear-gradient(to right, rgb(30 41 59), rgb(15 23 42 / 0.8), rgb(30 41 59))"
+              : userOrganization?.primary_color 
+                ? `linear-gradient(to right, ${userOrganization.primary_color}15, ${userOrganization.secondary_color || userOrganization.primary_color}08, ${userOrganization.primary_color}15)`
+                : "linear-gradient(to right, white, rgb(248 250 252 / 0.5), white)",
           }}
         >
           {/* Декоративный градиент */}
@@ -1768,11 +1784,21 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Онлайн индикатор */}
+              <OnlineUsersIndicator authFetch={authFetch} />
+
+              {/* Переключатель темы */}
+              <ThemeToggle />
+
               {/* Кнопка выхода */}
               <button
                 type="button"
                 onClick={handleManualLogout}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/60 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:from-slate-200 hover:to-slate-100 hover:shadow-sm active:scale-95 whitespace-nowrap"
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm active:scale-95 whitespace-nowrap ${
+                  theme === "dark"
+                    ? "bg-slate-700 border border-slate-600 text-slate-200 hover:bg-slate-600"
+                    : "bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/60 text-slate-700 hover:from-slate-200 hover:to-slate-100"
+                }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
