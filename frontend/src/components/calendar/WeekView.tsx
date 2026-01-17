@@ -949,8 +949,8 @@ export function WeekView({
                         left: positionStyles.left,
                         width: positionStyles.width,
                         zIndex: hoveredEventId === event.id ? 100 : positionStyles.zIndex,
-                        // Тёмная тема: яркие градиенты
-                        ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && darkColor ? {
+                        // Тёмная тема: яркие градиенты (не для needsAction - у них белый фон)
+                        ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction && darkColor ? {
                           background: darkColor.bg,
                           borderColor: darkColor.border,
                           boxShadow: `0 4px 15px ${darkColor.border}30`,
