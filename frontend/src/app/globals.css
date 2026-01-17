@@ -453,6 +453,221 @@ body {
   border-color: #363c45 !important;
 }
 
+/* ===== SPECIFIC COMPONENT FIXES ===== */
+
+/* 1. Time blocks in header (Moscow time, Local time) */
+[data-theme="dark"] .from-blue-50,
+[data-theme="dark"] .to-indigo-50,
+[data-theme="dark"] .from-purple-50,
+[data-theme="dark"] .to-pink-50 {
+  --tw-gradient-from: #1e2329 !important;
+  --tw-gradient-to: #181a20 !important;
+}
+[data-theme="dark"] .border-blue-200\/60,
+[data-theme="dark"] .border-purple-200\/60 {
+  border-color: #2b3139 !important;
+}
+[data-theme="dark"] .text-blue-600,
+[data-theme="dark"] .text-blue-600\/70,
+[data-theme="dark"] .text-blue-700 {
+  color: #1e90ff !important;
+}
+[data-theme="dark"] .text-purple-600,
+[data-theme="dark"] .text-purple-600\/70,
+[data-theme="dark"] .text-purple-700 {
+  color: #9d4edd !important;
+}
+
+/* 2. Event modal - Resource panel & availability */
+[data-theme="dark"] .bg-gradient-to-r.from-blue-500,
+[data-theme="dark"] .bg-gradient-to-r.to-indigo-600 {
+  background: linear-gradient(to right, #1e90ff, #6366f1) !important;
+}
+[data-theme="dark"] .bg-slate-50.rounded-lg,
+[data-theme="dark"] div.bg-slate-50,
+[data-theme="dark"] div.bg-gray-50 {
+  background-color: #1e2329 !important;
+}
+
+/* 3. Upcoming events in sidebar */
+[data-theme="dark"] .rounded-xl.bg-slate-50,
+[data-theme="dark"] .rounded-lg.bg-slate-50,
+[data-theme="dark"] .rounded-lg.bg-white.border {
+  background-color: #181a20 !important;
+  border-color: #2b3139 !important;
+}
+[data-theme="dark"] div.flex.items-center.gap-2.rounded-xl,
+[data-theme="dark"] div.rounded-xl.border.bg-white {
+  background-color: #181a20 !important;
+}
+
+/* 4. Availability slots table header */
+[data-theme="dark"] thead,
+[data-theme="dark"] thead tr,
+[data-theme="dark"] thead th {
+  background-color: #1e2329 !important;
+  color: #eaecef !important;
+}
+[data-theme="dark"] tbody tr {
+  background-color: #181a20 !important;
+}
+[data-theme="dark"] tbody tr:nth-child(even) {
+  background-color: #1e2329 !important;
+}
+[data-theme="dark"] tbody tr:hover {
+  background-color: #2b3139 !important;
+}
+
+/* 5. OrgStructure - departments and subdepartments */
+[data-theme="dark"] div[class*="rounded"][class*="border"][class*="p-"],
+[data-theme="dark"] div.rounded-lg.border.p-3,
+[data-theme="dark"] div.rounded-lg.border.p-4,
+[data-theme="dark"] div.rounded-xl.border.p-3,
+[data-theme="dark"] div.rounded-xl.border.p-4,
+[data-theme="dark"] div.rounded-2xl.border.p-3,
+[data-theme="dark"] div.rounded-2xl.border.p-4 {
+  background-color: #181a20 !important;
+  border-color: #2b3139 !important;
+}
+[data-theme="dark"] div[class*="rounded"][class*="border"][class*="p-"]:hover {
+  background-color: #1e2329 !important;
+  border-color: #363c45 !important;
+}
+/* Department cards with gradient */
+[data-theme="dark"] div.bg-gradient-to-br {
+  background: linear-gradient(135deg, #181a20, #1e2329) !important;
+}
+/* Org tree nodes */
+[data-theme="dark"] .ml-4.pl-4.border-l-2,
+[data-theme="dark"] .ml-6.pl-4.border-l-2,
+[data-theme="dark"] .ml-8.pl-4.border-l-2 {
+  border-color: #363c45 !important;
+}
+
+/* 6. Ticket detail view */
+[data-theme="dark"] .flex-1.overflow-y-auto.p-4,
+[data-theme="dark"] .flex-1.overflow-y-auto.p-6,
+[data-theme="dark"] div.flex.flex-col.h-full.bg-white,
+[data-theme="dark"] div.flex.flex-1.flex-col.bg-white,
+[data-theme="dark"] div.h-full.bg-white,
+[data-theme="dark"] section.flex-1.bg-white {
+  background-color: #0b0e11 !important;
+}
+[data-theme="dark"] .space-y-4 > div.rounded-lg,
+[data-theme="dark"] .space-y-3 > div.rounded-lg {
+  background-color: #181a20 !important;
+  border-color: #2b3139 !important;
+}
+
+/* Ticket status badges */
+[data-theme="dark"] .inline-flex.items-center.rounded-full {
+  background-color: #1e2329 !important;
+}
+
+/* Ticket info sections */
+[data-theme="dark"] dl,
+[data-theme="dark"] .grid.grid-cols-2 {
+  color: #b7bdc6 !important;
+}
+[data-theme="dark"] dt {
+  color: #848e9c !important;
+}
+[data-theme="dark"] dd {
+  color: #eaecef !important;
+}
+
+/* Ticket comments section */
+[data-theme="dark"] .border-t.pt-4,
+[data-theme="dark"] .border-t.pt-6 {
+  border-color: #2b3139 !important;
+}
+
+/* Comment cards */
+[data-theme="dark"] div.rounded-lg.bg-slate-50.p-3,
+[data-theme="dark"] div.rounded-lg.bg-slate-50.p-4,
+[data-theme="dark"] div.rounded-lg.bg-gray-50.p-3,
+[data-theme="dark"] div.rounded-lg.bg-gray-50.p-4 {
+  background-color: #1e2329 !important;
+}
+
+/* Wider fix for any remaining white backgrounds */
+[data-theme="dark"] [class*="bg-white"],
+[data-theme="dark"] [class*="from-white"],
+[data-theme="dark"] [class*="to-white"] {
+  --tw-bg-opacity: 1;
+  background-color: #181a20 !important;
+}
+
+/* Fix gradient backgrounds more aggressively */
+[data-theme="dark"] [class*="bg-gradient"] {
+  background-image: none !important;
+  background-color: #181a20 !important;
+}
+[data-theme="dark"] [class*="bg-gradient-to-br"][class*="from-white"] {
+  background: linear-gradient(135deg, #181a20, #1e2329) !important;
+}
+[data-theme="dark"] [class*="bg-gradient-to-r"][class*="from-white"] {
+  background: linear-gradient(to right, #181a20, #1e2329) !important;
+}
+
+/* Keep colored gradients for buttons */
+[data-theme="dark"] button[class*="bg-gradient-to-r"][class*="from-lime"],
+[data-theme="dark"] button[class*="bg-gradient-to-r"][class*="from-green"],
+[data-theme="dark"] button[class*="bg-gradient-to-r"][class*="from-blue"],
+[data-theme="dark"] button[class*="bg-gradient-to-r"][class*="from-red"] {
+  background-image: revert !important;
+  background-color: revert !important;
+}
+
+/* Panel sections and cards */
+[data-theme="dark"] .p-4.bg-white,
+[data-theme="dark"] .p-6.bg-white,
+[data-theme="dark"] .p-3.bg-white,
+[data-theme="dark"] .px-4.py-3.bg-white,
+[data-theme="dark"] .px-6.py-4.bg-white {
+  background-color: #181a20 !important;
+}
+
+/* Resource panel in event modal */
+[data-theme="dark"] aside.w-80,
+[data-theme="dark"] aside.w-96,
+[data-theme="dark"] .w-80.border-l,
+[data-theme="dark"] .w-96.border-l {
+  background-color: #0b0e11 !important;
+  border-color: #2b3139 !important;
+}
+
+/* Participant list */
+[data-theme="dark"] ul.space-y-2 > li,
+[data-theme="dark"] ul.space-y-1 > li {
+  background-color: #181a20 !important;
+  border-color: #2b3139 !important;
+}
+[data-theme="dark"] ul.space-y-2 > li:hover,
+[data-theme="dark"] ul.space-y-1 > li:hover {
+  background-color: #1e2329 !important;
+}
+
+/* Fix dividers */
+[data-theme="dark"] hr,
+[data-theme="dark"] .divide-y > *,
+[data-theme="dark"] .divide-x > * {
+  border-color: #2b3139 !important;
+}
+
+/* Availability timeline */
+[data-theme="dark"] .h-8.rounded,
+[data-theme="dark"] .h-6.rounded,
+[data-theme="dark"] .h-4.rounded {
+  background-color: #1e2329 !important;
+}
+
+/* Main content areas */
+[data-theme="dark"] main,
+[data-theme="dark"] .flex-1.min-h-0 {
+  background-color: transparent !important;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes fadeIn {
   from { opacity: 0; }
