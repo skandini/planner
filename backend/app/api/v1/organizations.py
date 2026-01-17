@@ -112,6 +112,18 @@ def create_organization(
     
     organization = Organization(**payload.model_dump())
     session.add(organization)
+    session.flush()  # Get the ID
+    
+    # Auto-create root department for the organization
+    root_department = Department(
+        name=organization.name,
+        description=f"Корневой отдел организации {organization.name}",
+        organization_id=organization.id,
+        parent_id=None,
+        manager_id=None
+    )
+    session.add(root_department)
+    
     session.commit()
     session.refresh(organization)
     return OrganizationRead.model_validate(organization)
