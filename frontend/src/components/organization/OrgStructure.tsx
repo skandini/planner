@@ -5,6 +5,7 @@ import type { UserProfile } from "@/types/user.types";
 import { DEPARTMENTS_ENDPOINT, USERS_ENDPOINT } from "@/lib/constants";
 import { UserProfileCard } from "@/components/profile/UserProfileCard";
 import { UserTooltip } from "@/components/common/UserTooltip";
+import { useTheme } from "@/context/ThemeContext";
 
 /**
  * Вертикальная древовидная оргструктура с компактными карточками.
@@ -22,6 +23,8 @@ interface OrgStructureProps {
 }
 
 export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onClose, onUsersUpdate, onOrganizationsUpdate }: OrgStructureProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [departments, setDepartments] = useState<DepartmentWithChildren[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -753,43 +756,138 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
               </div>
             </div>
 
-            {d.children && d.children.length > 0 && (
-              <div className="mt-6 flex flex-col items-center relative">
-                {/* Вертикальная линия от родителя */}
-                <div className="w-0.5 h-10 bg-gradient-to-b from-slate-300 to-slate-400 relative">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400"></div>
-                </div>
-                
-                {/* Горизонтальная линия-соединитель */}
-                {d.children.length > 1 && (
-                  <div 
-                    className="absolute h-0.5 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"
-                    style={{
-                      top: '40px',
-                      left: '50%',
-                      right: '50%',
-                      width: `calc(${(d.children.length - 1) * 352}px)`,
+            {d.children && d.children.length > 0 && (() => {
+              // Цвета линий в зависимости от темы
+              const lineColor = isDark ? '#6b7280' : '#94a3b8';
+              const lineColorEnd = isDark ? '#4b5563' : '#64748b';
+              const dotColor = isDark ? '#fcd535' : '#64748b';
+              const glowColor = isDark ? 'rgba(252, 213, 53, 0.3)' : 'rgba(100, 116, 139, 0.3)';
+              
+              return (
+                <div className="mt-4 flex flex-col items-center relative">
+                  {/* SVG линии-коннекторы */}
+                  <svg 
+                    className="absolute pointer-events-none transition-colors duration-300" 
+                    style={{ 
+                      top: 0, 
+                      left: '50%', 
                       transform: 'translateX(-50%)',
+                      width: d.children.length > 1 ? `${(d.children.length - 1) * 360 + 40}px` : '40px',
+                      height: '60px',
+                      overflow: 'visible'
                     }}
-                  />
-                )}
-                
-                {/* Контейнер для дочерних отделов */}
-                <div className="relative flex flex-row gap-8 mt-0">
-                  {d.children.map((child, childIndex) => {
-                    return (
+                  >
+                    <defs>
+                      <linearGradient id={`tree-gradient-${d.id}-${isDark}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor={lineColor} stopOpacity="0.9" />
+                        <stop offset="100%" stopColor={lineColorEnd} stopOpacity="0.7" />
+                      </linearGradient>
+                      <filter id={`tree-glow-${d.id}-${isDark}`} x="-100%" y="-100%" width="300%" height="300%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor={glowColor} />
+                      </filter>
+                    </defs>
+                    
+                    {/* Вертикальная линия вниз от родителя */}
+                    <line 
+                      x1="50%" 
+                      y1="0" 
+                      x2="50%" 
+                      y2={d.children.length > 1 ? "30" : "60"}
+                      stroke={`url(#tree-gradient-${d.id}-${isDark})`}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      filter={`url(#tree-glow-${d.id}-${isDark})`}
+                    />
+                    
+                    {/* Точка соединения сверху */}
+                    <circle 
+                      cx="50%" 
+                      cy="0" 
+                      r="5" 
+                      fill={dotColor}
+                      filter={`url(#tree-glow-${d.id}-${isDark})`}
+                      style={{ 
+                        transition: 'fill 0.3s ease',
+                        filter: isDark ? `drop-shadow(0 0 4px ${glowColor})` : undefined
+                      }}
+                    />
+                    
+                    {/* Горизонтальная линия если несколько детей */}
+                    {d.children.length > 1 && (
+                      <>
+                        <line 
+                          x1="20" 
+                          y1="30" 
+                          x2={`calc(100% - 20px)`}
+                          y2="30"
+                          stroke={lineColor}
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          filter={`url(#tree-glow-${d.id}-${isDark})`}
+                        />
+                        
+                        {/* Вертикальные линии к каждому ребенку */}
+                        {d.children.map((_, idx) => {
+                          const xPos = (idx * 360) + 20;
+                          return (
+                            <g key={idx}>
+                              <line 
+                                x1={xPos} 
+                                y1="30" 
+                                x2={xPos} 
+                                y2="60"
+                                stroke={`url(#tree-gradient-${d.id}-${isDark})`}
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                filter={`url(#tree-glow-${d.id}-${isDark})`}
+                              />
+                              <circle 
+                                cx={xPos} 
+                                cy="60" 
+                                r="4" 
+                                fill={dotColor}
+                                filter={`url(#tree-glow-${d.id}-${isDark})`}
+                                style={{ 
+                                  transition: 'fill 0.3s ease',
+                                  filter: isDark ? `drop-shadow(0 0 3px ${glowColor})` : undefined
+                                }}
+                              />
+                            </g>
+                          );
+                        })}
+                      </>
+                    )}
+                    
+                    {/* Точка внизу если один ребенок */}
+                    {d.children.length === 1 && (
+                      <circle 
+                        cx="50%" 
+                        cy="60" 
+                        r="4" 
+                        fill={dotColor}
+                        filter={`url(#tree-glow-${d.id}-${isDark})`}
+                        style={{ 
+                          transition: 'fill 0.3s ease',
+                          filter: isDark ? `drop-shadow(0 0 3px ${glowColor})` : undefined
+                        }}
+                      />
+                    )}
+                  </svg>
+                  
+                  {/* Контейнер для дочерних отделов */}
+                  <div 
+                    className="relative flex flex-row gap-8"
+                    style={{ marginTop: '60px' }}
+                  >
+                    {d.children.map((child) => (
                       <div key={child.id} className="relative flex flex-col items-center">
-                        {/* Вертикальная линия к ребенку */}
-                        {d.children.length > 1 && (
-                          <div className="w-0.5 h-10 bg-gradient-to-b from-slate-400 to-slate-300 mb-2"></div>
-                        )}
                         {renderTree([child], depth + 1, org || parentOrg)}
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </li>
         );
       })}

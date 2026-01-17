@@ -450,6 +450,21 @@ body {
   border-color: #363c45 !important;
 }
 
+/* SVG tree connectors for dark theme */
+[data-theme="dark"] svg line[stroke*="slate"],
+[data-theme="dark"] svg line[stroke*="gradient"] {
+  stroke: #4b5563 !important;
+}
+[data-theme="dark"] svg circle[fill="#64748b"] {
+  fill: #6b7280 !important;
+}
+[data-theme="dark"] svg stop[stop-color="#94a3b8"] {
+  stop-color: #6b7280 !important;
+}
+[data-theme="dark"] svg stop[stop-color="#64748b"] {
+  stop-color: #4b5563 !important;
+}
+
 /* User cards */
 [data-theme="dark"] .user-card,
 [data-theme="dark"] .employee-card {
