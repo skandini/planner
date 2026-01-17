@@ -594,9 +594,9 @@ export function DayView({
                       boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
                     } : {}),
                     ...(isDark && needsAction ? {
-                      background: "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%)",
+                      background: "#ffffff",
                       borderColor: "#fcd535",
-                      boxShadow: "0 0 15px rgba(252, 213, 53, 0.5), 0 0 30px rgba(252, 213, 53, 0.3)",
+                      boxShadow: "0 0 20px rgba(252, 213, 53, 0.6), 0 0 40px rgba(252, 213, 53, 0.3)",
                     } : {}),
                   }}
                 >
