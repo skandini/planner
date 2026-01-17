@@ -156,7 +156,7 @@ export function OrganizationManagement({ authFetch }: OrganizationManagementProp
         return;
       }
 
-      const res = await authFetch(`${ORGANIZATIONS_ENDPOINT}${editingOrg.id}`, {
+      const res = await authFetch(`${ORGANIZATIONS_ENDPOINT}/${editingOrg.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -185,7 +185,7 @@ export function OrganizationManagement({ authFetch }: OrganizationManagementProp
     setSavingId(org.id);
     setError(null);
     try {
-      const res = await authFetch(`${ORGANIZATIONS_ENDPOINT}${org.id}`, {
+      const res = await authFetch(`${ORGANIZATIONS_ENDPOINT}/${org.id}`, {
         method: "DELETE",
       });
 

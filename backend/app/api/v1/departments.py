@@ -143,15 +143,44 @@ def create_department(
             )
     
     # Validate organization exists if provided
-    if payload.organization_id:
-        org = session.get(Organization, payload.organization_id)
+    organization_id = payload.organization_id
+    if organization_id:
+        org = session.get(Organization, organization_id)
         if not org:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Organization not found",
             )
     
-    department = Department(**payload.model_dump())
+    # Auto-create organization for root department without organization
+    if not payload.parent_id and not organization_id:
+        # Create a slug from department name
+        import re
+        slug = re.sub(r'[^a-z0-9-]', '', payload.name.lower().replace(' ', '-'))
+        if not slug:
+            slug = "organization"
+        
+        # Check if organization with this slug exists
+        existing_org = session.exec(
+            select(Organization).where(Organization.slug == slug)
+        ).first()
+        
+        if existing_org:
+            organization_id = existing_org.id
+        else:
+            # Create new organization
+            new_org = Organization(
+                name=payload.name,
+                slug=slug,
+                timezone="Europe/Moscow"
+            )
+            session.add(new_org)
+            session.flush()  # Get the ID without committing
+            organization_id = new_org.id
+    
+    dept_data = payload.model_dump()
+    dept_data['organization_id'] = organization_id
+    department = Department(**dept_data)
     session.add(department)
     session.commit()
     session.refresh(department)

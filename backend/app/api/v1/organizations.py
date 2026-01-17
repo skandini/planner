@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import List
 from uuid import UUID
 
@@ -8,10 +9,51 @@ from sqlmodel import select
 
 from app.api.deps import get_current_user, is_admin_or_it
 from app.db import SessionDep
-from app.models import Organization, User
+from app.models import Organization, Department, User
 from app.schemas.organization import OrganizationCreate, OrganizationRead, OrganizationUpdate
 
 router = APIRouter()
+
+
+def sync_organizations_from_departments(session: SessionDep) -> None:
+    """Auto-create organizations for root departments without organization."""
+    # Find root departments without organization
+    root_depts_without_org = session.exec(
+        select(Department).where(
+            Department.parent_id == None,
+            Department.organization_id == None
+        )
+    ).all()
+    
+    for dept in root_depts_without_org:
+        # Create slug from department name
+        slug = re.sub(r'[^a-z0-9-]', '', dept.name.lower().replace(' ', '-'))
+        if not slug:
+            slug = f"org-{dept.id}"[:50]
+        
+        # Check if organization with this slug exists
+        existing_org = session.exec(
+            select(Organization).where(Organization.slug == slug)
+        ).first()
+        
+        if existing_org:
+            # Link department to existing organization
+            dept.organization_id = existing_org.id
+        else:
+            # Create new organization
+            new_org = Organization(
+                name=dept.name,
+                slug=slug,
+                timezone="Europe/Moscow"
+            )
+            session.add(new_org)
+            session.flush()
+            dept.organization_id = new_org.id
+        
+        session.add(dept)
+    
+    if root_depts_without_org:
+        session.commit()
 
 
 @router.get("/", response_model=List[OrganizationRead], summary="List organizations")
@@ -19,7 +61,10 @@ def list_organizations(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> List[OrganizationRead]:
-    """List all organizations."""
+    """List all organizations. Auto-syncs with root departments."""
+    # Auto-sync organizations from root departments
+    sync_organizations_from_departments(session)
+    
     statement = select(Organization).order_by(Organization.name.asc())
     return session.exec(statement).all()
 
