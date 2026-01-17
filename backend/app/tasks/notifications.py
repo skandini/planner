@@ -190,12 +190,28 @@ def notify_event_updated_task(
             
             updater_text = f" {updater_name}" if updater_name else ""
             
+            # Форматируем дату и время события для уведомления
+            from datetime import datetime
+            import pytz
+            
+            # Преобразуем в московское время для отображения
+            moscow_tz = pytz.timezone('Europe/Moscow')
+            event_start = event.starts_at
+            if event_start.tzinfo is None:
+                event_start = pytz.utc.localize(event_start)
+            event_start_msk = event_start.astimezone(moscow_tz)
+            
+            # Форматируем дату и время
+            date_str = event_start_msk.strftime('%d.%m.%Y')
+            time_str = event_start_msk.strftime('%H:%M')
+            event_time_info = f" Время проведения: {date_str} в {time_str}"
+            
             notification = Notification(
                 user_id=UUID(user_id),
                 event_id=UUID(event_id),
                 type="event_updated",
                 title="Встреча изменена",
-                message=f"Встреча «{event.title}» была изменена{updater_text}",
+                message=f"Встреча «{event.title}» была изменена{updater_text}.{event_time_info}",
             )
             session.add(notification)
             session.commit()
