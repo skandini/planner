@@ -765,6 +765,7 @@ export function WeekView({
                   const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
                   const minutesFromStart = (moscowTime.hour * 60) + moscowTime.minute;
                   const topPx = (minutesFromStart / MINUTES_IN_DAY) * DAY_HEIGHT;
+                  const timeStr = `${String(moscowTime.hour).padStart(2, '0')}:${String(moscowTime.minute).padStart(2, '0')}`;
                   
                   // Показываем линию только если она в пределах видимой области (0-23:59)
                   if (topPx >= 0 && topPx <= DAY_HEIGHT) {
@@ -775,8 +776,17 @@ export function WeekView({
                       >
                         {/* Красная линия с тенью для лучшей видимости */}
                         <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
-                        {/* Красная точка слева с анимацией пульсации */}
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse" />
+                        {/* Красная точка слева с временем */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <div className="h-3 w-3 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse" />
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm ${
+                            isDark 
+                              ? "bg-red-500/90 text-white" 
+                              : "bg-red-500 text-white"
+                          }`}>
+                            {timeStr}
+                          </span>
+                        </div>
                       </div>
                     );
                   }

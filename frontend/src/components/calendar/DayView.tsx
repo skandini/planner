@@ -347,15 +347,18 @@ export function DayView({
     return formatTimeInTimeZone(date, MOSCOW_TIMEZONE);
   }, []);
   
-  const getCurrentTimePosition = useMemo(() => {
+  const currentTimeInfo = useMemo(() => {
     if (!isToday) return null;
     
     const now = getCurrentMoscowDate();
     const moscowTime = getTimeInTimeZone(now, MOSCOW_TIMEZONE);
     const position = (moscowTime.hour * HOUR_HEIGHT) + (moscowTime.minute / 60 * HOUR_HEIGHT);
+    const timeStr = `${String(moscowTime.hour).padStart(2, '0')}:${String(moscowTime.minute).padStart(2, '0')}`;
     
-    return position;
+    return { position, timeStr };
   }, [isToday, currentTime, HOUR_HEIGHT]);
+  
+  const getCurrentTimePosition = currentTimeInfo?.position ?? null;
   
   const dayName = useMemo(() => {
     return new Intl.DateTimeFormat('ru-RU', {
@@ -440,16 +443,23 @@ export function DayView({
             </div>
             
             {/* Current time indicator */}
-            {getCurrentTimePosition !== null && (
+            {currentTimeInfo && (
               <div
                 className="absolute left-0 right-0 z-20 pointer-events-none"
-                style={{ top: `${getCurrentTimePosition}px` }}
+                style={{ top: `${currentTimeInfo.position}px` }}
               >
                 <div className="flex items-center">
-                  <div className="w-20 flex-shrink-0">
-                    <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow-md" />
+                  <div className="w-20 flex-shrink-0 flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow-md animate-pulse" />
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm ${
+                      isDark 
+                        ? "bg-red-500/90 text-white" 
+                        : "bg-red-500 text-white"
+                    }`}>
+                      {currentTimeInfo.timeStr}
+                    </span>
                   </div>
-                  <div className="flex-1 h-0.5 bg-red-500" />
+                  <div className="flex-1 h-0.5 bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
                 </div>
               </div>
             )}
