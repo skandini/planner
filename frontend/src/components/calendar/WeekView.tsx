@@ -796,7 +796,7 @@ export function WeekView({
                   const layout = eventLayoutMap?.get(event.id);
                   const positionStyles = layout 
                     ? getEventPositionStyles(layout, { 
-                        cascadeOffset: 10,      // Смещение каскада
+                        cascadeOffset: 16,      // Увеличенное смещение каскада для лучшей видимости
                         minWidth: 80,           // Минимальная ширина
                         useClassicCascade: true // Классическое наслоение
                       })
