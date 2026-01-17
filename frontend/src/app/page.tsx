@@ -1978,9 +1978,8 @@ export default function Home() {
 
                 const handleDayClick = (date: Date) => {
                   setSelectedDate(date);
-                  if (viewMode !== 'week' && viewMode !== 'month') {
-                    setViewMode('week');
-                  }
+                  // Не меняем viewMode - остаёмся в текущем режиме
+                  // Если день, то день, если неделя - то неделя
                 };
 
                 return (

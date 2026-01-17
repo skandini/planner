@@ -10,6 +10,7 @@ import type { AuthenticatedFetch } from "@/lib/api/baseApi";
 import { EnhancedTimeline } from "@/components/availability/EnhancedTimeline";
 import { inputToDate, getTimeInTimeZone, MOSCOW_TIMEZONE, addDaysInMoscow } from "@/lib/utils/dateUtils";
 import { CALENDAR_ENDPOINT } from "@/lib/constants";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ResourcePanelProps {
   rooms: Room[];
@@ -72,6 +73,8 @@ export function ResourcePanel({
   editingEventId, // ID редактируемого события
   onNavigateDays, // Функция навигации по дням
 }: ResourcePanelProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [participantAvailability, setParticipantAvailability] = useState<
     Record<string, EventRecord[]>
   >({});
@@ -438,16 +441,22 @@ export function ResourcePanel({
   return (
     <div className={variant === "modal" ? "flex flex-col gap-3" : "flex flex-col gap-3"}>
       {variant === "modal" && (
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5">
-          <div className="text-xs font-semibold text-slate-800">
+        <div className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 ${
+          isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-200 bg-slate-50/70"
+        }`}>
+          <div className={`text-xs font-semibold ${isDark ? "text-[#eaecef]" : "text-slate-800"}`}>
             Ресурсы участников
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 border border-slate-200">
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold border ${
+              isDark ? "bg-[#2b3139] text-[#848e9c] border-[#2b3139]" : "bg-white text-slate-600 border-slate-200"
+            }`}>
               {participantsCount} уч.
             </span>
             {hasAnyConflicts && (
-              <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200">
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold border ${
+                isDark ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-800 border-amber-200"
+              }`}>
                 ⚠
               </span>
             )}
@@ -462,7 +471,11 @@ export function ResourcePanel({
           <button
             type="button"
             onClick={() => onNavigateDays(-1)}
-            className="rounded border border-slate-200 bg-white px-3 py-2 text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+            className={`rounded border px-3 py-2 transition ${
+              isDark 
+                ? "border-[#2b3139] bg-[#1e2329] text-[#eaecef] hover:bg-[#2b3139]" 
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+            }`}
             title="Предыдущий день"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -470,7 +483,9 @@ export function ResourcePanel({
             </svg>
           </button>
           
-          <div className="px-5 py-1.5 text-sm font-semibold text-slate-900 min-w-[180px] text-center bg-white rounded border border-slate-200">
+          <div className={`px-5 py-1.5 text-sm font-semibold min-w-[180px] text-center rounded border ${
+            isDark ? "border-[#2b3139] bg-[#1e2329] text-[#eaecef]" : "border-slate-200 bg-white text-slate-900"
+          }`}>
             {new Intl.DateTimeFormat('ru-RU', { 
               weekday: 'short', 
               day: 'numeric', 
@@ -482,7 +497,11 @@ export function ResourcePanel({
           <button
             type="button"
             onClick={() => onNavigateDays(1)}
-            className="rounded border border-slate-200 bg-white px-3 py-2 text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+            className={`rounded border px-3 py-2 transition ${
+              isDark 
+                ? "border-[#2b3139] bg-[#1e2329] text-[#eaecef] hover:bg-[#2b3139]" 
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+            }`}
             title="Следующий день"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

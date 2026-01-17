@@ -5,6 +5,7 @@ import type { TimelineRowData } from "@/types/common.types";
 import type { EventRecord } from "@/types/event.types";
 import { inputToDate, parseUTC, getTimeInTimeZone, formatTimeInTimeZone, MOSCOW_TIMEZONE } from "@/lib/utils/dateUtils";
 import { WORKDAY_START_HOUR, WORKDAY_END_HOUR, SLOT_DURATION_MINUTES, MINUTES_IN_DAY } from "@/lib/constants";
+import { useTheme } from "@/context/ThemeContext";
 
 interface EnhancedTimelineProps {
   rows: TimelineRowData[];
@@ -49,6 +50,8 @@ export function EnhancedTimeline({
   currentUserEmail, // Email текущего пользователя
   editingEventId, // ID редактируемого события
 }: EnhancedTimelineProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [currentSelectionSlot, setCurrentSelectionSlot] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -202,12 +205,14 @@ export function EnhancedTimeline({
 
   if (resourceRows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-        <svg className="h-12 w-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className={`flex flex-col items-center justify-center rounded-lg border p-8 text-center ${
+        isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-200 bg-slate-50"
+      }`}>
+        <svg className={`h-12 w-12 mb-3 ${isDark ? "text-[#848e9c]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <p className="text-sm font-medium text-slate-700">Добавьте участников или переговорку</p>
-        <p className="mt-1 text-xs text-slate-500">чтобы увидеть таймлайн занятости</p>
+        <p className={`text-sm font-medium ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Добавьте участников или переговорку</p>
+        <p className={`mt-1 text-xs ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>чтобы увидеть таймлайн занятости</p>
       </div>
     );
   }
@@ -460,36 +465,40 @@ export function EnhancedTimeline({
   return (
     <div className="space-y-3">
       {/* Легенда - легкий воздушный дизайн */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5">
+      <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border px-3 py-1.5 ${
+        isDark ? "border-[#2b3139] bg-[#181a20]" : "border-slate-200 bg-white"
+      }`}>
         <div className="flex items-center gap-2">
-          <div className="h-2 w-8 rounded border border-rose-200 bg-rose-100" />
-          <span className="text-[0.7rem] font-medium text-slate-600">Занято</span>
+          <div className={`h-2 w-8 rounded border ${isDark ? "border-rose-500/30 bg-rose-500/20" : "border-rose-200 bg-rose-100"}`} />
+          <span className={`text-[0.7rem] font-medium ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>Занято</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-2 w-8 rounded border border-emerald-200 bg-emerald-50" />
-          <span className="text-[0.7rem] font-medium text-slate-600">Свободно</span>
+          <div className={`h-2 w-8 rounded border ${isDark ? "border-emerald-500/30 bg-emerald-500/20" : "border-emerald-200 bg-emerald-50"}`} />
+          <span className={`text-[0.7rem] font-medium ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>Свободно</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-2 w-8 rounded border border-blue-300 bg-blue-100" />
-          <span className="text-[0.7rem] font-medium text-slate-600">Выбрано</span>
+          <div className={`h-2 w-8 rounded border ${isDark ? "border-blue-500/50 bg-blue-500/30" : "border-blue-300 bg-blue-100"}`} />
+          <span className={`text-[0.7rem] font-medium ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>Выбрано</span>
         </div>
         {unavailableParticipants.size > 0 && (
-          <div className="flex items-center gap-2 ml-2 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200">
-            <span className="text-orange-600 font-bold">⚠</span>
-            <span className="text-[0.7rem] font-semibold text-orange-900">Недоступен в выбранное время</span>
+          <div className={`flex items-center gap-2 ml-2 px-2 py-0.5 rounded-md border ${
+            isDark ? "bg-orange-500/10 border-orange-500/30" : "bg-orange-50 border-orange-200"
+          }`}>
+            <span className={isDark ? "text-orange-400" : "text-orange-600"}>⚠</span>
+            <span className={`text-[0.7rem] font-semibold ${isDark ? "text-orange-400" : "text-orange-900"}`}>Недоступен в выбранное время</span>
           </div>
         )}
       </div>
 
       {/* Легкий воздушный таймлайн */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white" ref={timelineRef} style={{ maxHeight: "400px" }}>
+      <div className={`overflow-x-auto rounded-lg border ${isDark ? "border-[#2b3139] bg-[#181a20]" : "border-slate-200 bg-white"}`} ref={timelineRef} style={{ maxHeight: "400px" }}>
         <div className="min-w-full space-y-1.5 p-2">
           {/* Заголовок времени */}
           <div
-            className="grid items-center rounded border-b border-slate-200 bg-slate-50 p-1.5"
+            className={`grid items-center rounded border-b p-1.5 ${isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-200 bg-slate-50"}`}
             style={{ gridTemplateColumns: templateColumns }}
           >
-            <div className="px-2 py-1.5 text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider">Ресурс</div>
+            <div className={`px-2 py-1.5 text-[0.7rem] font-semibold uppercase tracking-wider ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>Ресурс</div>
             {timeSlots.map((slot) => {
               // Создаем дату для слота в московском времени для правильного отображения времени
               const slotDate = buildSlotTimes(slot.index).slotStart;
@@ -498,7 +507,7 @@ export function EnhancedTimeline({
               
               // Показываем метки времени каждые 30 минут для читаемости при 10-минутных слотах
               return slot.minute === 0 || slot.minute === 30 ? (
-                <div key={slot.index} className="text-center text-[0.65rem] font-semibold text-slate-600 py-2">
+                <div key={slot.index} className={`text-center text-[0.65rem] font-semibold py-2 ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
                   {timeLabel}
                 </div>
               ) : (
@@ -518,20 +527,26 @@ export function EnhancedTimeline({
                 key={row.id}
                 className={`grid items-center rounded border transition-all ${
                   isUnavailable
-                    ? "border-orange-300 bg-orange-50/70 ring-1 ring-orange-200"
+                    ? isDark 
+                      ? "border-orange-500/30 bg-orange-500/10 ring-1 ring-orange-500/20" 
+                      : "border-orange-300 bg-orange-50/70 ring-1 ring-orange-200"
                     : hasConflict
-                    ? "border-amber-200 bg-amber-50/50"
-                    : "border-slate-200 bg-white hover:bg-slate-50/50"
+                    ? isDark
+                      ? "border-amber-500/30 bg-amber-500/10"
+                      : "border-amber-200 bg-amber-50/50"
+                    : isDark
+                      ? "border-[#2b3139] bg-[#1e2329] hover:bg-[#2b3139]"
+                      : "border-slate-200 bg-white hover:bg-slate-50/50"
                 }`}
                 style={{ gridTemplateColumns: templateColumns }}
               >
                 {/* Название ресурса */}
-                <div className="flex items-center gap-2 rounded px-2 py-1.5 bg-white">
+                <div className={`flex items-center gap-2 rounded px-2 py-1.5 ${isDark ? "bg-[#1e2329]" : "bg-white"}`}>
                   {row.avatarUrl ? (
                     <img
                       src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
                       alt={row.label}
-                      className="h-6 w-6 rounded-full object-cover border border-slate-200 flex-shrink-0"
+                      className={`h-6 w-6 rounded-full object-cover border flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-200"}`}
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                         const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
@@ -552,13 +567,21 @@ export function EnhancedTimeline({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-[0.7rem] font-semibold truncate ${
-                      isUnavailable ? "text-orange-900" : hasConflict ? "text-amber-900" : "text-slate-900"
+                      isUnavailable 
+                        ? isDark ? "text-orange-400" : "text-orange-900" 
+                        : hasConflict 
+                        ? isDark ? "text-amber-400" : "text-amber-900" 
+                        : isDark ? "text-[#eaecef]" : "text-slate-900"
                     }`}>
                       {row.label}
                     </p>
                     {row.meta && (
                       <p className={`text-[0.6rem] truncate mt-0.5 ${
-                        isUnavailable ? "text-orange-700" : hasConflict ? "text-amber-700" : "text-slate-500"
+                        isUnavailable 
+                          ? isDark ? "text-orange-400/80" : "text-orange-700" 
+                          : hasConflict 
+                          ? isDark ? "text-amber-400/80" : "text-amber-700" 
+                          : isDark ? "text-[#848e9c]" : "text-slate-500"
                       }`}>
                         {row.meta}
                       </p>
@@ -672,7 +695,11 @@ export function EnhancedTimeline({
       </div>
 
       {errorMessage && (
-        <div className="rounded-lg border border-red-200 bg-gradient-to-r from-red-50 to-red-100 p-3 text-xs text-red-700 shadow-sm">
+        <div className={`rounded-lg border p-3 text-xs shadow-sm ${
+          isDark 
+            ? "border-red-500/30 bg-red-500/10 text-red-400" 
+            : "border-red-200 bg-gradient-to-r from-red-50 to-red-100 text-red-700"
+        }`}>
           {errorMessage}
         </div>
       )}
