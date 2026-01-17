@@ -26,10 +26,10 @@ export function getPastelColor(hexColor: string): string {
 }
 
 /**
- * Создает вариацию цвета для каскадных событий
+ * Создает пастельную вариацию цвета для каскадных событий
  * @param hexColor - базовый цвет в формате #RRGGBB
  * @param columnIndex - номер колонки (0, 1, 2, ...)
- * @returns модифицированный цвет
+ * @returns пастельный модифицированный цвет
  */
 export function getCascadeColorVariation(hexColor: string, columnIndex: number): string {
   // Убираем # если есть
@@ -40,15 +40,20 @@ export function getCascadeColorVariation(hexColor: string, columnIndex: number):
   let g = parseInt(hex.substring(2, 4), 16);
   let b = parseInt(hex.substring(4, 6), 16);
   
-  // Для каждой последующей колонки немного затемняем цвет
-  // Это помогает визуально отличать события
-  const darkenFactor = 1 - (columnIndex * 0.08); // Уменьшаем яркость на 8% для каждой колонки
+  // Сначала создаем пастельный оттенок (смешиваем с белым)
+  const pastelR = Math.round(r * 0.3 + 255 * 0.7);
+  const pastelG = Math.round(g * 0.3 + 255 * 0.7);
+  const pastelB = Math.round(b * 0.3 + 255 * 0.7);
   
-  r = Math.max(0, Math.min(255, Math.round(r * darkenFactor)));
-  g = Math.max(0, Math.min(255, Math.round(g * darkenFactor)));
-  b = Math.max(0, Math.min(255, Math.round(b * darkenFactor)));
+  // Затем применяем очень легкое затемнение для различия
+  // Только 3% для каждой колонки - очень мягкая вариация
+  const darkenFactor = 1 - (columnIndex * 0.03);
   
-  return `rgb(${r}, ${g}, ${b})`;
+  const finalR = Math.max(0, Math.min(255, Math.round(pastelR * darkenFactor)));
+  const finalG = Math.max(0, Math.min(255, Math.round(pastelG * darkenFactor)));
+  const finalB = Math.max(0, Math.min(255, Math.round(pastelB * darkenFactor)));
+  
+  return `rgb(${finalR}, ${finalG}, ${finalB})`;
 }
 
 export interface EventLayoutInfo {
