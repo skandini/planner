@@ -1040,11 +1040,18 @@ export default function Home() {
       return;
     }
 
-    if (viewMode === "week") {
+    if (viewMode === "day") {
+      // В дневном режиме переключаем по 1 дню
+      setSelectedDate((prev) =>
+        addDays(prev, direction === "prev" ? -1 : 1),
+      );
+    } else if (viewMode === "week") {
+      // В недельном режиме переключаем по 7 дней
       setSelectedDate((prev) =>
         addDays(prev, direction === "prev" ? -7 : 7),
       );
     } else {
+      // В месячном режиме переключаем по месяцам
       setSelectedDate((prev) => addMonths(prev, direction === "prev" ? -1 : 1));
     }
   };

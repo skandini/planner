@@ -5,6 +5,22 @@ import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
 import { formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
+import { useTheme } from "@/context/ThemeContext";
+
+// Яркие градиенты для событий в тёмной теме (вдохновлено Bybit)
+const DARK_EVENT_COLORS = [
+  { bg: "linear-gradient(135deg, rgba(14, 203, 129, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)", border: "#0ecb81", text: "#34d399" },
+  { bg: "linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%)", border: "#818cf8", text: "#a5b4fc" },
+  { bg: "linear-gradient(135deg, rgba(252, 213, 53, 0.2) 0%, rgba(245, 158, 11, 0.12) 100%)", border: "#fcd535", text: "#fde047" },
+  { bg: "linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(244, 114, 182, 0.15) 100%)", border: "#ec4899", text: "#f9a8d4" },
+  { bg: "linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%)", border: "#06b6d4", text: "#67e8f9" },
+  { bg: "linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(251, 146, 60, 0.15) 100%)", border: "#f97316", text: "#fdba74" },
+];
+
+function getDarkEventColor(eventId: string, index: number) {
+  const hash = eventId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return DARK_EVENT_COLORS[(hash + index) % DARK_EVENT_COLORS.length];
+}
 
 interface DayViewProps {
   day: Date;
@@ -37,6 +53,8 @@ export function DayView({
   apiBaseUrl = "http://localhost:8000",
   getUserOrganizationAbbreviation,
 }: DayViewProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const HOUR_HEIGHT = 60;
   const DAY_HEIGHT = 24 * HOUR_HEIGHT;
@@ -387,13 +405,13 @@ export function DayView({
       )}
       
       <div className="flex flex-col h-full">
-        <div className="flex-shrink-0 px-4 py-3 border-b border-slate-200 bg-white">
-          <h2 className="text-lg font-semibold text-slate-900 capitalize">{dayName}</h2>
+        <div className={`flex-shrink-0 px-4 py-3 border-b ${isDark ? "border-[#2b3139] bg-[#181a20]" : "border-slate-200 bg-white"}`}>
+          <h2 className={`text-lg font-semibold capitalize ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>{dayName}</h2>
         </div>
         
         <div 
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto relative"
+          className={`flex-1 overflow-y-auto relative ${isDark ? "bg-[#0b0e11]" : ""}`}
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
@@ -403,15 +421,17 @@ export function DayView({
               {hours.map((hour) => (
                 <div
                   key={hour}
-                  className="border-t border-slate-100"
+                  className={`border-t ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}
                   style={{ height: `${HOUR_HEIGHT}px` }}
                 >
                   <div className="flex h-full">
-                    <div className="w-20 flex-shrink-0 px-2 py-1 text-xs text-slate-500">
+                    <div className={`w-20 flex-shrink-0 px-2 py-1 text-xs ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
                       {hour.toString().padStart(2, '0')}:00
                     </div>
                     <div 
-                      className="flex-1 border-l border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
+                      className={`flex-1 border-l cursor-pointer transition-colors ${
+                        isDark ? "border-[#2b3139] hover:bg-[#1e2329]" : "border-slate-100 hover:bg-slate-50"
+                      }`}
                       onClick={() => handleTimeSlotClick(hour, 0)}
                     />
                   </div>
@@ -435,7 +455,7 @@ export function DayView({
             )}
             
             {/* Events */}
-            {dayEvents.map((event) => {
+            {dayEvents.map((event, index) => {
               const isUnavailable = event.status === "unavailable";
               const isAvailable = event.status === "available";
               const isBookedSlot = event.status === "booked_slot";
@@ -455,6 +475,9 @@ export function DayView({
                 const diff = eventStart.getTime() - now.getTime();
                 return diff > 0 && diff <= 15 * 60 * 1000;
               })();
+              
+              // Получаем цвет для тёмной темы
+              const darkColor = isDark ? getDarkEventColor(event.id, index) : null;
               
               return (
                 <div
@@ -496,54 +519,96 @@ export function DayView({
                     }
                   }}
                   onDragEnd={handleDragEnd}
-                  className={`absolute left-20 right-4 rounded-lg border p-1.5 text-xs shadow-md transition ${
+                  className={`absolute left-20 right-4 rounded-lg border p-1.5 text-xs shadow-md transition-all duration-200 ${
                     isUnavailable
-                      ? "cursor-default border-slate-300 bg-slate-100 z-5"
+                      ? isDark
+                        ? "cursor-default border-slate-600 z-5"
+                        : "cursor-default border-slate-300 bg-slate-100 z-5"
                       : isAvailable
-                        ? "cursor-default border-green-300 bg-green-50 z-15"
+                        ? isDark
+                          ? "cursor-default border-emerald-500/50 z-15"
+                          : "cursor-default border-green-300 bg-green-50 z-15"
                         : isBookedSlot
-                          ? "cursor-default border-orange-400 bg-orange-100 z-10"
+                          ? isDark
+                            ? "cursor-default border-orange-500/50 z-10"
+                            : "cursor-default border-orange-400 bg-orange-100 z-10"
                           : isStartingSoon 
-                          ? "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg" 
-                          : needsAction
-                            ? "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
-                            : "border-slate-200 cursor-pointer hover:shadow-lg"
+                            ? isDark
+                              ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                              : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
+                            : needsAction
+                              ? isDark
+                                ? "border-2 border-slate-500 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                                : "border-2 border-slate-300 bg-white cursor-pointer hover:shadow-lg"
+                              : isDark
+                                ? "border-l-[3px] cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                                : "border-slate-200 cursor-pointer hover:shadow-lg"
                   }`}
                   style={{
                     top: `${topPx}px`,
                     height: `${heightPx}px`,
-                    background: isUnavailable
-                      ? "rgba(148, 163, 184, 0.3)"
-                      : isAvailable
-                        ? "rgba(34, 197, 94, 0.2)"
-                        : isBookedSlot
-                          ? "rgba(249, 115, 22, 0.2)"
-                          : isStartingSoon 
-                            ? event.department_color 
-                              ? `${event.department_color}40`
-                              : `${accent}40`
-                            : needsAction
-                              ? "white"
-                              : event.department_color
-                                ? `${event.department_color}20`
-                                : `${accent}20`,
-                    borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
-                      ? event.department_color
-                      : undefined,
+                    // Тёмная тема: яркие градиенты
+                    ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && darkColor ? {
+                      background: darkColor.bg,
+                      borderColor: darkColor.border,
+                      boxShadow: `0 4px 15px ${darkColor.border}30`,
+                    } : {}),
+                    // Светлая тема: оригинальные стили
+                    ...(!isDark ? {
+                      background: isUnavailable
+                        ? "rgba(148, 163, 184, 0.3)"
+                        : isAvailable
+                          ? "rgba(34, 197, 94, 0.2)"
+                          : isBookedSlot
+                            ? "rgba(249, 115, 22, 0.2)"
+                            : isStartingSoon 
+                              ? event.department_color 
+                                ? `${event.department_color}40`
+                                : `${accent}40`
+                              : needsAction
+                                ? "white"
+                                : event.department_color
+                                  ? `${event.department_color}20`
+                                  : `${accent}20`,
+                      borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
+                        ? event.department_color
+                        : undefined,
+                    } : {}),
+                    // Специальные состояния в тёмной теме
+                    ...(isDark && isUnavailable ? { background: "rgba(100, 116, 139, 0.3)" } : {}),
+                    ...(isDark && isAvailable ? { background: "rgba(16, 185, 129, 0.2)" } : {}),
+                    ...(isDark && isBookedSlot ? { background: "rgba(249, 115, 22, 0.25)", borderColor: "#f97316" } : {}),
+                    ...(isDark && isStartingSoon && darkColor ? {
+                      borderColor: "#fcd535",
+                      background: "linear-gradient(135deg, rgba(252, 213, 53, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)",
+                      boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
+                    } : {}),
+                    ...(isDark && needsAction ? { background: "rgba(71, 85, 105, 0.4)", borderColor: "#94a3b8" } : {}),
                   }}
                 >
                   <div className="flex items-start justify-between gap-1">
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-semibold leading-tight truncate ${isUnavailable ? "text-slate-600" : isAvailable ? "text-green-700" : isBookedSlot ? "text-orange-700" : "text-slate-900"}`}>
+                      <p 
+                        className={`text-xs font-semibold leading-tight truncate ${
+                          isUnavailable 
+                            ? isDark ? "text-slate-400" : "text-slate-600"
+                            : isAvailable 
+                              ? isDark ? "text-emerald-400" : "text-green-700"
+                              : isBookedSlot 
+                                ? isDark ? "text-orange-400" : "text-orange-700"
+                                : isDark ? "text-white" : "text-slate-900"
+                        }`}
+                        style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                      >
                         {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                       </p>
                       {isAvailable && event.description && event.description !== event.title && (
-                        <p className="text-[0.65rem] text-green-600 leading-tight truncate mt-0.5">
+                        <p className={`text-[0.65rem] leading-tight truncate mt-0.5 ${isDark ? "text-emerald-400/80" : "text-green-600"}`}>
                           {event.description}
                         </p>
                       )}
                       {isBookedSlot && event.description && event.description !== event.title && (
-                        <p className="text-[0.65rem] text-orange-600 leading-tight truncate mt-0.5">
+                        <p className={`text-[0.65rem] leading-tight truncate mt-0.5 ${isDark ? "text-orange-400/80" : "text-orange-600"}`}>
                           {event.description}
                         </p>
                       )}
@@ -551,21 +616,21 @@ export function DayView({
                     {/* Индикаторы вложений и комментариев */}
                     <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
                       {event.attachments && event.attachments.length > 0 && (
-                        <div className="w-3 h-3 rounded-full bg-blue-500/80 flex items-center justify-center flex-shrink-0" title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
+                        <div className={`w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-blue-400" : "bg-blue-500/80"}`} title={`${event.attachments.length} вложение${event.attachments.length > 1 ? 'й' : ''}`}>
                           <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
                           </svg>
                         </div>
                       )}
                       {event.comments_count !== undefined && event.comments_count > 0 && (
-                        <div className="w-3 h-3 rounded-full bg-red-500/80 flex items-center justify-center flex-shrink-0" title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
+                        <div className={`w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? "bg-red-400" : "bg-red-500/80"}`} title={`${event.comments_count} комментари${event.comments_count === 1 ? 'й' : event.comments_count < 5 ? 'я' : 'ев'}`}>
                           <span className="text-[0.65rem] font-semibold text-white leading-none">{event.comments_count}</span>
                         </div>
                       )}
                     </div>
                   </div>
                   {!isUnavailable && !isAvailable && !isBookedSlot && (
-                    <p className="text-[0.65rem] text-slate-500 leading-tight truncate mt-0.5">
+                    <p className={`text-[0.65rem] leading-tight truncate mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                       {formatTime(parseUTC(event.starts_at))} - {formatTime(parseUTC(event.ends_at))}
                     </p>
                   )}
