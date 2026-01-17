@@ -454,18 +454,28 @@ def update_ticket(
 
     if ticket_update.status is not None and ticket_update.status != ticket.status:
         old_status = ticket.status
+        new_status = ticket_update.status
         add_ticket_history(
             session, ticket.id, current_user.id,
             TicketHistoryAction.STATUS_CHANGED,
-            "status", get_status_label(old_status), get_status_label(ticket_update.status)
+            "status", get_status_label(old_status), get_status_label(new_status)
         )
-        ticket.status = ticket_update.status
+        ticket.status = new_status
         
         # Update timestamps based on status
         if ticket.status == TicketStatus.RESOLVED and not ticket.resolved_at:
             ticket.resolved_at = datetime.utcnow()
         elif ticket.status == TicketStatus.CLOSED and not ticket.closed_at:
             ticket.closed_at = datetime.utcnow()
+        
+        # Notify ticket creator about status change (if not the one changing it)
+        if ticket.created_by and ticket.created_by != current_user.id:
+            changer_name = current_user.full_name or current_user.email
+            create_ticket_notification(
+                session, ticket.created_by, ticket.id, ticket.title,
+                "ticket_status_changed",
+                f"{changer_name} изменил статус тикета «{ticket.title}» на «{get_status_label(new_status)}»"
+            )
 
     if ticket_update.priority is not None and ticket_update.priority != ticket.priority:
         old_priority = ticket.priority

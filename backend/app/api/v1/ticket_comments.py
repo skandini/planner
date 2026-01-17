@@ -9,7 +9,7 @@ from sqlmodel import select
 
 from app.api.deps import get_current_user
 from app.db import SessionDep
-from app.models import Ticket, TicketComment, User
+from app.models import Ticket, TicketComment, User, Notification
 from app.schemas.ticket_comment import (
     TicketCommentCreate,
     TicketCommentRead,
@@ -85,6 +85,32 @@ def create_ticket_comment(
     )
 
     session.add(comment)
+    
+    # Notify relevant users about new comment
+    commenter_name = current_user.full_name or current_user.email
+    
+    # Notify ticket creator (if not the commenter)
+    if ticket.created_by and ticket.created_by != current_user.id:
+        notification = Notification(
+            user_id=ticket.created_by,
+            ticket_id=ticket.id,
+            type="ticket_comment",
+            title="Новый комментарий",
+            message=f"{commenter_name} оставил комментарий к тикету: {ticket.title}"
+        )
+        session.add(notification)
+    
+    # Notify ticket assignee (if not the commenter and different from creator)
+    if ticket.assigned_to and ticket.assigned_to != current_user.id and ticket.assigned_to != ticket.created_by:
+        notification = Notification(
+            user_id=ticket.assigned_to,
+            ticket_id=ticket.id,
+            type="ticket_comment",
+            title="Новый комментарий",
+            message=f"{commenter_name} оставил комментарий к тикету: {ticket.title}"
+        )
+        session.add(notification)
+    
     session.commit()
     session.refresh(comment)
 
