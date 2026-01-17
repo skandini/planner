@@ -931,14 +931,14 @@ export function WeekView({
                               ? isDark
                                 ? "cursor-default border-orange-500/50 z-10"
                                 : "cursor-default border-orange-400 bg-orange-100 z-10"
-                              : isStartingSoon 
+                              : needsAction
                                 ? isDark
-                                  ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
-                                  : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
-                                : needsAction
+                                  ? "border-2 border-[#fcd535] bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
+                                  : "border-2 border-amber-400 bg-white cursor-pointer hover:shadow-lg"
+                                : isStartingSoon 
                                   ? isDark
-                                    ? "border-2 border-[#fcd535] bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
-                                    : "border-2 border-amber-400 bg-white cursor-pointer hover:shadow-lg"
+                                    ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
+                                    : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
                                   : isDark
                                     ? "border-l-[3px] cursor-pointer hover:shadow-xl hover:scale-[1.02]"
                                     : "border-slate-200 cursor-pointer hover:shadow-lg"
@@ -963,12 +963,12 @@ export function WeekView({
                               ? "rgba(34, 197, 94, 0.2)"
                               : isBookedSlot
                                 ? "rgba(249, 115, 22, 0.2)"
-                                : isStartingSoon 
-                                  ? event.department_color 
-                                    ? `${event.department_color}40`
-                                    : `${accent}40`
-                                  : needsAction
-                                    ? "white"
+                                : needsAction
+                                  ? "white"
+                                  : isStartingSoon 
+                                    ? event.department_color 
+                                      ? `${event.department_color}40`
+                                      : `${accent}40`
                                     : isAccepted
                                       ? event.department_color
                                         ? (layout && layout.column > 0 
@@ -995,7 +995,7 @@ export function WeekView({
                           background: "rgba(249, 115, 22, 0.25)",
                           borderColor: "#f97316",
                         } : {}),
-                        ...(isDark && isStartingSoon && darkColor ? {
+                        ...(isDark && isStartingSoon && !needsAction && darkColor ? {
                           borderColor: "#fcd535",
                           background: "linear-gradient(135deg, rgba(252, 213, 53, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)",
                           boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
