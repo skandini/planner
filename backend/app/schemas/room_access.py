@@ -15,9 +15,11 @@ class RoomAccessBase(BaseModel):
     department_id: Optional[UUID] = None
 
 
-class RoomAccessCreate(RoomAccessBase):
+class RoomAccessCreate(BaseModel):
     """Schema for creating room access."""
-    pass
+    
+    user_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None
 
 
 class RoomAccessRead(RoomAccessBase):
