@@ -27,7 +27,6 @@ from app.tasks.notifications import (
     notify_event_cancelled_task,
     notify_event_invited_task,
     notify_event_updated_task,
-    notify_participant_response_task,
 )
 
 router = APIRouter()
@@ -1302,23 +1301,6 @@ def update_participant_status(
         participant.response_status = payload.response_status
         session.add(participant)
         session.commit()
-
-        # Уведомляем организатора события об изменении статуса участника (асинхронно через Celery)
-        calendar = session.get(Calendar, event.calendar_id)
-        if calendar and calendar.owner_id:
-            if calendar.owner_id != current_user.id:
-                try:
-                    participant_name = current_user.full_name or current_user.email
-                    notify_participant_response_task.delay(
-                        calendar_owner_id=str(calendar.owner_id),
-                        event_id=str(event_id),
-                        participant_name=participant_name,
-                        response_status=payload.response_status,
-                        old_status=old_status,
-                    )
-                except Exception as e:
-                    # Логируем ошибку уведомления, но не прерываем обновление статуса
-                    print(f"[WARNING] Failed to send notification: {e}")
 
         session.refresh(event)
         return _serialize_event_with_participants(session, event)

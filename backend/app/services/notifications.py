@@ -100,35 +100,6 @@ def create_reminder_notification(
     )
 
 
-def notify_participant_response(
-    session: Session,
-    event: Event,
-    participant: User,
-    response_status: str,
-    calendar_owner_id: UUID | None = None,
-) -> None:
-    """Notify event organizer about participant response."""
-    if not calendar_owner_id:
-        return
-    
-    status_labels = {
-        "accepted": "принял",
-        "declined": "отклонил",
-    }
-    
-    status_label = status_labels.get(response_status, "изменил статус")
-    participant_name = participant.full_name or participant.email
-    
-    create_notification(
-        session=session,
-        user_id=calendar_owner_id,
-        type="participant_response",
-        title="Ответ на приглашение",
-        message=f"{participant_name} {status_label} приглашение на встречу «{event.title}»",
-        event_id=event.id,
-    )
-
-
 def schedule_reminders_for_event(
     session: Session,
     event: Event,
