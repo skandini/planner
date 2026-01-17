@@ -469,7 +469,7 @@ export function EnhancedTimeline({
         isDark ? "border-[#2b3139] bg-[#181a20]" : "border-slate-200 bg-white"
       }`}>
         <div className="flex items-center gap-2">
-          <div className={`h-2 w-8 rounded border ${isDark ? "border-rose-500/30 bg-rose-500/20" : "border-rose-200 bg-rose-100"}`} />
+          <div className={`h-2 w-8 rounded border ${isDark ? "border-red-400 bg-red-500" : "border-rose-500 bg-rose-400"}`} />
           <span className={`text-[0.7rem] font-medium ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>Занято</span>
         </div>
         <div className="flex items-center gap-2">
@@ -680,10 +680,18 @@ export function EnhancedTimeline({
                       : "bg-emerald-50 border border-emerald-200 cursor-pointer hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-150";
                   }
 
+                  // Inline стиль для гарантированной заливки занятых слотов
+                  const slotStyle = (state === "busy" && isDark) 
+                    ? { backgroundColor: '#ef4444', borderColor: '#f87171' } 
+                    : (state === "busy" && !isDark) 
+                      ? { backgroundColor: '#fb7185', borderColor: '#f43f5e' }
+                      : undefined;
+
                   return (
                     <div
                       key={`${row.id}-${slot.index}`}
                       className={slotClassName}
+                      style={slotStyle}
                       onMouseDown={(e) => {
                         // Разрешаем выбор любого времени, даже занятого
                         // Занятость показывается визуально, но не блокирует выбор
