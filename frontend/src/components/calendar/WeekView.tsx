@@ -937,8 +937,8 @@ export function WeekView({
                                   : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
                                 : needsAction
                                   ? isDark
-                                    ? "border-2 border-amber-500 cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
-                                    : "border-2 border-amber-400 bg-amber-50 cursor-pointer hover:shadow-lg"
+                                    ? "border-2 border-[#fcd535] cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
+                                    : "border-2 border-amber-400 bg-white cursor-pointer hover:shadow-lg"
                                   : isDark
                                     ? "border-l-[3px] cursor-pointer hover:shadow-xl hover:scale-[1.02]"
                                     : "border-slate-200 cursor-pointer hover:shadow-lg"
@@ -1001,9 +1001,9 @@ export function WeekView({
                           boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
                         } : {}),
                         ...(isDark && needsAction ? {
-                          background: "linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(245, 158, 11, 0.15) 100%)",
-                          borderColor: "#f59e0b",
-                          boxShadow: "0 0 12px rgba(251, 191, 36, 0.4), inset 0 0 20px rgba(251, 191, 36, 0.1)",
+                          background: "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%)",
+                          borderColor: "#fcd535",
+                          boxShadow: "0 0 15px rgba(252, 213, 53, 0.5), 0 0 30px rgba(252, 213, 53, 0.3)",
                         } : {}),
                       }}
                     >
@@ -1018,11 +1018,13 @@ export function WeekView({
                                   ? isDark ? "text-emerald-400" : "text-green-700" 
                                   : isBookedSlot 
                                     ? isDark ? "text-orange-400" : "text-orange-700" 
-                                    : isDark 
-                                      ? "text-white" 
-                                      : "text-slate-900"
+                                    : needsAction
+                                      ? "text-slate-800"
+                                      : isDark 
+                                        ? "text-white" 
+                                        : "text-slate-900"
                             }`}
-                            style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                            style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction ? { color: darkColor.text } : undefined}
                           >
                             {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                           </p>
@@ -1054,11 +1056,13 @@ export function WeekView({
                                     ? isDark ? "text-emerald-400" : "text-green-700" 
                                     : isBookedSlot 
                                       ? isDark ? "text-orange-400" : "text-orange-700" 
-                                      : isDark 
-                                        ? "text-white" 
-                                        : "text-slate-900"
+                                      : needsAction
+                                        ? "text-slate-800"
+                                        : isDark 
+                                          ? "text-white" 
+                                          : "text-slate-900"
                               }`}
-                              style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                              style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction ? { color: darkColor.text } : undefined}
                             >
                               {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                             </p>
@@ -1103,11 +1107,13 @@ export function WeekView({
                                       ? isDark ? "text-emerald-400" : "text-green-700" 
                                       : isBookedSlot 
                                         ? isDark ? "text-orange-400" : "text-orange-700" 
-                                        : isDark 
-                                          ? "text-white" 
-                                          : "text-slate-900"
+                                        : needsAction
+                                          ? "text-slate-800"
+                                          : isDark 
+                                            ? "text-white" 
+                                            : "text-slate-900"
                                 }`}
-                                style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
+                                style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction ? { color: darkColor.text } : undefined}
                               >
                                 {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                               </p>
