@@ -659,10 +659,8 @@ export function EnhancedTimeline({
                   let slotClassName = "h-6 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
-                    // Занято - полностью закрашено
-                    slotClassName += isDark
-                      ? "bg-red-500 border border-red-400 cursor-pointer hover:bg-red-400"
-                      : "bg-rose-400 border border-rose-500 cursor-pointer hover:bg-rose-300";
+                    // Занято - полностью закрашено (стили через inline style)
+                    slotClassName += "cursor-pointer hover:opacity-80";
                   } else if (isBeingSelected) {
                     // Предварительное выделение
                     slotClassName += isDark
@@ -681,11 +679,14 @@ export function EnhancedTimeline({
                   }
 
                   // Inline стиль для гарантированной заливки занятых слотов
-                  const slotStyle = (state === "busy" && isDark) 
-                    ? { backgroundColor: '#ef4444', borderColor: '#f87171' } 
-                    : (state === "busy" && !isDark) 
-                      ? { backgroundColor: '#fb7185', borderColor: '#f43f5e' }
-                      : undefined;
+                  const slotStyle: React.CSSProperties = (state === "busy") 
+                    ? { 
+                        backgroundColor: isDark ? '#ef4444' : '#fb7185', 
+                        borderColor: isDark ? '#f87171' : '#f43f5e',
+                        borderWidth: '1px',
+                        borderStyle: 'solid'
+                      } 
+                    : {};
 
                   return (
                     <div
