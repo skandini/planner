@@ -70,10 +70,10 @@ export function CommentsSection({
     }
   }, [eventId, authFetch]);
 
-  // Автоматическая прокрутка к последнему комментарию
-  const scrollToBottom = () => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // ОТКЛЮЧЕНО: Автоматическая прокрутка к последнему комментарию
+  // const scrollToBottom = () => {
+  //   commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // };
 
   // Загрузка комментариев
   const loadComments = async () => {
@@ -92,7 +92,8 @@ export function CommentsSection({
 
       const data = await response.json();
       setComments(data);
-      setTimeout(scrollToBottom, 100);
+      // ОТКЛЮЧЕНО: Не скроллим автоматически
+      // setTimeout(scrollToBottom, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки комментариев");
       console.error("Error loading comments:", err);
@@ -185,7 +186,8 @@ export function CommentsSection({
       const createdComment = await response.json();
       setComments((prev) => [...prev, createdComment]);
       setNewComment("");
-      setTimeout(scrollToBottom, 100);
+      // ОТКЛЮЧЕНО: Не скроллим после добавления комментария
+      // setTimeout(scrollToBottom, 100);
     } catch (err) {
       let errorMessage = "Ошибка добавления комментария";
       if (err instanceof Error) {

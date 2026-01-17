@@ -170,10 +170,10 @@ export function EventModalModern({
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // Скроллим модальное окно вверх при открытии
-    if (modalContentRef.current) {
-      modalContentRef.current.scrollTop = 0;
-    }
+    // ОТКЛЮЧЕНО: Не скроллим модальное окно - пользователь сам выберет позицию
+    // if (modalContentRef.current) {
+    //   modalContentRef.current.scrollTop = 0;
+    // }
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
