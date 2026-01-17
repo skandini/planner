@@ -25,7 +25,10 @@ from app.models import (  # noqa: F401
     Room,
     Ticket,
     TicketAttachment,
+    TicketCategory,
     TicketComment,
+    TicketHistory,
+    TicketInternalNote,
     User,
     UserDepartment,
     UserOrganization,
@@ -57,18 +60,9 @@ engine = _build_engine()
 
 
 def init_db() -> None:
-    """Create database tables in environments without migrations."""
-    # Проверяем, существует ли уже таблица tickets (созданная через миграции)
-    # Если да, то не создаем таблицы через create_all
-    from sqlalchemy import inspect
-    inspector = inspect(engine)
-    existing_tables = inspector.get_table_names()
-    
-    # Если таблицы тикетов уже существуют (созданы через миграции), пропускаем create_all
-    if "tickets" in existing_tables:
-        return
-    
-    # Иначе создаем все таблицы (для новых установок без миграций)
+    """Create database tables. Uses create_all which only creates missing tables."""
+    # SQLModel.metadata.create_all() безопасно - создаёт только недостающие таблицы
+    # и не трогает существующие (checkfirst=True по умолчанию)
     SQLModel.metadata.create_all(bind=engine)
 
 

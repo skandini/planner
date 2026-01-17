@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin_notifications, auth, availability_slots, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, push, room_access, rooms, statistics, ticket_attachments, ticket_comments, tickets, user_availability, users, user_avatars, websocket
+from app.api.v1 import admin_notifications, auth, availability_slots, calendars, departments, event_attachments, event_comments, events, health, notifications, organizations, push, room_access, rooms, statistics, ticket_attachments, ticket_categories, ticket_comments, ticket_statistics, tickets, user_availability, users, user_avatars, websocket
 
 
 api_router = APIRouter()
@@ -23,7 +23,9 @@ api_router.include_router(user_avatars.router, prefix="/users", tags=["users"])
 api_router.include_router(user_availability.router, prefix="/users", tags=["users"])
 api_router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
+# Ticket categories and statistics must be before tickets to avoid route conflicts
+api_router.include_router(ticket_categories.router, prefix="/ticket-categories", tags=["ticket-categories"])
+api_router.include_router(ticket_statistics.router, prefix="/ticket-statistics", tags=["ticket-statistics"])
 api_router.include_router(tickets.router, prefix="/tickets", tags=["tickets"])
 api_router.include_router(ticket_comments.router, prefix="", tags=["ticket-comments"])
-api_router.include_router(ticket_attachments.router, prefix="", tags=["ticket-attachments"])
 api_router.include_router(ticket_attachments.router, prefix="", tags=["ticket-attachments"])

@@ -13,7 +13,10 @@ from .room import Room
 from .room_access import RoomAccess
 from .ticket import Ticket
 from .ticket_attachment import TicketAttachment
+from .ticket_category import TicketCategory
 from .ticket_comment import TicketComment
+from .ticket_history import TicketHistory, TicketHistoryAction
+from .ticket_internal_note import TicketInternalNote
 from .user import User
 from .user_availability_schedule import UserAvailabilitySchedule
 from .user_department import UserDepartment
@@ -38,7 +41,11 @@ __all__ = [
     "RoomAccess",
     "Ticket",
     "TicketAttachment",
+    "TicketCategory",
     "TicketComment",
+    "TicketHistory",
+    "TicketHistoryAction",
+    "TicketInternalNote",
     "User",
     "UserAvailabilitySchedule",
     "UserDepartment",

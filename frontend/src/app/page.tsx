@@ -2596,6 +2596,7 @@ export default function Home() {
               organizations={organizations}
               getUserOrganizationAbbreviation={getUserOrganizationAbbreviation}
               currentUserId={currentUser?.id}
+              currentUserRole={currentUser?.role}
               onClose={() => setViewMode("week")}
             />
           )}
