@@ -63,6 +63,7 @@ export function TicketTracker({
   // Filters
   const [filters, setFilters] = useState<TicketFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [hideClosed, setHideClosed] = useState(true); // Hide closed tickets by default
   
   // Create form
   const [formData, setFormData] = useState<TicketCreate>({
@@ -194,12 +195,34 @@ export function TicketTracker({
     }
   };
 
+  // Filter tickets (hide closed by default)
+  const displayedTickets = useMemo(() => {
+    let filtered = tickets;
+    
+    // Hide closed tickets if enabled
+    if (hideClosed) {
+      filtered = filtered.filter(t => t.status !== "closed");
+    }
+    
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.title.toLowerCase().includes(query) ||
+        t.description?.toLowerCase().includes(query) ||
+        t.created_by_full_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [tickets, hideClosed, searchQuery]);
+
   // Bulk operations
   const handleSelectAll = () => {
-    if (selectedIds.size === tickets.length) {
+    if (selectedIds.size === displayedTickets.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(tickets.map(t => t.id)));
+      setSelectedIds(new Set(displayedTickets.map(t => t.id)));
     }
   };
 
@@ -269,6 +292,11 @@ export function TicketTracker({
       <div className="flex items-center justify-between gap-3 p-4 bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
         <div className="flex items-center gap-3 flex-1">
           <h2 className="text-lg font-bold text-slate-900">🎫 Техподдержка</h2>
+          <span className="text-sm text-slate-500">
+            {displayedTickets.length === tickets.length 
+              ? `(${tickets.length})` 
+              : `(${displayedTickets.length} из ${tickets.length})`}
+          </span>
           
           {/* Search */}
           <div className="relative flex-1 max-w-md">
@@ -283,6 +311,17 @@ export function TicketTracker({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
+
+          {/* Hide closed toggle */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={hideClosed}
+              onChange={(e) => setHideClosed(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-sm text-slate-600 whitespace-nowrap">Скрыть закрытые</span>
+          </label>
 
           {/* Filter button */}
           <button
@@ -548,12 +587,12 @@ export function TicketTracker({
                     className="rounded border-slate-300"
                   />
                   <span className="text-xs text-slate-500">
-                    {selectedIds.size === tickets.length ? "Снять выделение" : "Выделить все"}
+                    {selectedIds.size === displayedTickets.length ? "Снять выделение" : "Выделить все"}
                   </span>
                 </div>
               )}
 
-              {tickets.map((ticket) => {
+              {displayedTickets.map((ticket) => {
                 const statusOpt = getStatusOption(ticket.status);
                 const priorityOpt = getPriorityOption(ticket.priority);
                 const isSelected = selectedIds.has(ticket.id);

@@ -12,7 +12,7 @@ from app.api.deps import get_current_user
 from app.db import SessionDep
 from app.models import (
     Ticket, TicketAttachment, TicketComment, TicketCategory,
-    TicketHistory, TicketHistoryAction, TicketInternalNote, User
+    TicketHistory, TicketHistoryAction, TicketInternalNote, User, Notification
 )
 from app.models.ticket import TicketPriority, TicketStatus
 from app.schemas.ticket import (
@@ -76,6 +76,31 @@ def get_priority_label(priority: str) -> str:
         "critical": "Критический"
     }
     return labels.get(priority, priority)
+
+
+def create_ticket_notification(
+    session,
+    user_id: UUID,
+    ticket_id: UUID,
+    ticket_title: str,
+    notification_type: str,
+    message: str
+):
+    """Create a notification for ticket-related events."""
+    type_titles = {
+        "ticket_assigned": "Назначен тикет",
+        "ticket_reassigned": "Переназначен тикет",
+        "ticket_comment": "Новый комментарий",
+        "ticket_status_changed": "Статус изменён",
+    }
+    notification = Notification(
+        user_id=user_id,
+        ticket_id=ticket_id,
+        type=notification_type,
+        title=type_titles.get(notification_type, "Тикет"),
+        message=message
+    )
+    session.add(notification)
 
 
 def populate_ticket_data(
@@ -480,6 +505,16 @@ def update_ticket(
                 new_name or "Не назначен"
             )
             ticket.assigned_to = new_assigned
+
+            # Send notification to new assignee
+            if new_assigned and new_assigned != current_user.id:
+                assigner_name = current_user.full_name or current_user.email
+                notif_type = "ticket_assigned" if action == TicketHistoryAction.ASSIGNED else "ticket_reassigned"
+                create_ticket_notification(
+                    session, new_assigned, ticket.id, ticket.title,
+                    notif_type,
+                    f"{assigner_name} назначил вам тикет: {ticket.title}"
+                )
 
             # Track first response time
             if not ticket.first_response_at and is_staff(current_user):

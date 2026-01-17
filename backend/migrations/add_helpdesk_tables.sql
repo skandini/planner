@@ -94,6 +94,13 @@ INSERT INTO ticket_categories (name, description, color, icon, sort_order) VALUE
     ('Другое', 'Прочие обращения', '#6b7280', '📝', 99)
 ON CONFLICT DO NOTHING;
 
+-- ===== UPDATE NOTIFICATIONS TABLE =====
+-- Add ticket_id reference for ticket notifications
+ALTER TABLE notifications 
+ADD COLUMN IF NOT EXISTS ticket_id UUID REFERENCES tickets(id);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_ticket_id ON notifications(ticket_id);
+
 -- ===== GRANT PERMISSIONS =====
 -- Note: Replace 'planner_user' with your actual database user if different
 -- GRANT ALL PRIVILEGES ON ticket_categories TO planner_user;
