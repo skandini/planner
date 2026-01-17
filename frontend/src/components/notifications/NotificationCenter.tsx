@@ -139,8 +139,8 @@ export function NotificationCenter({
     }
   };
 
-  const handleDelete = async (notificationId: string) => {
-    if (!confirm("Вы уверены, что хотите удалить это уведомление?")) {
+  const handleDelete = async (notificationId: string, skipConfirmation = false) => {
+    if (!skipConfirmation && !confirm("Вы уверены, что хотите удалить это уведомление?")) {
       return;
     }
     setDeletingId(notificationId);
@@ -161,15 +161,11 @@ export function NotificationCenter({
     setUpdatingStatus((prev) => new Set(prev).add(key));
     try {
       await onUpdateParticipantStatus(eventId, status);
-      // Автоматически удаляем уведомление после ответа на приглашение
+      // После успешного ответа на приглашение - автоматически удаляем это уведомление
       const notification = notifications.find((n) => n.event_id === eventId && n.type === "event_invited");
       if (notification) {
-        // Сначала отмечаем как прочитанное (если еще не прочитано)
-        if (!notification.is_read) {
-          await onMarkAsRead(notification.id);
-        }
-        // Затем удаляем уведомление, так как пользователь уже ответил
-        await onDelete(notification.id);
+        // Удаляем уведомление без подтверждения, так как пользователь уже дал ответ
+        await handleDelete(notification.id, true);
       }
     } catch (err) {
       console.error("Failed to update participant status:", err);
