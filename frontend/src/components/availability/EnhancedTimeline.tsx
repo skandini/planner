@@ -659,9 +659,9 @@ export function EnhancedTimeline({
                   let slotClassName = "h-6 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
-                    // Занято - можно выбрать
+                    // Занято - можно выбрать (яркий красный для видимости)
                     slotClassName += isDark
-                      ? "bg-rose-500/25 border border-rose-500/40 cursor-pointer hover:bg-rose-500/35"
+                      ? "bg-red-500/40 border border-red-400/60 cursor-pointer hover:bg-red-500/50 shadow-[inset_0_0_4px_rgba(239,68,68,0.3)]"
                       : "bg-rose-100 border border-rose-200 cursor-pointer hover:bg-rose-150";
                   } else if (isBeingSelected) {
                     // Предварительное выделение
