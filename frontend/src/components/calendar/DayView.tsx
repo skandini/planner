@@ -548,7 +548,7 @@ export function DayView({
                               : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
                             : needsAction
                               ? isDark
-                                ? "border-2 border-[#fcd535] cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
+                                ? "border-2 border-[#fcd535] bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
                                 : "border-2 border-amber-400 bg-white cursor-pointer hover:shadow-lg"
                               : isDark
                                 ? "border-l-[3px] cursor-pointer hover:shadow-xl hover:scale-[1.02]"

@@ -937,7 +937,7 @@ export function WeekView({
                                   : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
                                 : needsAction
                                   ? isDark
-                                    ? "border-2 border-[#fcd535] cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
+                                    ? "border-2 border-[#fcd535] bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
                                     : "border-2 border-amber-400 bg-white cursor-pointer hover:shadow-lg"
                                   : isDark
                                     ? "border-l-[3px] cursor-pointer hover:shadow-xl hover:scale-[1.02]"
@@ -1250,13 +1250,13 @@ export function WeekView({
                         setHoveredEvent(null);
                       }
                     }}
-                    className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white transition shadow-sm flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold transition flex items-center justify-center gap-2 ${
                       isDark 
-                        ? "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400" 
-                        : "bg-gradient-to-r from-lime-500 to-emerald-500 hover:from-lime-600 hover:to-emerald-600"
+                        ? "bg-[#0ecb81] hover:bg-[#1ad48a] text-white shadow-[0_0_15px_rgba(14,203,129,0.4)]" 
+                        : "bg-gradient-to-r from-lime-500 to-emerald-500 hover:from-lime-600 hover:to-emerald-600 text-white shadow-sm"
                     }`}
                   >
-                    <span className="text-sm">✓</span> Принять
+                    <span className="text-base">✓</span> Принять
                   </button>
                   <button
                     type="button"
@@ -1267,9 +1267,13 @@ export function WeekView({
                         setHoveredEvent(null);
                       }
                     }}
-                    className="flex-1 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:from-red-600 hover:to-red-700 shadow-sm flex items-center justify-center gap-1.5"
+                    className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold transition flex items-center justify-center gap-2 ${
+                      isDark 
+                        ? "bg-[#f6465d] hover:bg-[#ff5a6e] text-white shadow-[0_0_15px_rgba(246,70,93,0.4)]" 
+                        : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-sm"
+                    }`}
                   >
-                    <span className="text-sm">✕</span> Отклонить
+                    <span className="text-base">✕</span> Отклонить
                   </button>
                 </div>
               </div>
