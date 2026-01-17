@@ -5,7 +5,7 @@ import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
 import { addDays, formatDate, parseUTC, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
-import { calculateEventLayout, getEventPositionStyles, getPastelColor } from "@/lib/utils/eventLayout";
+import { calculateEventLayout, getEventPositionStyles, getPastelColor, getCascadeColorVariation } from "@/lib/utils/eventLayout";
 
 interface WeekViewEnhancedProps {
   days: Date[];

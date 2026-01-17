@@ -5,7 +5,7 @@ import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
 import { addDays, addDaysInMoscow, formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { MINUTES_IN_DAY } from "@/lib/constants";
-import { calculateEventLayout, getEventPositionStyles, getPastelColor } from "@/lib/utils/eventLayout";
+import { calculateEventLayout, getEventPositionStyles, getPastelColor, getCascadeColorVariation } from "@/lib/utils/eventLayout";
 
 interface WeekViewProps {
   days: Date[];
@@ -894,8 +894,12 @@ export function WeekView({
                                   ? "white"
                                   : isAccepted
                                     ? event.department_color
-                                      ? getPastelColor(event.department_color) // Пастельный оттенок цвета отдела
-                                      : getPastelColor(accent) // Пастельный оттенок accent
+                                      ? (layout && layout.column > 0 
+                                          ? getCascadeColorVariation(event.department_color, layout.column) 
+                                          : getPastelColor(event.department_color)) // Вариация цвета для каскада
+                                      : (layout && layout.column > 0 
+                                          ? getCascadeColorVariation(accent, layout.column) 
+                                          : getPastelColor(accent))
                                     : event.department_color
                                       ? `${event.department_color}20`
                                       : `${accent}20`,

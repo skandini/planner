@@ -25,6 +25,32 @@ export function getPastelColor(hexColor: string): string {
   return `rgb(${pastelR}, ${pastelG}, ${pastelB})`;
 }
 
+/**
+ * Создает вариацию цвета для каскадных событий
+ * @param hexColor - базовый цвет в формате #RRGGBB
+ * @param columnIndex - номер колонки (0, 1, 2, ...)
+ * @returns модифицированный цвет
+ */
+export function getCascadeColorVariation(hexColor: string, columnIndex: number): string {
+  // Убираем # если есть
+  const hex = hexColor.replace('#', '');
+  
+  // Парсим RGB
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+  
+  // Для каждой последующей колонки немного затемняем цвет
+  // Это помогает визуально отличать события
+  const darkenFactor = 1 - (columnIndex * 0.08); // Уменьшаем яркость на 8% для каждой колонки
+  
+  r = Math.max(0, Math.min(255, Math.round(r * darkenFactor)));
+  g = Math.max(0, Math.min(255, Math.round(g * darkenFactor)));
+  b = Math.max(0, Math.min(255, Math.round(b * darkenFactor)));
+  
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 export interface EventLayoutInfo {
   id: string;
   start: Date;
@@ -216,26 +242,21 @@ export function getEventPositionStyles(
   const { column, totalColumns } = layout;
   
   if (useClassicCascade && totalColumns > 1) {
-    // Классическое каскадное наслоение (как в Google Calendar)
-    // Первое событие занимает всю ширину, остальные каскадом поверх
+    // Каскадное веерное наслоение - все события видны
+    // Каждое событие смещается и уменьшается, чтобы были видны все
     
-    if (column === 0) {
-      // Первое событие - на всю ширину ячейки
-      return {
-        left: '2px',
-        width: 'calc(100% - 4px)',
-        zIndex: 10, // Нижний слой
-      };
-    } else {
-      // Остальные события - каскадом поверх первого
-      const offsetPx = column * cascadeOffset; // Смещение в пикселях
-      
-      return {
-        left: `${offsetPx}px`,
-        width: `calc(100% - ${offsetPx + 4}px)`, // Ширина от смещения до края
-        zIndex: 10 + column, // Каждое следующее событие выше предыдущего
-      };
-    }
+    const offsetPx = column * cascadeOffset; // Смещение каждого события
+    
+    // Вычисляем ширину так, чтобы было видно все события
+    // Оставляем место справа для следующих событий
+    const remainingColumns = totalColumns - column; // Сколько событий справа
+    const reserveWidth = (remainingColumns - 1) * cascadeOffset; // Резервируем место
+    
+    return {
+      left: `${offsetPx}px`,
+      width: `calc(100% - ${offsetPx + reserveWidth + 4}px)`,
+      zIndex: 10 + column, // Каждое следующее событие выше предыдущего
+    };
   } else {
     // Режим колонок - события впритык, каждое в своей колонке
     // Рассчитываем ширину одной колонки в процентах
