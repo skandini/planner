@@ -768,6 +768,20 @@ body {
   }
 }
 
+/* Мягкая пульсация для событий требующих ответа */
+@keyframes pulse-subtle {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.4), inset 0 0 20px rgba(251, 191, 36, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 30px rgba(251, 191, 36, 0.15);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
 @keyframes liveDot {
   0% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(1.3); }
