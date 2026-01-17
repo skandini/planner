@@ -478,7 +478,7 @@ def get_online_users_stats(
 def update_user_activity(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
-) -> None:
+):
     """
     Update the current user's last activity timestamp.
     Called periodically by the frontend to track online status.
@@ -486,6 +486,5 @@ def update_user_activity(
     current_user.last_activity = datetime.utcnow()
     session.add(current_user)
     session.commit()
-    return None
 
 
