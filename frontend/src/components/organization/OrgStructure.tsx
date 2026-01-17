@@ -415,7 +415,7 @@ export function OrgStructure({ authFetch, users, organizations, apiBaseUrl, onCl
   };
 
   const renderTree = (nodes: DepartmentWithChildren[], depth = 0, parentOrg: { id: string; name: string; slug: string } | null = null) => (
-    <ul className="space-y-6 pl-0">
+    <ul className={depth === 0 ? "flex flex-row flex-wrap gap-12 justify-center pl-0" : "space-y-6 pl-0"}>
       {nodes.map((d, index) => {
         const manager = d.manager_id ? users.find((u) => u.id === d.manager_id) : null;
         // Get users who belong to this department (support both old and new format)
