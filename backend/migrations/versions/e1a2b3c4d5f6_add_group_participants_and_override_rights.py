@@ -57,3 +57,4 @@ def downgrade() -> None:
     op.drop_column('users', 'can_override_availability')
     # ### end Alembic commands ###
 
+

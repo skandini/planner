@@ -38,3 +38,4 @@ class EventGroupParticipantWithDetails(EventGroupParticipantRead):
     member_count: int = Field(description="Количество участников в группе")
     added_by_name: str = Field(description="Имя пользователя, добавившего группу")
 
+

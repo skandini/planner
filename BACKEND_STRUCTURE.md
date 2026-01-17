@@ -660,3 +660,4 @@ celery -A app.celery_app beat --loglevel=info
 **Последнее обновление:** 14 января 2026
 
 
+
