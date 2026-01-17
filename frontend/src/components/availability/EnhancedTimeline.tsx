@@ -655,21 +655,29 @@ export function EnhancedTimeline({
                       tooltipText = state === "busy" ? "Занято (можно выбрать)" : isSelected ? "Выбрано" : isBeingSelected ? "Выделяется..." : "Доступно - кликните для выбора времени";
                     }
 
-                  // Легкая воздушная цветовая схема с компактными ячейками
+                  // Цветовая схема слотов
                   let slotClassName = "h-6 rounded transition-all duration-75 ease-out relative overflow-hidden group ";
                   
                   if (state === "busy") {
-                    // Занято - мягкий розовый, но можно выбрать (cursor-pointer)
-                    slotClassName += "bg-rose-100 border border-rose-200 cursor-pointer hover:bg-rose-150";
+                    // Занято - можно выбрать
+                    slotClassName += isDark
+                      ? "bg-rose-500/25 border border-rose-500/40 cursor-pointer hover:bg-rose-500/35"
+                      : "bg-rose-100 border border-rose-200 cursor-pointer hover:bg-rose-150";
                   } else if (isBeingSelected) {
-                    // Предварительное выделение - яркий голубой с пунктирной рамкой
-                    slotClassName += "bg-indigo-100 border-2 border-dashed border-indigo-400 cursor-pointer";
+                    // Предварительное выделение
+                    slotClassName += isDark
+                      ? "bg-[#fcd535]/30 border-2 border-dashed border-[#fcd535] cursor-pointer"
+                      : "bg-indigo-100 border-2 border-dashed border-indigo-400 cursor-pointer";
                   } else if (isSelected) {
-                    // Выбранное - мягкий голубой
-                    slotClassName += "bg-blue-100 border-2 border-blue-300 cursor-pointer hover:bg-blue-150";
+                    // Выбранное
+                    slotClassName += isDark
+                      ? "bg-[#fcd535]/25 border-2 border-[#fcd535]/60 cursor-pointer hover:bg-[#fcd535]/35"
+                      : "bg-blue-100 border-2 border-blue-300 cursor-pointer hover:bg-blue-150";
                   } else {
-                    // Свободное - мягкий зеленый
-                    slotClassName += "bg-emerald-50 border border-emerald-200 cursor-pointer hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-150";
+                    // Свободное
+                    slotClassName += isDark
+                      ? "bg-emerald-500/15 border border-emerald-500/30 cursor-pointer hover:bg-emerald-500/25 hover:border-emerald-500/50"
+                      : "bg-emerald-50 border border-emerald-200 cursor-pointer hover:bg-emerald-100 hover:border-emerald-300 active:bg-emerald-150";
                   }
 
                   return (
