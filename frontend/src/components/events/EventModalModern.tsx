@@ -162,10 +162,18 @@ export function EventModalModern({
     onClose();
   }, [onClose]);
 
-  // UX: блокируем скролл, закрытие по Escape
+  // Ref для контейнера модального окна для скролла
+  const modalContentRef = useRef<HTMLDivElement>(null);
+
+  // UX: блокируем скролл, закрытие по Escape, скролл вверх при открытии
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    // Скроллим модальное окно вверх при открытии
+    if (modalContentRef.current) {
+      modalContentRef.current.scrollTop = 0;
+    }
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -193,6 +201,7 @@ export function EventModalModern({
         aria-hidden="true"
       >
         <div
+          ref={modalContentRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
