@@ -39,3 +39,4 @@ class EventGroupParticipantWithDetails(EventGroupParticipantRead):
     added_by_name: str = Field(description="Имя пользователя, добавившего группу")
 
 
+
