@@ -782,6 +782,19 @@ body {
   animation: pulse-subtle 1.5s ease-in-out infinite;
 }
 
+/* Принудительный белый фон для событий требующих ответа */
+.needs-action-event {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+[data-theme="dark"] .needs-action-event {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 20px rgba(252, 213, 53, 0.6), 0 0 40px rgba(252, 213, 53, 0.3) !important;
+}
+
 @keyframes liveDot {
   0% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(1.3); }

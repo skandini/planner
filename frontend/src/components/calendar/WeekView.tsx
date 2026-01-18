@@ -931,10 +931,10 @@ export function WeekView({
                               ? isDark
                                 ? "cursor-default border-orange-500/50 z-10"
                                 : "cursor-default border-orange-400 bg-orange-100 z-10"
-                              : needsAction
+                                : needsAction
                                 ? isDark
-                                  ? "border-2 border-[#fcd535] bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle"
-                                  : "border-2 border-amber-400 bg-white cursor-pointer hover:shadow-lg"
+                                  ? "border-2 border-[#fcd535] !bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle needs-action-event"
+                                  : "border-2 border-amber-400 !bg-white cursor-pointer hover:shadow-lg needs-action-event"
                                 : isStartingSoon 
                                   ? isDark
                                     ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
