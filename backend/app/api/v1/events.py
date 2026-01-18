@@ -525,6 +525,7 @@ def _ensure_no_conflicts(
     exclude_event_id: UUID | None = None,
     skip_availability_check_for: list[UUID] | None = None,
     skip_all_availability_checks: bool = False,
+    creator_id: UUID | None = None,
 ) -> None:
     """
     Проверяет конфликты для события.
@@ -532,6 +533,8 @@ def _ensure_no_conflicts(
     Args:
         skip_all_availability_checks: Если True, полностью пропускает проверку занятости
                                       (для пользователей с can_override_availability)
+        creator_id: ID создателя события - всегда исключается из проверки конфликтов
+                    (создатель имеет право наслаивать свои события)
     """
     filters = [
         Event.calendar_id == calendar_id,
@@ -581,6 +584,10 @@ def _ensure_no_conflicts(
             )
         ).all()
         allow_overlap_ids = set(users_allow_overlap)
+        
+        # Создатель события всегда имеет право на наслоение своих событий
+        if creator_id:
+            allow_overlap_ids.add(creator_id)
         
         # Проверяем расписание доступности для каждого участника
         # Пропускаем проверку для тех, кто уже подтвердил участие, явно указан в skip_availability_check_for,
@@ -997,15 +1004,25 @@ def create_event(
         room_id=data.get("room_id"),
         participant_ids=participant_ids,
         skip_all_availability_checks=skip_all_availability_checks,
+        creator_id=current_user.id,
     )
 
     event = Event(**data)
     session.add(event)
     session.flush()
     
-    # Добавляем индивидуальных участников
-    if participant_ids:
-        _attach_participants(session, event.id, participant_ids)
+    # Добавляем создателя как участника со статусом "accepted"
+    creator_participant = EventParticipant(
+        event_id=event.id, 
+        user_id=current_user.id, 
+        response_status="accepted"
+    )
+    session.add(creator_participant)
+    
+    # Добавляем индивидуальных участников (кроме создателя)
+    other_participant_ids = [pid for pid in participant_ids if pid != current_user.id]
+    if other_participant_ids:
+        _attach_participants(session, event.id, other_participant_ids)
     
     # Добавляем групповых участников
     if group_participants:
@@ -1027,6 +1044,7 @@ def create_event(
                 room_id=data.get("room_id"),
                 participant_ids=participant_ids,
                 skip_all_availability_checks=skip_all_availability_checks,
+                creator_id=current_user.id,
             )
             child_event = Event(
                 calendar_id=event.calendar_id,
@@ -1043,8 +1061,16 @@ def create_event(
             )
             session.add(child_event)
             session.flush()
-            if participant_ids:
-                _attach_participants(session, child_event.id, participant_ids)
+            # Добавляем создателя как участника со статусом "accepted"
+            child_creator_participant = EventParticipant(
+                event_id=child_event.id, 
+                user_id=current_user.id, 
+                response_status="accepted"
+            )
+            session.add(child_creator_participant)
+            # Добавляем других участников
+            if other_participant_ids:
+                _attach_participants(session, child_event.id, other_participant_ids)
             if group_participants:
                 _attach_group_participants(session, child_event.id, group_participants, current_user.id)
 
@@ -1153,6 +1179,7 @@ def update_event(
                 room_id=target.room_id,
                 participant_ids=participant_ids,
                 exclude_event_id=target.id,
+                creator_id=current_user.id,
             )
             updated.append((target, new_start, new_end))
 
@@ -1204,6 +1231,7 @@ def update_event(
         room_id=new_room_id,
         participant_ids=new_participant_ids,
         exclude_event_id=event_id,
+        creator_id=current_user.id,
     )
 
     for field, value in data.items():
