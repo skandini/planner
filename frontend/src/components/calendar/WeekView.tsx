@@ -1002,8 +1002,11 @@ export function WeekView({
                         } : {}),
                         // needsAction ВСЕГДА должен быть белым - применяем последним для перезаписи
                         ...(needsAction ? {
+                          backgroundColor: "#ffffff",
                           background: "#ffffff",
+                          opacity: 1,
                           borderColor: "#fcd535",
+                          borderWidth: "2px",
                           boxShadow: isDark ? "0 0 20px rgba(252, 213, 53, 0.6), 0 0 40px rgba(252, 213, 53, 0.3)" : "0 4px 12px rgba(251, 191, 36, 0.3)",
                         } : {}),
                       }}
