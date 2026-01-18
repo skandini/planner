@@ -2472,10 +2472,10 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setIsInvitationsPanelOpen(true)}
-                    className={`relative rounded-lg border px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5 ${
+                    className={`relative rounded-xl border px-4 py-2 text-xs font-semibold transition-all duration-200 flex items-center gap-2 hover:scale-105 hover:shadow-lg active:scale-95 ${
                       invitationsUnreadCount > 0
-                        ? "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-500/50 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                        : "border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700"
+                        ? "border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100 hover:shadow-blue-200 dark:border-blue-500/50 dark:bg-gradient-to-r dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-300 dark:hover:from-blue-900/60 dark:hover:to-indigo-900/60 dark:hover:shadow-blue-900/50"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:shadow-slate-900/50"
                     }`}
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2483,7 +2483,7 @@ export default function Home() {
                     </svg>
                     Приглашения
                     {invitationsUnreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[0.6rem] font-bold text-white animate-pulse">
+                      <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-[0.65rem] font-bold text-white shadow-lg shadow-blue-500/50 animate-bounce">
                         {invitationsUnreadCount > 99 ? "99+" : invitationsUnreadCount}
                       </span>
                     )}
@@ -2492,14 +2492,18 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setIsNotificationCenterOpen(true)}
-                    className="relative rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5"
+                    className={`relative rounded-xl border px-4 py-2 text-xs font-semibold transition-all duration-200 flex items-center gap-2 hover:scale-105 hover:shadow-lg active:scale-95 ${
+                      otherUnreadCount > 0
+                        ? "border-amber-400 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 hover:from-amber-100 hover:to-orange-100 hover:shadow-amber-200 dark:border-amber-500/50 dark:bg-gradient-to-r dark:from-amber-900/40 dark:to-orange-900/40 dark:text-amber-300 dark:hover:from-amber-900/60 dark:hover:to-orange-900/60 dark:hover:shadow-amber-900/50"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:shadow-slate-900/50"
+                    }`}
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                     Уведомления
                     {otherUnreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[0.6rem] font-bold text-white">
+                      <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[0.65rem] font-bold text-white shadow-lg shadow-red-500/50 notification-pulse">
                         {otherUnreadCount > 99 ? "99+" : otherUnreadCount}
                       </span>
                     )}

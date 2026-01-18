@@ -71,31 +71,30 @@ def get_unread_count(
     return {"count": count}
 
 
-@router.patch("/mark-all-read", summary="Mark all notifications as read")
+@router.patch("/mark-all-read", summary="Mark all notifications as read and delete them")
 def mark_all_read(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    """Mark all user's notifications as read."""
+    """Mark all user's notifications as read and delete them from database."""
     try:
         statement = select(Notification).where(
             Notification.user_id == current_user.id,
             Notification.is_read == False,
-            Notification.is_deleted == False,  # Исключаем удаленные
+            Notification.is_deleted == False,
         )
         notifications = session.exec(statement).all()
         
-        now = datetime.utcnow()
+        count = len(notifications)
+        # Удаляем все непрочитанные уведомления
         for notification in notifications:
-            notification.is_read = True
-            notification.read_at = now
-            session.add(notification)
+            session.delete(notification)
         
         session.commit()
-        return {"marked": len(notifications)}
+        return {"deleted": count}
     except Exception as e:
         import traceback
-        error_msg = f"Error marking all notifications as read: {str(e)}"
+        error_msg = f"Error marking/deleting all notifications: {str(e)}"
         print(f"[ERROR] {error_msg}")
         print(traceback.format_exc())
         raise HTTPException(
@@ -115,7 +114,7 @@ def update_notification(
     session: SessionDep,
     current_user: User = Depends(get_current_user),
 ) -> NotificationRead:
-    """Update notification (mark as read/unread or soft delete)."""
+    """Update notification. If marked as read - delete from database."""
     try:
         # Конвертируем строку в UUID
         try:
@@ -130,21 +129,49 @@ def update_notification(
         if notification.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not your notification")
         
-        # Обновляем is_read если передан
-        if data.is_read is not None:
-            notification.is_read = data.is_read
-            if data.is_read and not notification.read_at:
-                notification.read_at = datetime.utcnow()
-            elif not data.is_read:
-                notification.read_at = None
+        # Если отмечается как прочитанное - удаляем из базы
+        if data.is_read is True:
+            # Создаём копию данных для возврата перед удалением
+            result = NotificationRead(
+                id=notification.id,
+                user_id=notification.user_id,
+                event_id=notification.event_id,
+                type=notification.type,
+                title=notification.title,
+                message=notification.message,
+                is_read=True,
+                is_deleted=True,
+                created_at=notification.created_at,
+                read_at=datetime.utcnow(),
+                deleted_at=datetime.utcnow(),
+            )
+            session.delete(notification)
+            session.commit()
+            return result
         
-        # Мягкое удаление
-        if data.is_deleted is not None:
-            notification.is_deleted = data.is_deleted
-            if data.is_deleted and not notification.deleted_at:
-                notification.deleted_at = datetime.utcnow()
-            elif not data.is_deleted:
-                notification.deleted_at = None
+        # Мягкое/жесткое удаление
+        if data.is_deleted is True:
+            result = NotificationRead(
+                id=notification.id,
+                user_id=notification.user_id,
+                event_id=notification.event_id,
+                type=notification.type,
+                title=notification.title,
+                message=notification.message,
+                is_read=notification.is_read,
+                is_deleted=True,
+                created_at=notification.created_at,
+                read_at=notification.read_at,
+                deleted_at=datetime.utcnow(),
+            )
+            session.delete(notification)
+            session.commit()
+            return result
+        
+        # Для других операций - просто обновляем
+        if data.is_read is False:
+            notification.is_read = False
+            notification.read_at = None
         
         session.add(notification)
         session.commit()
