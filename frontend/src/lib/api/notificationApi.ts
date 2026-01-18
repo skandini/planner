@@ -4,13 +4,19 @@ import { NOTIFICATION_ENDPOINT } from "@/lib/constants";
 
 export const notificationApi = {
   async list(authFetch: AuthenticatedFetch): Promise<Notification[]> {
-    const response = await authFetch(`${NOTIFICATION_ENDPOINT}/`, {
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error("Не удалось загрузить уведомления");
+    try {
+      const response = await authFetch(`${NOTIFICATION_ENDPOINT}/`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        console.warn("Не удалось загрузить уведомления:", response.status);
+        return [];
+      }
+      return response.json();
+    } catch (error) {
+      console.warn("Ошибка при загрузке уведомлений:", error);
+      return [];
     }
-    return response.json();
   },
 
   async getUnreadCount(authFetch: AuthenticatedFetch): Promise<number> {
