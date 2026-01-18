@@ -91,6 +91,8 @@ def update_current_user_profile(
         current_user.show_moscow_time = payload_dict["show_moscow_time"]
     if "birthday" in payload_dict:
         current_user.birthday = payload_dict["birthday"]
+    if "allow_event_overlap" in payload_dict:
+        current_user.allow_event_overlap = payload_dict["allow_event_overlap"]
     
     # Handle many-to-many relationships if provided
     if "department_ids" in payload_dict and payload_dict["department_ids"] is not None:
