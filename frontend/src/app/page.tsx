@@ -2512,7 +2512,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => openEventModal()}
-                      className="rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-lime-500/30 transition-all duration-200 hover:from-lime-400 hover:to-emerald-400 hover:shadow-xl hover:shadow-lime-500/40 hover:scale-105 active:scale-95 dark:from-emerald-600 dark:to-teal-600 dark:text-white dark:shadow-emerald-500/30 dark:hover:from-emerald-500 dark:hover:to-teal-500 dark:hover:shadow-emerald-500/40"
+                      className="rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-lime-500/30 transition-all duration-200 hover:from-lime-400 hover:to-emerald-400 hover:shadow-xl hover:shadow-lime-500/40 hover:scale-105 active:scale-95 dark:from-amber-500 dark:to-yellow-500 dark:text-black dark:shadow-amber-500/30 dark:hover:from-amber-400 dark:hover:to-yellow-400 dark:hover:shadow-amber-500/40"
                 >
                       + Событие
                 </button>
