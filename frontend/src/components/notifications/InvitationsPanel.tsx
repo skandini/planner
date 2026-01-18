@@ -100,11 +100,11 @@ export function InvitationsPanel({
       }}
     >
       <div 
-        className="w-full max-w-xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col dark:bg-[#181a20] dark:border-slate-700"
+        className="w-full max-w-xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col dark:bg-[#0b0e11] dark:border-slate-700/50"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-5 py-4 flex-shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#2b3139] px-5 py-4 flex-shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-[#181a20] dark:to-[#1e2329]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -133,7 +133,7 @@ export function InvitationsPanel({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 bg-slate-50 dark:bg-[#0b0e11]">
+        <div className="flex-1 overflow-y-auto px-4 py-4 bg-slate-50 dark:bg-[#0b0e11]/50">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -160,8 +160,8 @@ export function InvitationsPanel({
               {invitations.map((invitation) => (
                 <div
                   key={invitation.id}
-                  className={`rounded-xl border bg-white dark:bg-[#1e222d] border-slate-200 dark:border-slate-700 p-4 transition hover:shadow-md ${
-                    !invitation.is_read ? "ring-2 ring-blue-200 dark:ring-blue-500/30" : ""
+                  className={`rounded-xl border bg-white dark:bg-[#181a20] border-slate-200 dark:border-[#2b3139] p-4 transition hover:shadow-md dark:hover:bg-[#1e2329] ${
+                    !invitation.is_read ? "ring-2 ring-blue-200 dark:ring-amber-500/40" : ""
                   }`}
                 >
                   <div className="flex items-start gap-3">

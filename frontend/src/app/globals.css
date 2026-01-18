@@ -798,11 +798,12 @@ body {
   animation: notification-pulse 1.2s ease-in-out infinite;
 }
 
-/* Мягкий светлый фон для событий требующих ответа */
+/* Мягкий фон для событий требующих ответа - светлая тема */
 .needs-action-event {
   background-color: #fef9e7 !important;
   background: linear-gradient(135deg, #fef9e7 0%, #fef3c7 100%) !important;
   opacity: 1 !important;
+  border-left: 3px solid #d97706 !important;
 }
 
 .needs-action-event,
@@ -815,10 +816,12 @@ body {
   --tw-text-opacity: 1 !important;
 }
 
+/* Тёмная тема - приглушённый золотистый фон */
 [data-theme="dark"] .needs-action-event {
-  background-color: #fefce8 !important;
-  background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%) !important;
-  box-shadow: 0 0 20px rgba(252, 213, 53, 0.6), 0 0 40px rgba(252, 213, 53, 0.3) !important;
+  background-color: rgba(252, 213, 53, 0.12) !important;
+  background: linear-gradient(135deg, rgba(252, 213, 53, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%) !important;
+  box-shadow: 0 0 8px rgba(252, 213, 53, 0.2), inset 0 0 0 1px rgba(252, 213, 53, 0.3) !important;
+  border-left: 3px solid #fcd535 !important;
 }
 
 [data-theme="dark"] .needs-action-event,
@@ -828,8 +831,9 @@ body {
 [data-theme="dark"] .needs-action-event div,
 [data-theme="dark"] .needs-action-event [class*="text-"],
 [data-theme="dark"] .needs-action-event [style*="color"] {
-  color: #1c1917 !important;
+  color: #fcd535 !important;
   --tw-text-opacity: 1 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
 }
 
 @keyframes liveDot {
