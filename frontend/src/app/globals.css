@@ -789,22 +789,26 @@ body {
   opacity: 1 !important;
 }
 
+.needs-action-event,
+.needs-action-event *,
 .needs-action-event p,
 .needs-action-event span,
 .needs-action-event div {
-  color: #78350f !important;
+  color: #451a03 !important;
 }
 
 [data-theme="dark"] .needs-action-event {
-  background-color: #fef9e7 !important;
-  background: linear-gradient(135deg, #fef9e7 0%, #fde68a 100%) !important;
+  background-color: #fefce8 !important;
+  background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%) !important;
   box-shadow: 0 0 20px rgba(252, 213, 53, 0.6), 0 0 40px rgba(252, 213, 53, 0.3) !important;
 }
 
+[data-theme="dark"] .needs-action-event,
+[data-theme="dark"] .needs-action-event *,
 [data-theme="dark"] .needs-action-event p,
 [data-theme="dark"] .needs-action-event span,
 [data-theme="dark"] .needs-action-event div {
-  color: #78350f !important;
+  color: #1c1917 !important;
 }
 
 @keyframes liveDot {
