@@ -18,6 +18,7 @@ export type UserProfile = {
   access_tickets?: boolean;
   access_availability_slots?: boolean;
   can_override_availability?: boolean;  // Право игнорировать проверку занятости при создании событий
+  allow_event_overlap?: boolean;  // Разрешить другим приглашать на наслаивающиеся события
   // Many-to-many relationships
   department_ids?: string[];  // All departments user belongs to
   organization_ids?: string[];  // All organizations user belongs to

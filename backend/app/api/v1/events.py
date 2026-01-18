@@ -573,11 +573,20 @@ def _ensure_no_conflicts(
         if skip_availability_check_for:
             skip_check_ids.update(skip_availability_check_for)
         
+        # Получаем пользователей, которые разрешили наслоение событий
+        users_allow_overlap = session.exec(
+            select(User.id).where(
+                User.id.in_(participant_ids),
+                User.allow_event_overlap == True
+            )
+        ).all()
+        allow_overlap_ids = set(users_allow_overlap)
+        
         # Проверяем расписание доступности для каждого участника
-        # Пропускаем проверку для тех, кто уже подтвердил участие или явно указан в skip_availability_check_for
+        # Пропускаем проверку для тех, кто уже подтвердил участие, явно указан в skip_availability_check_for,
+        # или разрешил наслоение событий
         for user_id in participant_ids:
-            # Если участник уже подтвердил участие или явно указан для пропуска проверки, пропускаем проверку расписания
-            if user_id in skip_check_ids:
+            if user_id in skip_check_ids or user_id in allow_overlap_ids:
                 continue
                 
             is_available, error_message = _check_availability_schedule(
@@ -594,16 +603,24 @@ def _ensure_no_conflicts(
                     detail=f"{user_name} недоступен в это время согласно расписанию доступности.",
                 )
         
+        # Исключаем участников с allow_event_overlap=True из проверки конфликтов
+        participants_to_check = [pid for pid in participant_ids if pid not in allow_overlap_ids]
+        
+        # Если все участники разрешили наслоение - пропускаем проверку конфликтов
+        if not participants_to_check:
+            return
+        
         # Проверяем конфликты участников во ВСЕХ календарях
         # Учитываем:
         # 1. События, где участник является участником (через EventParticipant) и НЕ отклонил участие
         # 2. События из личных календарей участника (где он владелец), если он не отклонил участие
         # Это дает полную занятость независимо от календаря
+        # Примечание: участники с allow_event_overlap=True исключены из проверки
         
         # События, где участники являются участниками и НЕ отклонили участие
         # Исключаем события, где response_status == "declined"
         participant_events_subquery = select(EventParticipant.event_id).where(
-            EventParticipant.user_id.in_(participant_ids),
+            EventParticipant.user_id.in_(participants_to_check),
             or_(
                 EventParticipant.response_status != "declined",
                 EventParticipant.response_status.is_(None),
@@ -612,7 +629,7 @@ def _ensure_no_conflicts(
         
         # Личные календари участников
         participant_calendars_subquery = select(Calendar.id).where(
-            Calendar.owner_id.in_(participant_ids)
+            Calendar.owner_id.in_(participants_to_check)
         )
         
         # Фильтры для проверки конфликтов
@@ -641,7 +658,7 @@ def _ensure_no_conflicts(
                 .join(User, User.id == EventParticipant.user_id)
                 .where(
                     EventParticipant.event_id == conflict_event.id,
-                    EventParticipant.user_id.in_(participant_ids),
+                    EventParticipant.user_id.in_(participants_to_check),
                     or_(
                         EventParticipant.response_status != "declined",
                         EventParticipant.response_status.is_(None),
@@ -662,7 +679,7 @@ def _ensure_no_conflicts(
                 # Конфликт в личном календаре участника
                 # Проверяем, не отклонил ли владелец событие в своем календаре
                 conflict_calendar = session.get(Calendar, conflict_event.calendar_id)
-                if conflict_calendar and conflict_calendar.owner_id in participant_ids:
+                if conflict_calendar and conflict_calendar.owner_id in participants_to_check:
                     # Проверяем, не отклонил ли владелец это событие
                     owner_participant = session.exec(
                         select(EventParticipant).where(

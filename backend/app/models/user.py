@@ -37,6 +37,8 @@ class User(SQLModel, table=True):
     access_availability_slots: bool = Field(default=False, nullable=False)
     # Право игнорировать проверку занятости при создании событий
     can_override_availability: bool = Field(default=False, nullable=False)
+    # Разрешить другим приглашать меня на наслаивающиеся события
+    allow_event_overlap: bool = Field(default=False, nullable=False)
     # Настройки проекта
     show_local_time: bool = Field(default=True)
     show_moscow_time: bool = Field(default=True)

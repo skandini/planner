@@ -44,6 +44,7 @@ export function ProfileSettings({
     birthday: "",
     organization_ids: [] as string[],
     department_ids: [] as string[],
+    allow_event_overlap: false,
   });
   const [initialFormData, setInitialFormData] = useState<typeof formData | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -79,6 +80,7 @@ export function ProfileSettings({
         birthday: data.birthday || "",
         organization_ids: data.organization_ids || [],
         department_ids: data.department_ids || [],
+        allow_event_overlap: data.allow_event_overlap || false,
       };
       
       setFormData(newFormData);
@@ -205,6 +207,7 @@ export function ProfileSettings({
         birthday: string | null;
         organization_ids: string[];
         department_ids: string[];
+        allow_event_overlap: boolean;
       } = {
         email: formData.email.trim(),
         full_name: formData.full_name.trim() || null,
@@ -213,6 +216,7 @@ export function ProfileSettings({
         birthday: formData.birthday.trim() || null,
         organization_ids: formData.organization_ids,
         department_ids: formData.department_ids,
+        allow_event_overlap: formData.allow_event_overlap,
       };
 
       const response = await authFetch(`${USERS_ENDPOINT}me`, {
@@ -635,6 +639,45 @@ export function ProfileSettings({
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Настройки календаря */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Настройки календаря</h3>
+                  
+                  <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 hover:border-slate-300 transition-all cursor-pointer group">
+                    <div className="pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={formData.allow_event_overlap}
+                        onChange={(e) => setFormData({ ...formData, allow_event_overlap: e.target.checked })}
+                        className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          Разрешить наслоение событий
+                        </span>
+                        <span className="px-2 py-0.5 text-[0.65rem] font-bold text-indigo-600 bg-indigo-100 rounded-full uppercase">
+                          Новое
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Если включено, другие пользователи смогут приглашать вас на события, 
+                        даже если в это время у вас уже есть другие встречи. 
+                        События будут наслаиваться друг на друга в календаре.
+                      </p>
+                      <div className="mt-2 flex items-center gap-2 text-xs">
+                        <svg className={`w-4 h-4 ${formData.allow_event_overlap ? 'text-emerald-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={formData.allow_event_overlap ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+                        </svg>
+                        <span className={formData.allow_event_overlap ? 'text-emerald-600 font-medium' : 'text-slate-500'}>
+                          {formData.allow_event_overlap ? 'Наслоение разрешено' : 'Наслоение запрещено'}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </form>
             )}
