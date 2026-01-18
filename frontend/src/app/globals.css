@@ -798,13 +798,13 @@ body {
   animation: notification-pulse 1.2s ease-in-out infinite;
 }
 
-/* Мягкий светлый фон для событий требующих ответа - светлая тема */
+/* Серый фон для событий требующих ответа - светлая тема */
 .needs-action-event {
-  background-color: #fffbeb !important;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  background-color: #f1f5f9 !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
   opacity: 1 !important;
-  border-left: 3px solid #f59e0b !important;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15) !important;
+  border-left: 3px solid #94a3b8 !important;
+  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.15) !important;
 }
 
 .needs-action-event,
@@ -813,16 +813,16 @@ body {
 .needs-action-event span,
 .needs-action-event div,
 .needs-action-event [class*="text-"] {
-  color: #78350f !important;
+  color: #334155 !important;
   --tw-text-opacity: 1 !important;
 }
 
-/* Тёмная тема - яркий контрастный бирюзовый */
+/* Тёмная тема - серый */
 [data-theme="dark"] .needs-action-event {
-  background-color: rgba(6, 182, 212, 0.2) !important;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(14, 165, 233, 0.15) 100%) !important;
-  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3), inset 0 0 0 1px rgba(6, 182, 212, 0.4) !important;
-  border-left: 3px solid #06b6d4 !important;
+  background-color: rgba(100, 116, 139, 0.2) !important;
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.25) 0%, rgba(71, 85, 105, 0.15) 100%) !important;
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.2), inset 0 0 0 1px rgba(148, 163, 184, 0.3) !important;
+  border-left: 3px solid #94a3b8 !important;
 }
 
 [data-theme="dark"] .needs-action-event,
@@ -832,9 +832,9 @@ body {
 [data-theme="dark"] .needs-action-event div,
 [data-theme="dark"] .needs-action-event [class*="text-"],
 [data-theme="dark"] .needs-action-event [style*="color"] {
-  color: #67e8f9 !important;
+  color: #cbd5e1 !important;
   --tw-text-opacity: 1 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
 }
 
 @keyframes liveDot {
