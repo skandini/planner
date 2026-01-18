@@ -1706,9 +1706,17 @@ export default function Home() {
               )}
               <div className="flex flex-col min-w-0">
                 <h1 
-                  className="text-sm font-bold truncate"
+                  className={`text-sm font-bold truncate ${
+                    theme === 'dark' && !userOrganization?.primary_color 
+                      ? 'text-[#eaecef]' 
+                      : ''
+                  }`}
                   style={{
-                    color: userOrganization?.primary_color || "rgb(15 23 42)",
+                    color: userOrganization?.primary_color 
+                      ? userOrganization.primary_color 
+                      : theme === 'dark' 
+                        ? '#eaecef' 
+                        : 'rgb(15 23 42)',
                   }}
                 >
                   {userOrganization?.name || "Планировщик Corestone"}

@@ -793,8 +793,10 @@ body {
 .needs-action-event *,
 .needs-action-event p,
 .needs-action-event span,
-.needs-action-event div {
+.needs-action-event div,
+.needs-action-event [class*="text-"] {
   color: #451a03 !important;
+  --tw-text-opacity: 1 !important;
 }
 
 [data-theme="dark"] .needs-action-event {
@@ -807,8 +809,11 @@ body {
 [data-theme="dark"] .needs-action-event *,
 [data-theme="dark"] .needs-action-event p,
 [data-theme="dark"] .needs-action-event span,
-[data-theme="dark"] .needs-action-event div {
+[data-theme="dark"] .needs-action-event div,
+[data-theme="dark"] .needs-action-event [class*="text-"],
+[data-theme="dark"] .needs-action-event [style*="color"] {
   color: #1c1917 !important;
+  --tw-text-opacity: 1 !important;
 }
 
 @keyframes liveDot {

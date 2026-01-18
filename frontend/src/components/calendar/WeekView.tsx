@@ -1015,7 +1015,7 @@ export function WeekView({
                                   : isBookedSlot 
                                     ? isDark ? "text-orange-400" : "text-orange-700" 
                                     : needsAction
-                                      ? "text-slate-800"
+                                      ? "" // Цвет задаётся через CSS класс needs-action-event
                                       : isDark 
                                         ? "text-white" 
                                         : "text-slate-900"
@@ -1053,7 +1053,7 @@ export function WeekView({
                                     : isBookedSlot 
                                       ? isDark ? "text-orange-400" : "text-orange-700" 
                                       : needsAction
-                                        ? "text-slate-800"
+                                        ? "" // Цвет через CSS класс needs-action-event
                                         : isDark 
                                           ? "text-white" 
                                           : "text-slate-900"
@@ -1104,7 +1104,7 @@ export function WeekView({
                                       : isBookedSlot 
                                         ? isDark ? "text-orange-400" : "text-orange-700" 
                                         : needsAction
-                                          ? "text-slate-800"
+                                          ? "" // Цвет через CSS класс needs-action-event
                                           : isDark 
                                             ? "text-white" 
                                             : "text-slate-900"
