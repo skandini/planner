@@ -596,8 +596,20 @@ export default function Home() {
     return d;
   }, [selectedDate]);
   
-  const rangeStart = viewMode === "day" ? dayStart : viewMode === "week" ? weekStart : monthGridStart;
-  const rangeEnd = viewMode === "day" ? dayEnd : viewMode === "week" ? weekEnd : monthGridEnd;
+  // Для режима "day" загружаем события за весь месяц мини-календаря,
+  // чтобы точки на мини-календаре отображались корректно
+  const dayMonthStart = useMemo(() => {
+    const gridDays = getMonthGridDays(miniCalendarMonth);
+    return gridDays[0];
+  }, [miniCalendarMonth]);
+  
+  const dayMonthEnd = useMemo(() => {
+    const gridDays = getMonthGridDays(miniCalendarMonth);
+    return addDays(gridDays[0], gridDays.length);
+  }, [miniCalendarMonth]);
+  
+  const rangeStart = viewMode === "day" ? dayMonthStart : viewMode === "week" ? weekStart : monthGridStart;
+  const rangeEnd = viewMode === "day" ? dayMonthEnd : viewMode === "week" ? weekEnd : monthGridEnd;
 
 
   const filteredUsers = useMemo(() => {
