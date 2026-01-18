@@ -24,14 +24,18 @@ export function OnlineUsersIndicator({ authFetch, className = "" }: OnlineUsersI
     try {
       const res = await authFetch("/api/v1/users/online/");
       if (!res.ok) {
-        throw new Error("Failed to fetch online stats");
+        // Тихая обработка если бэкенд недоступен
+        console.warn("Online stats unavailable:", res.status);
+        setStats({ online_count: 0, total_users: 0, last_updated: "" });
+        return;
       }
       const data = await res.json();
       setStats(data);
       setError(null);
     } catch (err) {
-      console.error("Error fetching online stats:", err);
-      setError("Ошибка загрузки");
+      // Тихая обработка ошибки
+      console.warn("Online stats fetch failed:", err);
+      setStats({ online_count: 0, total_users: 0, last_updated: "" });
     } finally {
       setLoading(false);
     }
