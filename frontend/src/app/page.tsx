@@ -37,6 +37,7 @@ import { MoveSeriesDialog } from "@/components/events/MoveSeriesDialog";
 import { UserAvailabilityView } from "@/components/availability/UserAvailabilityView";
 import { UserAvailabilityWeekModal } from "@/components/availability/UserAvailabilityWeekModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { InvitationsPanel } from "@/components/notifications/InvitationsPanel";
 import { CalendarMembersManager } from "@/components/calendar/CalendarMembersManager";
 import { ProfileSettings } from "@/components/profile/ProfileSettings";
 import { OrgStructure } from "@/components/organization/OrgStructure";
@@ -117,6 +118,13 @@ export default function Home() {
     refresh: notificationsRefresh,
   } = useNotifications();
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [isInvitationsPanelOpen, setIsInvitationsPanelOpen] = useState(false);
+  
+  // Разделяем уведомления: приглашения отдельно, остальное в колокольчик
+  const invitations = notifications.filter(n => n.type === "event_invited");
+  const otherNotifications = notifications.filter(n => n.type !== "event_invited");
+  const invitationsUnreadCount = invitations.filter(n => !n.is_read).length;
+  const otherUnreadCount = otherNotifications.filter(n => !n.is_read).length;
   const [isMembersManagerOpen, setIsMembersManagerOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState<EventDraft>(DEFAULT_EVENT_FORM);
@@ -2460,18 +2468,39 @@ export default function Home() {
                       </span>
                     </label>
                   )}
+                  {/* Кнопка приглашений */}
+                  <button
+                    type="button"
+                    onClick={() => setIsInvitationsPanelOpen(true)}
+                    className={`relative rounded-lg border px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5 ${
+                      invitationsUnreadCount > 0
+                        ? "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-500/50 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Приглашения
+                    {invitationsUnreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[0.6rem] font-bold text-white animate-pulse">
+                        {invitationsUnreadCount > 99 ? "99+" : invitationsUnreadCount}
+                      </span>
+                    )}
+                  </button>
+                  {/* Кнопка уведомлений (колокольчик) */}
                   <button
                     type="button"
                     onClick={() => setIsNotificationCenterOpen(true)}
-                    className="relative rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 flex items-center gap-1.5"
+                    className="relative rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                     Уведомления
-                    {unreadCount > 0 && (
+                    {otherUnreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[0.6rem] font-bold text-white">
-                        {unreadCount > 99 ? "99+" : unreadCount}
+                        {otherUnreadCount > 99 ? "99+" : otherUnreadCount}
                       </span>
                     )}
                   </button>
@@ -2843,9 +2872,9 @@ export default function Home() {
         )}
         {isNotificationCenterOpen && (
           <NotificationCenter
-            notifications={notifications}
+            notifications={otherNotifications}
             loading={notificationsLoading}
-            unreadCount={unreadCount}
+            unreadCount={otherUnreadCount}
             onClose={() => setIsNotificationCenterOpen(false)}
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
@@ -2904,6 +2933,61 @@ export default function Home() {
               if (event) {
                 openEventModal(undefined, event);
                 setIsNotificationCenterOpen(false);
+              }
+            }}
+          />
+        )}
+        {isInvitationsPanelOpen && (
+          <InvitationsPanel
+            invitations={invitations}
+            loading={notificationsLoading}
+            onClose={() => setIsInvitationsPanelOpen(false)}
+            onMarkAsRead={markAsRead}
+            onDelete={deleteNotification}
+            onUpdateParticipantStatus={async (eventId: string, status: string) => {
+              try {
+                const { eventApi } = await import("@/lib/api/eventApi");
+                const event = events.find((e) => e.id === eventId);
+                let currentParticipant;
+                if (!event || !event.participants) {
+                  const loadedEvent = await eventApi.get(authFetch, eventId);
+                  if (!loadedEvent.participants) {
+                    throw new Error("Не удалось найти участников события");
+                  }
+                  currentParticipant = loadedEvent.participants.find(
+                    (p) => p.email === userEmail
+                  );
+                } else {
+                  currentParticipant = event.participants.find(
+                    (p) => p.email === userEmail
+                  );
+                }
+                if (!currentParticipant) {
+                  throw new Error("Вы не являетесь участником этого события");
+                }
+                await eventApi.updateParticipantStatus(authFetch, eventId, currentParticipant.user_id, status);
+                await loadEvents();
+                notificationsRefresh();
+              } catch (err) {
+                console.error("Failed to update participant status:", err);
+                throw err;
+              }
+            }}
+            onEventClick={async (eventId: string) => {
+              let event = events.find((e) => e.id === eventId);
+              if (!event) {
+                try {
+                  const { eventApi } = await import("@/lib/api/eventApi");
+                  event = await eventApi.get(authFetch, eventId);
+                } catch (err) {
+                  console.error("Failed to load event:", err);
+                  alert("Не удалось загрузить событие");
+                  return;
+                }
+              }
+              if (event) {
+                openEventModal(undefined, event);
+                setIsInvitationsPanelOpen(false);
               }
             }}
           />
