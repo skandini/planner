@@ -933,8 +933,8 @@ export function WeekView({
                                 : "cursor-default border-orange-400 bg-orange-100 z-10"
                                 : needsAction
                                 ? isDark
-                                  ? "border-2 border-[#fcd535] !bg-white cursor-pointer hover:shadow-xl hover:scale-[1.02] animate-pulse-subtle needs-action-event"
-                                  : "border-2 border-amber-400 !bg-white cursor-pointer hover:shadow-lg needs-action-event"
+                                  ? "border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02] needs-action-event"
+                                  : "border-2 cursor-pointer hover:shadow-lg needs-action-event"
                                 : isStartingSoon 
                                   ? isDark
                                     ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
@@ -956,16 +956,14 @@ export function WeekView({
                           boxShadow: `0 4px 15px ${darkColor.border}30`,
                         } : {}),
                         // Светлая тема: оригинальные стили
-                        ...(!isDark ? {
+                        ...(!isDark && !needsAction ? {
                           background: isUnavailable
                             ? "rgba(148, 163, 184, 0.3)"
                             : isAvailable
                               ? "rgba(34, 197, 94, 0.2)"
                               : isBookedSlot
                                 ? "rgba(249, 115, 22, 0.2)"
-                                : needsAction
-                                  ? "white"
-                                  : isStartingSoon 
+                                : isStartingSoon 
                                     ? event.department_color 
                                       ? `${event.department_color}40`
                                       : `${accent}40`
