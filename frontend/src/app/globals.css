@@ -782,17 +782,29 @@ body {
   animation: pulse-subtle 1.5s ease-in-out infinite;
 }
 
-/* Принудительный белый фон для событий требующих ответа */
+/* Мягкий светлый фон для событий требующих ответа */
 .needs-action-event {
-  background-color: #ffffff !important;
-  background: #ffffff !important;
+  background-color: #fef9e7 !important;
+  background: linear-gradient(135deg, #fef9e7 0%, #fef3c7 100%) !important;
   opacity: 1 !important;
 }
 
+.needs-action-event p,
+.needs-action-event span,
+.needs-action-event div {
+  color: #78350f !important;
+}
+
 [data-theme="dark"] .needs-action-event {
-  background-color: #ffffff !important;
-  background: #ffffff !important;
+  background-color: #fef9e7 !important;
+  background: linear-gradient(135deg, #fef9e7 0%, #fde68a 100%) !important;
   box-shadow: 0 0 20px rgba(252, 213, 53, 0.6), 0 0 40px rgba(252, 213, 53, 0.3) !important;
+}
+
+[data-theme="dark"] .needs-action-event p,
+[data-theme="dark"] .needs-action-event span,
+[data-theme="dark"] .needs-action-event div {
+  color: #78350f !important;
 }
 
 @keyframes liveDot {
