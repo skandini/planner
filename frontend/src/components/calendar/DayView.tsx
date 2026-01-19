@@ -545,11 +545,7 @@ export function DayView({
                           ? isDark
                             ? "cursor-default border-orange-500/50 z-10"
                             : "cursor-default border-orange-400 bg-orange-100 z-10"
-                          : needsAction
-                            ? isDark
-                              ? "border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02] needs-action-event"
-                              : "border-2 cursor-pointer hover:shadow-lg needs-action-event"
-                            : isStartingSoon 
+                          : isStartingSoon 
                               ? isDark
                                 ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
                                 : "event-vibrating border-lime-500 border-2 cursor-pointer hover:shadow-lg"
@@ -560,14 +556,14 @@ export function DayView({
                   style={{
                     top: `${topPx}px`,
                     height: `${heightPx}px`,
-                    // Тёмная тема: яркие градиенты (не для needsAction - у них белый фон)
-                    ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction && darkColor ? {
+                    // Тёмная тема: зелёный (принятые) или янтарный (непринятые)
+                    ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && darkColor ? {
                       background: darkColor.bg,
                       borderColor: darkColor.border,
                       boxShadow: `0 4px 15px ${darkColor.border}30`,
                     } : {}),
-                    // Светлая тема: оригинальные стили (не для needsAction - стили через CSS)
-                    ...(!isDark && !needsAction ? {
+                    // Светлая тема: оригинальные стили
+                    ...(!isDark ? {
                       background: isUnavailable
                         ? "rgba(148, 163, 184, 0.3)"
                         : isAvailable
@@ -581,7 +577,7 @@ export function DayView({
                               : event.department_color
                                 ? `${event.department_color}20`
                                 : `${accent}20`,
-                      borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon && !needsAction
+                      borderColor: event.department_color && !isUnavailable && !isAvailable && !isBookedSlot && !isStartingSoon
                         ? event.department_color
                         : undefined,
                     } : {}),
@@ -589,12 +585,11 @@ export function DayView({
                     ...(isDark && isUnavailable ? { background: "rgba(100, 116, 139, 0.3)" } : {}),
                     ...(isDark && isAvailable ? { background: "rgba(16, 185, 129, 0.2)" } : {}),
                     ...(isDark && isBookedSlot ? { background: "rgba(249, 115, 22, 0.25)", borderColor: "#f97316" } : {}),
-                    ...(isDark && isStartingSoon && !needsAction && darkColor ? {
+                    ...(isDark && isStartingSoon && darkColor ? {
                       borderColor: "#fcd535",
                       background: "linear-gradient(135deg, rgba(252, 213, 53, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)",
                       boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
                     } : {}),
-                    // needsAction стили через CSS класс needs-action-event
                   }}
                 >
                   <div className="flex items-start justify-between gap-1">

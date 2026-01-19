@@ -933,10 +933,6 @@ export function WeekView({
                               ? isDark
                                 ? "cursor-default border-orange-500/50 z-10"
                                 : "cursor-default border-orange-400 bg-orange-100 z-10"
-                                : needsAction
-                                ? isDark
-                                  ? "border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02] needs-action-event"
-                                  : "border-2 cursor-pointer hover:shadow-lg needs-action-event"
                                 : isStartingSoon 
                                   ? isDark
                                     ? "event-vibrating border-2 cursor-pointer hover:shadow-xl hover:scale-[1.02]"
@@ -951,8 +947,8 @@ export function WeekView({
                         left: positionStyles.left,
                         width: positionStyles.width,
                         zIndex: hoveredEventId === event.id ? 100 : positionStyles.zIndex,
-                        // Тёмная тема: яркие градиенты (не для needsAction - у них белый фон)
-                        ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction && darkColor ? {
+                        // Тёмная тема: зелёный (принятые) или янтарный (непринятые)
+                        ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && darkColor ? {
                           background: darkColor.bg,
                           borderColor: darkColor.border,
                           boxShadow: `0 4px 15px ${darkColor.border}30`,
@@ -995,12 +991,11 @@ export function WeekView({
                           background: "rgba(249, 115, 22, 0.25)",
                           borderColor: "#f97316",
                         } : {}),
-                        ...(isDark && isStartingSoon && !needsAction && darkColor ? {
+                        ...(isDark && isStartingSoon && darkColor ? {
                           borderColor: "#fcd535",
                           background: "linear-gradient(135deg, rgba(252, 213, 53, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)",
                           boxShadow: "0 0 15px rgba(252, 213, 53, 0.4)",
                         } : {}),
-                        // needsAction стили через CSS класс needs-action-event
                       }}
                     >
                       {/* Очень короткие события (< 30 мин): только название */}
@@ -1020,7 +1015,7 @@ export function WeekView({
                                         ? "text-white" 
                                         : "text-slate-900"
                             }`}
-                            style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction ? { color: darkColor.text } : undefined}
+                            style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
                           >
                             {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                           </p>
@@ -1058,7 +1053,7 @@ export function WeekView({
                                           ? "text-white" 
                                           : "text-slate-900"
                               }`}
-                              style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction ? { color: darkColor.text } : undefined}
+                              style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
                             >
                               {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                             </p>
@@ -1109,7 +1104,7 @@ export function WeekView({
                                             ? "text-white" 
                                             : "text-slate-900"
                                 }`}
-                                style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot && !needsAction ? { color: darkColor.text } : undefined}
+                                style={isDark && darkColor && !isUnavailable && !isAvailable && !isBookedSlot ? { color: darkColor.text } : undefined}
                               >
                                 {isUnavailable ? "Недоступен" : isAvailable ? event.title : isBookedSlot ? event.title : event.title}
                               </p>
