@@ -2542,7 +2542,7 @@ export default function Home() {
                     onClick={() => setIsInvitationsPanelOpen(true)}
                     className={`relative rounded-lg border px-1.5 sm:px-2.5 py-1.5 text-[0.65rem] sm:text-xs font-semibold transition-all duration-200 flex items-center gap-1 hover:scale-105 hover:shadow-md active:scale-95 touch-manipulation ${
                       invitationsUnreadCount > 0
-                        ? "border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100 dark:border-blue-500/50 dark:bg-gradient-to-r dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-300"
+                        ? "border-blue-400 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-500/50 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-800/50"
                         : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                     }`}
                   >
