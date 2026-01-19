@@ -7,21 +7,19 @@ import { formatDate, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_T
 import { MINUTES_IN_DAY } from "@/lib/constants";
 import { useTheme } from "@/context/ThemeContext";
 
-// Цвета событий для тёмной темы: зелёный для принятых, серый для непринятых
-const DARK_EVENT_ACCEPTED = { 
-  bg: "linear-gradient(135deg, rgba(14, 203, 129, 0.22) 0%, rgba(16, 185, 129, 0.12) 100%)", 
-  border: "#0ecb81", 
-  text: "#34d399" 
-};
+// Яркие градиенты для событий в тёмной теме (вдохновлено Bybit)
+const DARK_EVENT_COLORS = [
+  { bg: "linear-gradient(135deg, rgba(14, 203, 129, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)", border: "#0ecb81", text: "#34d399" },
+  { bg: "linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%)", border: "#818cf8", text: "#a5b4fc" },
+  { bg: "linear-gradient(135deg, rgba(252, 213, 53, 0.2) 0%, rgba(245, 158, 11, 0.12) 100%)", border: "#fcd535", text: "#fde047" },
+  { bg: "linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(244, 114, 182, 0.15) 100%)", border: "#ec4899", text: "#f9a8d4" },
+  { bg: "linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(34, 211, 238, 0.15) 100%)", border: "#06b6d4", text: "#67e8f9" },
+  { bg: "linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(251, 146, 60, 0.15) 100%)", border: "#f97316", text: "#fdba74" },
+];
 
-const DARK_EVENT_PENDING = { 
-  bg: "linear-gradient(135deg, rgba(100, 116, 139, 0.25) 0%, rgba(71, 85, 105, 0.15) 100%)", 
-  border: "#64748b", 
-  text: "#94a3b8" 
-};
-
-function getDarkEventColor(isAccepted: boolean) {
-  return isAccepted ? DARK_EVENT_ACCEPTED : DARK_EVENT_PENDING;
+function getDarkEventColor(eventId: string, index: number) {
+  const hash = eventId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return DARK_EVENT_COLORS[(hash + index) % DARK_EVENT_COLORS.length];
 }
 
 interface DayViewProps {
@@ -476,7 +474,6 @@ export function DayView({
               const userParticipant = currentUserEmail && event.participants
                 ? event.participants.find((p) => p.email === currentUserEmail)
                 : null;
-              const isAccepted = userParticipant?.response_status === "accepted";
               const needsAction = userParticipant && 
                 (userParticipant.response_status === "needs_action" || 
                  userParticipant.response_status === "pending" ||
@@ -489,8 +486,8 @@ export function DayView({
                 return diff > 0 && diff <= 15 * 60 * 1000;
               })();
               
-              // Получаем цвет для тёмной темы: зелёный для принятых, серый для непринятых
-              const darkColor = isDark ? getDarkEventColor(isAccepted) : null;
+              // Получаем цвет для тёмной темы
+              const darkColor = isDark ? getDarkEventColor(event.id, index) : null;
               
               return (
                 <div
