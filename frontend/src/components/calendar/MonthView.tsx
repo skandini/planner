@@ -5,6 +5,7 @@ import type { EventRecord } from "@/types/event.types";
 import type { Room } from "@/types/room.types";
 import { addDays, parseUTC, formatTimeInTimeZone, getTimeInTimeZone, MOSCOW_TIMEZONE, getCurrentMoscowDate, isSameDayInMoscow } from "@/lib/utils/dateUtils";
 import { WEEKDAY_LABELS } from "@/lib/constants";
+import { useTheme } from "@/context/ThemeContext";
 
 interface MonthViewProps {
   days: Date[];
@@ -31,6 +32,8 @@ export function MonthView({
   currentUserEmail,
   getUserOrganizationAbbreviation,
 }: MonthViewProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const currentMonth = selectedDate.getMonth();
   
   // Состояние для всплывающего окна с деталями события

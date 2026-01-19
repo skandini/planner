@@ -950,7 +950,10 @@ export function WeekView({
                         // Тёмная тема: зелёный (принятые) или янтарный (непринятые)
                         ...(isDark && !isUnavailable && !isAvailable && !isBookedSlot && darkColor ? {
                           background: darkColor.bg,
+                          backgroundColor: isAccepted ? '#134e3a' : '#fbbf24',
                           borderColor: darkColor.border,
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
                           boxShadow: `0 4px 15px ${darkColor.border}30`,
                         } : {}),
                         // Светлая тема: оригинальные стили
