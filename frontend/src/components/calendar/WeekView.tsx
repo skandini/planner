@@ -8,15 +8,15 @@ import { MINUTES_IN_DAY } from "@/lib/constants";
 import { calculateEventLayout, getEventPositionStyles, getPastelColor, getCascadeColorVariation } from "@/lib/utils/eventLayout";
 import { useTheme } from "@/context/ThemeContext";
 
-// Цвета для тёмной темы: зелёный (принятые) и янтарный (непринятые)
+// Цвета для тёмной темы: зелёный (принятые) и янтарный (непринятые) - без прозрачности
 const DARK_COLOR_ACCEPTED = { 
-  bg: "linear-gradient(135deg, rgba(14, 203, 129, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)", 
+  bg: "linear-gradient(135deg, #134e3a 0%, #14532d 100%)", 
   border: "#0ecb81", 
   text: "#34d399" 
 };
 
 const DARK_COLOR_PENDING = { 
-  bg: "linear-gradient(135deg, rgba(252, 213, 53, 0.22) 0%, rgba(245, 158, 11, 0.14) 100%)", 
+  bg: "linear-gradient(135deg, #78350f 0%, #713f12 100%)", 
   border: "#fcd535", 
   text: "#fde047" 
 };
