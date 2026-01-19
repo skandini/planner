@@ -1192,278 +1192,243 @@ export function WeekView({
       </div>
     </div>
       
-          {/* Всплывающее окно с деталями события - вынесено за пределы цикла по дням, чтобы показывалось только один раз */}
+          {/* Всплывающее окно с деталями события */}
       {hoveredEvent && (
         <div
-          className={`fixed z-50 rounded-xl border p-4 pointer-events-auto overflow-hidden flex flex-col ${
+          className={`fixed z-50 rounded-2xl border pointer-events-auto overflow-hidden flex flex-col ${
             isDark 
-              ? "border-[#2b3139] bg-[#181a20] shadow-[0_10px_40px_rgba(0,0,0,0.5)]" 
-              : "border-slate-200 bg-white shadow-[0_10px_40px_rgba(15,23,42,0.2)]"
+              ? "border-[#2b3139] bg-[#181a20] shadow-[0_20px_60px_rgba(0,0,0,0.6)]" 
+              : "border-slate-200/80 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.15)]"
           }`}
           style={{
             top: `${hoveredEvent.position.top}px`,
             left: `${hoveredEvent.position.left}px`,
-            width: "320px",
-            maxHeight: "500px",
+            width: "340px",
+            maxHeight: "480px",
             maxWidth: "calc(100vw - 20px)",
           }}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
         >
-          {/* Заголовок события */}
-          <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
-            <p className={`text-sm font-semibold mb-1 line-clamp-2 break-words ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>{hoveredEvent.event.title}</p>
-            <p className={`text-xs ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
-              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), MOSCOW_TIMEZONE)}{" "}
-              —{" "}
-              {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
-            </p>
-          </div>
-          
-          {/* Кнопки ответа на приглашение */}
-          {onUpdateParticipantStatus && currentUserEmail && hoveredEvent.event.participants && (() => {
-            const currentParticipant = hoveredEvent.event.participants.find(
-              (p) => p.email === currentUserEmail
-            );
-            const needsAction = currentParticipant && 
-              (currentParticipant.response_status === "needs_action" || 
-               currentParticipant.response_status === "pending" ||
-               !currentParticipant.response_status);
-            
-            if (!needsAction) return null;
-            
-            return (
-              <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
-                <p className={`text-xs font-semibold mb-2 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Ответить на приглашение</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (currentParticipant) {
-                        handleUpdateParticipantStatus(hoveredEvent.event, currentParticipant.user_id, "accepted");
-                        setHoveredEvent(null);
-                      }
-                    }}
-                    className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold transition flex items-center justify-center gap-2 ${
-                      isDark 
-                        ? "bg-[#0ecb81] hover:bg-[#1ad48a] text-white shadow-[0_0_15px_rgba(14,203,129,0.4)]" 
-                        : "bg-gradient-to-r from-lime-500 to-emerald-500 hover:from-lime-600 hover:to-emerald-600 text-white shadow-sm"
-                    }`}
-                  >
-                    <span className="text-base">✓</span> Принять
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (currentParticipant) {
-                        handleUpdateParticipantStatus(hoveredEvent.event, currentParticipant.user_id, "declined");
-                        setHoveredEvent(null);
-                      }
-                    }}
-                    className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold transition flex items-center justify-center gap-2 ${
-                      isDark 
-                        ? "bg-[#f6465d] hover:bg-[#ff5a6e] text-white shadow-[0_0_15px_rgba(246,70,93,0.4)]" 
-                        : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-sm"
-                    }`}
-                  >
-                    <span className="text-base">✕</span> Отклонить
-                  </button>
+          {/* Заголовок с цветной полосой */}
+          <div className={`px-4 pt-4 pb-3 ${isDark ? "bg-[#1e2329]" : "bg-gradient-to-r from-slate-50 to-white"}`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-1 h-12 rounded-full flex-shrink-0 ${isDark ? "bg-[#fcd535]" : "bg-lime-500"}`} />
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-bold leading-tight line-clamp-2 ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>
+                  {hoveredEvent.event.title}
+                </p>
+                <div className={`flex items-center gap-2 mt-1.5 text-xs ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium">
+                    {formatTimeInTimeZone(parseUTC(hoveredEvent.event.starts_at), MOSCOW_TIMEZONE)} — {formatTimeInTimeZone(parseUTC(hoveredEvent.event.ends_at), MOSCOW_TIMEZONE)}
+                  </span>
                 </div>
               </div>
-            );
-          })()}
-          
-          {/* Описание события */}
-          {hoveredEvent.event.description && hoveredEvent.event.description.trim().length > 0 && (
-            <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
-              <p className={`text-xs font-semibold mb-1.5 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Описание</p>
-              <p className={`text-xs leading-relaxed line-clamp-3 break-words ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
-                {hoveredEvent.event.description}
-              </p>
             </div>
-          )}
-          
-          {/* Переговорка */}
-          {hoveredEvent.event.room_id && (
-            <div className={`mb-3 border-b pb-3 flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-100"}`}>
-              <p className={`text-xs font-semibold mb-1.5 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>Переговорка</p>
-              <div className={`flex items-center gap-2 rounded-lg border p-2 ${
-                isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-100 bg-slate-50"
-              }`}>
-                <span className="text-lg flex-shrink-0">🏢</span>
+          </div>
+
+          {/* Содержимое */}
+          <div className="px-4 py-3 flex-1 overflow-y-auto space-y-3">
+            {/* Кнопки ответа на приглашение */}
+            {onUpdateParticipantStatus && currentUserEmail && hoveredEvent.event.participants && (() => {
+              const currentParticipant = hoveredEvent.event.participants.find(
+                (p) => p.email === currentUserEmail
+              );
+              const needsAction = currentParticipant && 
+                (currentParticipant.response_status === "needs_action" || 
+                 currentParticipant.response_status === "pending" ||
+                 !currentParticipant.response_status);
+              
+              if (!needsAction) return null;
+              
+              return (
+                <div className={`p-3 rounded-xl ${isDark ? "bg-[#1e2329]" : "bg-amber-50 border border-amber-200"}`}>
+                  <p className={`text-xs font-semibold mb-2.5 flex items-center gap-1.5 ${isDark ? "text-amber-400" : "text-amber-700"}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    Требуется ответ
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (currentParticipant) {
+                          handleUpdateParticipantStatus(hoveredEvent.event, currentParticipant.user_id, "accepted");
+                          setHoveredEvent(null);
+                        }
+                      }}
+                      className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        isDark 
+                          ? "bg-[#0ecb81] hover:bg-[#1ad48a] text-white" 
+                          : "bg-lime-500 hover:bg-lime-600 text-white"
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Принять
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (currentParticipant) {
+                          handleUpdateParticipantStatus(hoveredEvent.event, currentParticipant.user_id, "declined");
+                          setHoveredEvent(null);
+                        }
+                      }}
+                      className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        isDark 
+                          ? "bg-[#363c45] hover:bg-[#474d57] text-[#848e9c]" 
+                          : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Отклонить
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Описание события */}
+            {hoveredEvent.event.description && hoveredEvent.event.description.trim().length > 0 && (
+              <div>
+                <p className={`text-[0.65rem] font-semibold uppercase tracking-wider mb-1.5 ${isDark ? "text-[#5e6673]" : "text-slate-400"}`}>
+                  Описание
+                </p>
+                <p className={`text-xs leading-relaxed line-clamp-3 ${isDark ? "text-[#b7bdc6]" : "text-slate-600"}`}>
+                  {hoveredEvent.event.description}
+                </p>
+              </div>
+            )}
+            
+            {/* Переговорка */}
+            {hoveredEvent.event.room_id && (
+              <div className={`flex items-center gap-3 p-2.5 rounded-xl ${isDark ? "bg-[#1e2329]" : "bg-slate-50"}`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? "bg-[#2b3139]" : "bg-white border border-slate-200"}`}>
+                  <svg className={`w-5 h-5 ${isDark ? "text-[#848e9c]" : "text-slate-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className={`text-xs font-semibold truncate ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>
                     {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.name || "Переговорка"}
                   </p>
                   {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.location && (
-                    <p className={`text-[0.65rem] mt-0.5 truncate ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
+                    <p className={`text-[0.65rem] truncate ${isDark ? "text-[#5e6673]" : "text-slate-500"}`}>
                       {rooms.find((r) => r.id === hoveredEvent.event.room_id)?.location}
                     </p>
                   )}
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Кнопка для перехода по ссылке на онлайн встречу */}
-          {hoveredEvent.event.room_online_meeting_url && (
-            <a
-              href={hoveredEvent.event.room_online_meeting_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-md transition hover:from-blue-600 hover:to-indigo-700 flex-shrink-0"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              Присоединиться к встрече
-            </a>
-          )}
-          
-          {/* Участники */}
-          {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 ? (
-            <div className="flex-1 min-h-0 flex flex-col">
-              <div className="mb-2 flex-shrink-0">
-                <p className={`text-xs font-semibold mb-2 ${isDark ? "text-[#eaecef]" : "text-slate-700"}`}>
-                  Участники ({hoveredEvent.event.participants.length})
+            )}
+            
+            {/* Ссылка на онлайн встречу */}
+            {hoveredEvent.event.room_online_meeting_url && (
+              <a
+                href={hoveredEvent.event.room_online_meeting_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${
+                  isDark 
+                    ? "bg-blue-600 hover:bg-blue-500 text-white" 
+                    : "bg-blue-500 hover:bg-blue-600 text-white"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Присоединиться к встрече
+              </a>
+            )}
+            
+            {/* Участники */}
+            {hoveredEvent.event.participants && hoveredEvent.event.participants.length > 0 && (
+              <div>
+                <p className={`text-[0.65rem] font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-[#5e6673]" : "text-slate-400"}`}>
+                  Участники · {hoveredEvent.event.participants.length}
                 </p>
-                {/* Аватарки участников в кружочках - показываем максимум 12 */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {hoveredEvent.event.participants.slice(0, 12).map((participant) => {
+                {/* Компактный список */}
+                <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
+                  {hoveredEvent.event.participants.slice(0, 6).map((participant) => {
                     const user = users.find((u) => u.id === participant.user_id || u.email === participant.email);
                     const avatarUrl = user?.avatar_url;
                     const displayName = participant.full_name || participant.email.split("@")[0];
                     const initials = displayName.charAt(0).toUpperCase();
+                    const status = participant.response_status || "pending";
                     
                     return (
                       <div
                         key={participant.user_id || participant.email}
-                        className="relative group/avatar"
-                        title={displayName}
+                        className={`flex items-center gap-2.5 p-2 rounded-lg ${isDark ? "bg-[#1e2329]" : "bg-slate-50"}`}
                       >
-                        {avatarUrl ? (
-                          <img
-                            src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
-                            alt={displayName}
-                            className={`w-8 h-8 rounded-full object-cover border-2 shadow-sm hover:scale-110 transition-transform cursor-pointer ${
-                              isDark ? "border-[#2b3139]" : "border-white"
-                            }`}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                              const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
-                              if (fallback) fallback.classList.remove('hidden');
-                            }}
-                          />
-                        ) : null}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm hover:scale-110 transition-transform cursor-pointer ${avatarUrl ? 'hidden' : ''} ${
-                          isDark 
-                            ? "bg-gradient-to-br from-slate-600 to-slate-700 border-[#2b3139]" 
-                            : "bg-gradient-to-br from-slate-300 to-slate-400 border-white"
-                        }`}>
-                          <span className="text-[0.65rem] font-semibold text-white">
-                            {initials}
-                          </span>
+                        {/* Аватар */}
+                        <div className="relative flex-shrink-0">
+                          {avatarUrl ? (
+                            <img
+                              src={avatarUrl.startsWith('http') ? avatarUrl : `${apiBaseUrl}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`}
+                              alt={displayName}
+                              className={`w-7 h-7 rounded-full object-cover ${isDark ? "border border-[#2b3139]" : "border border-slate-200"}`}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                if (fallback) fallback.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${avatarUrl ? 'hidden' : ''} ${
+                            isDark ? "bg-[#2b3139]" : "bg-slate-200"
+                          }`}>
+                            <span className={`text-[0.6rem] font-semibold ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
+                              {initials}
+                            </span>
+                          </div>
+                          {/* Статус точка */}
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${
+                            isDark ? "border-[#1e2329]" : "border-slate-50"
+                          } ${
+                            status === "accepted" ? "bg-lime-500" : status === "declined" ? "bg-red-500" : "bg-amber-500"
+                          }`} />
                         </div>
-                        {/* Статус участника (цветная точка) */}
-                        <div
-                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                            participant.response_status === "accepted"
-                              ? "bg-lime-500"
-                              : participant.response_status === "declined"
-                              ? "bg-red-500"
-                              : "bg-amber-500"
-                          }`}
-                          title={
-                            participant.response_status === "accepted"
-                              ? "Принял"
-                              : participant.response_status === "declined"
-                              ? "Отклонил"
-                              : "Ожидает ответа"
-                          }
-                        />
+                        {/* Имя */}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-medium truncate ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>
+                            {displayName}
+                          </p>
+                        </div>
+                        {/* Статус бейдж */}
+                        <span className={`text-[0.6rem] font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
+                          isDark 
+                            ? status === "accepted" ? "bg-emerald-500/20 text-emerald-400" 
+                              : status === "declined" ? "bg-red-500/20 text-red-400" 
+                              : "bg-amber-500/20 text-amber-400"
+                            : status === "accepted" ? "bg-lime-100 text-lime-700" 
+                              : status === "declined" ? "bg-red-100 text-red-700" 
+                              : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {status === "accepted" ? "✓" : status === "declined" ? "✕" : "?"}
+                        </span>
                       </div>
                     );
                   })}
-                  {hoveredEvent.event.participants.length > 12 ? (
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-sm ${
-                      isDark ? "bg-[#2b3139] border-[#2b3139]" : "bg-slate-200 border-white"
-                    }`}>
-                      <span className={`text-[0.65rem] font-semibold ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
-                        +{hoveredEvent.event.participants.length - 12}
-                      </span>
-                    </div>
-                  ) : null}
+                  {hoveredEvent.event.participants.length > 6 && (
+                    <p className={`text-[0.65rem] text-center py-1 ${isDark ? "text-[#5e6673]" : "text-slate-400"}`}>
+                      + ещё {hoveredEvent.event.participants.length - 6}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
-                {hoveredEvent.event.participants.slice(0, 8).map((participant) => {
-                  const statusLabels: Record<string, string> = {
-                    accepted: "Принял",
-                    declined: "Отклонил",
-                    pending: "Нет ответа",
-                    needs_action: "Нет ответа",
-                  };
-                  const statusColors: Record<string, string> = isDark ? {
-                    accepted: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-                    declined: "bg-red-500/20 text-red-400 border-red-500/30",
-                    pending: "bg-amber-500/40 text-amber-300 border-amber-500/60",
-                    needs_action: "bg-amber-500/40 text-amber-300 border-amber-500/60",
-                  } : {
-                    accepted: "bg-lime-100 text-lime-700 border-lime-300",
-                    declined: "bg-red-100 text-red-700 border-red-300",
-                    pending: "bg-slate-100 text-slate-600 border-slate-300",
-                    needs_action: "bg-slate-100 text-slate-600 border-slate-300",
-                  };
-                  const status = participant.response_status || "pending";
-                  const orgAbbr = getUserOrganizationAbbreviation ? getUserOrganizationAbbreviation(participant.user_id) : "";
-                  
-                  return (
-                    <div
-                      key={participant.user_id}
-                      className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${
-                        isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-100 bg-slate-50"
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <p className={`text-xs font-semibold truncate ${isDark ? "text-[#eaecef]" : "text-slate-900"}`}>
-                            {participant.full_name || participant.email}
-                          </p>
-                          {orgAbbr ? (
-                            <span className={`rounded-full px-1.5 py-0.5 text-[0.6rem] font-semibold flex-shrink-0 ${
-                              isDark ? "bg-[#2b3139] text-[#848e9c]" : "bg-slate-200 text-slate-700"
-                            }`}>
-                              {orgAbbr}
-                            </span>
-                          ) : null}
-                        </div>
-                        {participant.full_name ? (
-                          <p className={`text-[0.65rem] truncate ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
-                            {participant.email}
-                          </p>
-                        ) : null}
-                      </div>
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold flex-shrink-0 ${
-                          statusColors[status] || statusColors.pending
-                        }`}
-                      >
-                        {statusLabels[status] || statusLabels.pending}
-                      </span>
-                    </div>
-                  );
-                })}
-                {hoveredEvent.event.participants.length > 8 ? (
-                  <p className={`text-[0.65rem] text-center pt-1 ${isDark ? "text-[#848e9c]" : "text-slate-500"}`}>
-                    и ещё {hoveredEvent.event.participants.length - 8} участников
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
+            )}
+          </div>
         </div>
       )}
     </React.Fragment>
