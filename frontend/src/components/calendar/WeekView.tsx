@@ -16,9 +16,9 @@ const DARK_COLOR_ACCEPTED = {
 };
 
 const DARK_COLOR_PENDING = { 
-  bg: "linear-gradient(135deg, #78350f 0%, #713f12 100%)", 
+  bg: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)", 
   border: "#fcd535", 
-  text: "#fde047" 
+  text: "#1c1917" 
 };
 
 // Функция получения цвета события для тёмной темы
