@@ -24,12 +24,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (savedTheme) {
       setThemeState(savedTheme);
       document.documentElement.setAttribute("data-theme", savedTheme);
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     } else {
       // Check system preference
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const defaultTheme = prefersDark ? "dark" : "light";
       setThemeState(defaultTheme);
       document.documentElement.setAttribute("data-theme", defaultTheme);
+      if (defaultTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
   }, []);
 
@@ -44,6 +54,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const newTheme = e.matches ? "dark" : "light";
         setThemeState(newTheme);
         document.documentElement.setAttribute("data-theme", newTheme);
+        if (newTheme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
       }
     };
 
@@ -55,6 +70,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme);
     localStorage.setItem("theme", newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
+    
+    // Add/remove dark class for Tailwind CSS
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     
     // Add transition class temporarily
     document.documentElement.classList.add("theme-transition");

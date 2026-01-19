@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthenticatedFetch } from "@/lib/api/baseApi";
-import { USERS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
+import { USERS_ENDPOINT, DEPARTMENTS_ENDPOINT, ORGANIZATIONS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 import type { UserProfile } from "@/types/user.types";
 import { NotificationCreator } from "./NotificationCreator";
 import { RoomManagement } from "./RoomManagement";
@@ -28,8 +28,10 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
     email: "",
     full_name: "",
     password: "",
+    organization_ids: [] as string[],
   });
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [bootstrapMode, setBootstrapMode] = useState(false);
   const [activeTab, setActiveTab] = useState<"users" | "rooms" | "organizations" | "statistics">("users");
   const [form, setForm] = useState({
@@ -65,6 +67,17 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
     }
   }, [authFetch]);
 
+  const loadOrganizations = useCallback(async () => {
+    try {
+      const res = await authFetch(ORGANIZATIONS_ENDPOINT);
+      if (!res.ok) throw new Error("Не удалось загрузить организации");
+      const data = await res.json();
+      setOrganizations(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [authFetch]);
+
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -90,7 +103,8 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
   useEffect(() => {
     loadUsers();
     loadDepartments();
-  }, [loadUsers, loadDepartments]);
+    loadOrganizations();
+  }, [loadUsers, loadDepartments, loadOrganizations]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -156,6 +170,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       if (typeof changes.access_availability_slots === "boolean") payload.access_availability_slots = changes.access_availability_slots;
       if (typeof changes.can_override_availability === "boolean") payload.can_override_availability = changes.can_override_availability;
       if (changes.department_id !== undefined) payload.department_id = changes.department_id;
+      if (changes.organization_ids !== undefined) payload.organization_ids = changes.organization_ids;
 
       const res = await authFetch(`${USERS_ENDPOINT}${user.id}`, {
         method: "PUT",
@@ -180,6 +195,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       email: user.email || "",
       full_name: user.full_name || "",
       password: "",
+      organization_ids: user.organization_ids || [],
     });
     setError(null);
   };
@@ -190,6 +206,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
       email: "",
       full_name: "",
       password: "",
+      organization_ids: [],
     });
     setError(null);
   };
@@ -220,6 +237,13 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
           return;
         }
         payload.password = editForm.password;
+      }
+
+      // Обновляем организации если они изменились
+      const currentOrgIds = editingUser.organization_ids || [];
+      const newOrgIds = editForm.organization_ids || [];
+      if (JSON.stringify(currentOrgIds.sort()) !== JSON.stringify(newOrgIds.sort())) {
+        payload.organization_ids = newOrgIds;
       }
 
       if (Object.keys(payload).length === 0) {
@@ -436,6 +460,7 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                 <th className="py-2 pr-3">Имя</th>
                 <th className="py-2 pr-3">Email</th>
                 <th className="py-2 pr-3">Роль</th>
+                <th className="py-2 pr-3">Организация</th>
                 <th className="py-2 pr-3">Отдел</th>
                 <th className="py-2 pr-3">Доступ</th>
                 <th className="py-2 pr-3">Действия</th>
@@ -456,6 +481,22 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                       <option value="employee">Сотрудник</option>
                       <option value="it">ИТ</option>
                       <option value="admin">Админ</option>
+                    </select>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <select
+                      className="rounded border border-slate-200 px-2 py-1 text-xs max-w-[150px]"
+                      value={u.organization_ids && u.organization_ids.length > 0 ? u.organization_ids[0] : ""}
+                      disabled={savingId === u.id}
+                      onChange={(e) => {
+                        const orgId = e.target.value;
+                        handleUpdate(u, { organization_ids: orgId ? [orgId] : [] });
+                      }}
+                    >
+                      <option value="">Не назначена</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                      ))}
                     </select>
                   </td>
                   <td className="py-2 pr-3">
@@ -566,6 +607,25 @@ export function AdminPanel({ authFetch, currentUser, onClose }: AdminPanelProps)
                   onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
                   placeholder="Иванов Иван Иванович"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Организация
+                </label>
+                <select
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value={editForm.organization_ids && editForm.organization_ids.length > 0 ? editForm.organization_ids[0] : ""}
+                  onChange={(e) => {
+                    const orgId = e.target.value;
+                    setEditForm({ ...editForm, organization_ids: orgId ? [orgId] : [] });
+                  }}
+                >
+                  <option value="">Не назначена</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
               </div>
               
               <div>

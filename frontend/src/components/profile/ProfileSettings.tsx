@@ -6,7 +6,6 @@ import type { UserProfile } from "@/types/user.types";
 import type { DepartmentWithChildren } from "@/types/department.types";
 import { USERS_ENDPOINT, ORGANIZATIONS_ENDPOINT, DEPARTMENTS_ENDPOINT, API_BASE_URL } from "@/lib/constants";
 import { AvailabilityScheduleSettings } from "./AvailabilityScheduleSettings";
-import { PushNotificationSettings } from "../notifications/PushNotificationSettings";
 
 interface Organization {
   id: string;
@@ -50,7 +49,7 @@ export function ProfileSettings({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "availability" | "notifications">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "availability" | "calendar">("profile");
 
   useEffect(() => {
     if (isOpen) {
@@ -372,18 +371,18 @@ export function ProfileSettings({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("notifications")}
+                  onClick={() => setActiveTab("calendar")}
                   className={`px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
-                    activeTab === "notifications"
+                    activeTab === "calendar"
                       ? "border-indigo-500 text-indigo-600 bg-indigo-50/50"
                       : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                   } rounded-t-lg`}
                 >
                   <span className="flex items-center gap-1.5">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Уведомления
+                    Настройки календаря
                   </span>
                 </button>
               </div>
@@ -417,9 +416,70 @@ export function ProfileSettings({
               <div className="p-6">
                 <AvailabilityScheduleSettings authFetch={authFetch} onUpdate={onUpdate} />
               </div>
-            ) : activeTab === "notifications" ? (
+            ) : activeTab === "calendar" ? (
               <div className="p-6">
-                <PushNotificationSettings />
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">Настройки календаря</h3>
+                    <p className="text-xs text-slate-500 mb-6">
+                      Управляйте поведением вашего календаря и доступностью для других пользователей.
+                    </p>
+                  </div>
+
+                  {/* Наслоение событий */}
+                  <label className="group flex items-start gap-4 p-4 border-2 border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer">
+                    <div className="flex items-center h-5">
+                      <input
+                        type="checkbox"
+                        checked={formData.allow_event_overlap}
+                        onChange={(e) => setFormData({ ...formData, allow_event_overlap: e.target.checked })}
+                        className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          Разрешить наслоение событий
+                        </span>
+                        <span className="px-2 py-0.5 text-[0.65rem] font-bold text-indigo-600 bg-indigo-100 rounded-full uppercase">
+                          Новое
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Если включено, другие пользователи смогут приглашать вас на события, 
+                        даже если в это время у вас уже есть другие встречи. 
+                        События будут наслаиваться друг на друга в календаре.
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <svg className={`w-4 h-4 ${formData.allow_event_overlap ? 'text-emerald-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={formData.allow_event_overlap ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+                        </svg>
+                        <span className={formData.allow_event_overlap ? 'text-emerald-600 font-medium' : 'text-slate-500'}>
+                          {formData.allow_event_overlap ? 'Наслоение разрешено' : 'Наслоение запрещено'}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Кнопки действий */}
+                <div className="flex gap-2 mt-6 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={saving}
+                    className="flex-1 rounded-lg bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saving ? "Сохранение…" : "Сохранить изменения"}
+                  </button>
+                </div>
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center py-12">
@@ -641,44 +701,6 @@ export function ProfileSettings({
                   </div>
                 </div>
 
-                {/* Настройки календаря */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Настройки календаря</h3>
-                  
-                  <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 hover:border-slate-300 transition-all cursor-pointer group">
-                    <div className="pt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={formData.allow_event_overlap}
-                        onChange={(e) => setFormData({ ...formData, allow_event_overlap: e.target.checked })}
-                        className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                          Разрешить наслоение событий
-                        </span>
-                        <span className="px-2 py-0.5 text-[0.65rem] font-bold text-indigo-600 bg-indigo-100 rounded-full uppercase">
-                          Новое
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        Если включено, другие пользователи смогут приглашать вас на события, 
-                        даже если в это время у вас уже есть другие встречи. 
-                        События будут наслаиваться друг на друга в календаре.
-                      </p>
-                      <div className="mt-2 flex items-center gap-2 text-xs">
-                        <svg className={`w-4 h-4 ${formData.allow_event_overlap ? 'text-emerald-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={formData.allow_event_overlap ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
-                        </svg>
-                        <span className={formData.allow_event_overlap ? 'text-emerald-600 font-medium' : 'text-slate-500'}>
-                          {formData.allow_event_overlap ? 'Наслоение разрешено' : 'Наслоение запрещено'}
-                        </span>
-                      </div>
-                    </div>
-                  </label>
-                </div>
               </form>
             )}
           </div>

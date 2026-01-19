@@ -524,7 +524,7 @@ export function EventModalModern({
 
                     {/* Список участников */}
                     {editingEvent?.participants && editingEvent.participants.length > 0 ? (
-                      <div className="space-y-2">
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                         {editingEvent.participants.map((participant) => (
                           <ParticipantStatusItem
                             key={participant.user_id}
@@ -573,7 +573,7 @@ export function EventModalModern({
                         ))}
                       </div>
                     ) : form.participant_ids.length > 0 ? (
-                      <div className="space-y-2">
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                         {users
                           .filter((user) => form.participant_ids.includes(user.id))
                           .map((user) => (
@@ -613,7 +613,7 @@ export function EventModalModern({
               </div>
 
               {/* ========== TIMELINE SECTION - Ресурсы и занятость ========== */}
-              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+              <div className="rounded-lg border border-slate-200 bg-white">
                 <ResourcePanel
                   rooms={rooms}
                   roomsLoading={roomsLoading}

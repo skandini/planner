@@ -48,12 +48,17 @@ export function ParticipantSearch({
   const [searchQuery, setSearchQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"users" | "departments" | "organizations">("users");
+  const [dropdownPosition, setDropdownPosition] = useState<{ top?: number; bottom?: number; left?: number; right?: number }>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Закрываем dropdown при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(event.target as Node);
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(event.target as Node);
+      
+      if (isOutsideDropdown && isOutsideContainer) {
         setIsExpanded(false);
         setSearchQuery("");
       }
@@ -66,6 +71,45 @@ export function ParticipantSearch({
       };
     }
   }, [isExpanded]);
+
+  // Позиционирование dropdown с учетом границ экрана
+  useEffect(() => {
+    if (isExpanded && containerRef.current) {
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const dropdownHeight = compact ? 384 : 256; // max-h-96 = 384px, max-h-64 = 256px
+      const dropdownWidth = compact ? 384 : rect.width; // w-96 = 384px для компактного, full width для обычного
+      
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      const position: { top?: number; bottom?: number; left?: number; right?: number } = {};
+      
+      // Проверяем, помещается ли dropdown снизу
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      if (spaceBelow >= dropdownHeight + 8 || spaceBelow >= spaceAbove) {
+        // Показываем снизу
+        position.top = rect.bottom + 8;
+      } else {
+        // Показываем сверху
+        position.bottom = viewportHeight - rect.top + 8;
+      }
+      
+      // Проверяем горизонтальное позиционирование
+      const spaceRight = viewportWidth - rect.left;
+      
+      if (spaceRight >= dropdownWidth) {
+        position.left = rect.left;
+      } else {
+        // Выравниваем по правому краю, чтобы не выходил за экран
+        position.right = viewportWidth - rect.right;
+      }
+      
+      setDropdownPosition(position);
+    }
+  }, [isExpanded, compact]);
 
   const membershipMap = useMemo(() => {
     const map = new Map<string, CalendarMember>();
@@ -318,7 +362,7 @@ export function ParticipantSearch({
 
         {/* Кнопка добавления участника */}
         {!readOnly && (
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative" ref={containerRef}>
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
@@ -332,7 +376,16 @@ export function ParticipantSearch({
 
             {/* Результаты поиска */}
             {isExpanded && (
-              <div className="absolute z-50 mt-2 left-0 max-h-96 w-96 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+              <div 
+                ref={dropdownRef}
+                className="fixed z-[9999] max-h-96 w-96 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
+                style={{
+                  top: dropdownPosition.top !== undefined ? `${dropdownPosition.top}px` : 'auto',
+                  bottom: dropdownPosition.bottom !== undefined ? `${dropdownPosition.bottom}px` : 'auto',
+                  left: dropdownPosition.left !== undefined ? `${dropdownPosition.left}px` : 'auto',
+                  right: dropdownPosition.right !== undefined ? `${dropdownPosition.right}px` : 'auto',
+                }}
+              >
                 {/* Вкладки */}
                 <div className="flex border-b border-slate-200 bg-slate-50 px-2">
                   <button
@@ -668,7 +721,7 @@ export function ParticipantSearch({
 
       {/* Поиск */}
       {!readOnly && (
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={containerRef}>
           <div className="relative">
             <svg
               className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
@@ -707,7 +760,17 @@ export function ParticipantSearch({
 
           {/* Результаты поиска */}
           {isExpanded && (searchQuery || filteredUsers.length > 0) && (
-            <div className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+            <div 
+              ref={dropdownRef}
+              className="fixed z-[9999] max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl"
+              style={{
+                top: dropdownPosition.top !== undefined ? `${dropdownPosition.top}px` : 'auto',
+                bottom: dropdownPosition.bottom !== undefined ? `${dropdownPosition.bottom}px` : 'auto',
+                left: dropdownPosition.left !== undefined ? `${dropdownPosition.left}px` : 'auto',
+                right: dropdownPosition.right !== undefined ? `${dropdownPosition.right}px` : 'auto',
+                width: containerRef.current ? `${containerRef.current.offsetWidth}px` : 'auto',
+              }}
+            >
               {usersLoading || membersLoading ? (
                 <div className="p-4 text-center text-sm text-slate-500">Загрузка...</div>
               ) : filteredUsers.length === 0 ? (

@@ -205,13 +205,13 @@ export function MonthView({
   }, [days, events]);
 
   return (
-    <div className="mt-6 relative">
-      <div className="grid grid-cols-7 gap-3 text-xs uppercase tracking-[0.3em] text-slate-500">
+    <div className="mt-2 sm:mt-6 relative">
+      <div className="grid grid-cols-7 gap-1 sm:gap-3 text-[0.5rem] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.3em] text-slate-500">
         {WEEKDAY_LABELS.map((label) => (
-          <p key={label}>{label}</p>
+          <p key={label} className="text-center sm:text-left">{label}</p>
         ))}
       </div>
-      <div className="mt-2 grid grid-cols-7 gap-3">
+      <div className="mt-1 sm:mt-2 grid grid-cols-7 gap-1 sm:gap-3">
         {days.map((day) => {
           const key = day.toDateString();
           const dayEvents = eventsByDay.get(key) ?? [];
@@ -223,23 +223,23 @@ export function MonthView({
               type="button"
               key={key}
               onClick={() => onSelectDate(new Date(day))}
-              className={`rounded-2xl border p-3 text-left transition ${
+              className={`rounded-lg sm:rounded-2xl border p-1.5 sm:p-3 text-left transition touch-manipulation min-h-[60px] sm:min-h-auto ${
                 isCurrentMonth
                   ? "border-slate-200 bg-white"
                   : "border-slate-100 bg-slate-50 text-slate-500"
-              } ${isToday ? "ring-2 ring-lime-400" : ""}`}
+              } ${isToday ? "ring-1 sm:ring-2 ring-lime-400" : ""}`}
             >
               <div className="flex items-center justify-between">
-                <p className="text-base font-semibold text-slate-900">
+                <p className="text-xs sm:text-base font-semibold text-slate-900">
                   {day.getDate().toString().padStart(2, "0")}
                 </p>
                 {isToday && (
-                  <span className="rounded-full bg-lime-100 px-2 py-1 text-[0.65rem] text-lime-600">
+                  <span className="hidden sm:inline rounded-full bg-lime-100 px-2 py-1 text-[0.65rem] text-lime-600">
                     сегодня
                   </span>
                 )}
               </div>
-              <div className="mt-3 space-y-1 relative">
+              <div className="mt-1 sm:mt-3 space-y-0.5 sm:space-y-1 relative">
                 {dayEvents.slice(0, 3).map((event) => {
                   // Проверяем, является ли событие расписанием доступности
                   const isUnavailable = event.status === "unavailable";
@@ -277,7 +277,7 @@ export function MonthView({
                         }
                       }}
                       onMouseLeave={handleEventMouseLeave}
-                      className={`flex items-center gap-2 rounded-xl px-2 py-1 text-[0.65rem] transition ${
+                      className={`flex items-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl px-1 sm:px-2 py-0.5 sm:py-1 text-[0.5rem] sm:text-[0.65rem] transition touch-manipulation ${
                         isUnavailable
                           ? "bg-slate-100 border border-slate-300 cursor-default"
                           : isAvailable
@@ -285,7 +285,7 @@ export function MonthView({
                             : isBookedSlot
                               ? "bg-orange-100 border border-orange-400 cursor-default"
                               : needsAction
-                                ? "bg-white border-2 border-slate-300 hover:bg-slate-50 shadow-sm cursor-pointer"
+                                ? "needs-action-event cursor-pointer border-2"
                                 : "bg-slate-100 hover:bg-slate-200 cursor-pointer"
                       }`}
                       style={{
@@ -402,7 +402,12 @@ export function MonthView({
                     pending: "Нет ответа",
                     needs_action: "Нет ответа",
                   };
-                  const statusColors: Record<string, string> = {
+                  const statusColors: Record<string, string> = isDark ? {
+                    accepted: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+                    declined: "bg-red-500/20 text-red-400 border-red-500/30",
+                    pending: "bg-amber-500/40 text-amber-300 border-amber-500/60",
+                    needs_action: "bg-amber-500/40 text-amber-300 border-amber-500/60",
+                  } : {
                     accepted: "bg-lime-100 text-lime-700 border-lime-300",
                     declined: "bg-red-100 text-red-700 border-red-300",
                     pending: "bg-slate-100 text-slate-600 border-slate-300",

@@ -658,38 +658,39 @@ export function WeekView({
         </div>
       )}
       
-    <div className={`h-full flex flex-col rounded-2xl border overflow-hidden ${
+    <div className={`h-full flex flex-col rounded-xl sm:rounded-2xl border overflow-hidden ${
       isDark 
         ? "border-[#2b3139] bg-[#0b0e11] shadow-[0_4px_20px_rgba(0,0,0,0.4)]" 
         : "border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.12)]"
     }`}>
-      <div className={`sticky top-0 z-10 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b text-sm flex-shrink-0 ${
+      <div className={`sticky top-0 z-10 grid grid-cols-[50px_repeat(7,minmax(0,1fr))] sm:grid-cols-[80px_repeat(7,minmax(0,1fr))] border-b text-xs sm:text-sm flex-shrink-0 ${
         isDark 
           ? "border-[#2b3139] bg-[#181a20]" 
           : "border-slate-200 bg-slate-50"
       }`}>
-        <div className={`p-2 text-right text-[0.65rem] uppercase tracking-[0.3em] ${
+        <div className={`p-1 sm:p-2 text-right text-[0.55rem] sm:text-[0.65rem] uppercase tracking-[0.2em] sm:tracking-[0.3em] ${
           isDark ? "text-[#848e9c] bg-[#181a20]" : "text-slate-500 bg-slate-50"
         }`}>
-          Время
+          <span className="hidden sm:inline">Время</span>
+          <span className="sm:hidden">⏰</span>
         </div>
         {dayColumns.map(({ date, isToday }) => (
           <div
             key={`head-${date.toISOString()}`}
-            className={`border-l p-2 ${
+            className={`border-l p-1 sm:p-2 ${
               isDark 
                 ? `border-[#2b3139] bg-[#181a20] ${isToday ? "bg-[#1a1d23]" : ""}` 
                 : `border-slate-200 bg-slate-50 ${isToday ? "bg-lime-50" : ""}`
             }`}
           >
-            <p className={`uppercase text-[0.65rem] tracking-[0.3em] ${isDark ? "text-[#848e9c]" : "text-slate-400"}`}>
+            <p className={`uppercase text-[0.5rem] sm:text-[0.65rem] tracking-[0.2em] sm:tracking-[0.3em] ${isDark ? "text-[#848e9c]" : "text-slate-400"}`}>
               {new Intl.DateTimeFormat("ru-RU", { 
                 weekday: "short",
                 timeZone: MOSCOW_TIMEZONE 
               }).format(date)}
             </p>
-            <div className="mt-0.5 flex items-baseline gap-1.5">
-              <p className={`text-base font-semibold ${isDark ? "text-[#eaecef]" : ""}`}>
+            <div className="mt-0.5 flex flex-col sm:flex-row items-start sm:items-baseline gap-0.5 sm:gap-1.5">
+              <p className={`text-xs sm:text-base font-semibold ${isDark ? "text-[#eaecef]" : ""}`}>
                 {new Intl.DateTimeFormat("ru-RU", {
                   day: "numeric",
                   month: "short",
@@ -697,7 +698,7 @@ export function WeekView({
                 }).format(date)}
               </p>
               {isToday && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase ${
+                <span className={`rounded-full px-1 sm:px-1.5 py-0.5 text-[0.45rem] sm:text-[0.55rem] font-semibold uppercase ${
                   isDark 
                     ? "bg-[#fcd535]/20 text-[#fcd535]" 
                     : "bg-lime-100 text-lime-600"
@@ -711,16 +712,16 @@ export function WeekView({
       </div>
 
       <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
-        <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))]">
+        <div className="grid grid-cols-[50px_repeat(7,minmax(0,1fr))] sm:grid-cols-[80px_repeat(7,minmax(0,1fr))]">
           <div
             className={`border-r ${isDark ? "border-[#2b3139] bg-[#0b0e11]" : "border-slate-200 bg-white"}`}
             style={{ height: `${DAY_HEIGHT}px` }}
           >
-            <div className={`flex h-full flex-col justify-between text-right text-xs ${isDark ? "text-slate-500" : "text-slate-500"}`}>
+            <div className={`flex h-full flex-col justify-between text-right text-[0.6rem] sm:text-xs ${isDark ? "text-slate-500" : "text-slate-500"}`}>
               {hours.map((hour) => (
                 <div
                   key={`label-${hour}`}
-                  className={`pr-1.5 text-[0.6rem] uppercase tracking-wide ${isDark ? "text-[#848e9c]" : ""}`}
+                  className={`pr-0.5 sm:pr-1.5 text-[0.5rem] sm:text-[0.6rem] uppercase tracking-wide ${isDark ? "text-[#848e9c]" : ""}`}
                   style={{ height: `${HOUR_HEIGHT}px` }}
                 >
                   {hour.toString().padStart(2, "0")}:00
@@ -1408,8 +1409,8 @@ export function WeekView({
                   const statusColors: Record<string, string> = isDark ? {
                     accepted: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
                     declined: "bg-red-500/20 text-red-400 border-red-500/30",
-                    pending: "bg-slate-600/30 text-slate-400 border-slate-600",
-                    needs_action: "bg-slate-600/30 text-slate-400 border-slate-600",
+                    pending: "bg-amber-500/40 text-amber-300 border-amber-500/60",
+                    needs_action: "bg-amber-500/40 text-amber-300 border-amber-500/60",
                   } : {
                     accepted: "bg-lime-100 text-lime-700 border-lime-300",
                     declined: "bg-red-100 text-red-700 border-red-300",

@@ -167,6 +167,11 @@ export default function Home() {
   }, []);
   const { accessToken, userEmail, logout, refreshAccessToken } = useAuth();
   const { theme } = useTheme();
+  
+  // Debug: выводим тему в консоль
+  useEffect(() => {
+    console.log('Current theme:', theme);
+  }, [theme]);
   const isAuthenticated = Boolean(accessToken);
   const router = useRouter();
   
@@ -184,6 +189,7 @@ export default function Home() {
   const [myAvailabilityLoading, setMyAvailabilityLoading] = useState(false);
   const [addToCalendarError, setAddToCalendarError] = useState<string | null>(null);
   const [addToCalendarLoading, setAddToCalendarLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const resetAuthState = useCallback(
     (message?: string) => {
@@ -346,9 +352,12 @@ export default function Home() {
         setCurrentUser(data);
         
         // Загружаем информацию об организации если есть
-        if (data.organization_id) {
+        // Проверяем как старое поле organization_id, так и новое organization_ids (массив)
+        const orgId = data.organization_id || (data.organization_ids && data.organization_ids.length > 0 ? data.organization_ids[0] : null);
+        
+        if (orgId) {
           try {
-            const orgResponse = await authFetch(`${ORGANIZATIONS_ENDPOINT}/${data.organization_id}`, { cache: "no-store" });
+            const orgResponse = await authFetch(`${ORGANIZATIONS_ENDPOINT}/${orgId}`, { cache: "no-store" });
             if (orgResponse.ok) {
               const orgData = await orgResponse.json();
               setUserOrganization(orgData);
@@ -1549,6 +1558,10 @@ export default function Home() {
       if (!calendar) {
         return;
       }
+      if (calendar.name === "Личный календарь") {
+        setError("Личный календарь не может быть удален");
+        return;
+      }
       if (calendar.current_user_role !== "owner") {
         setError("Удалять календарь может только владелец");
         return;
@@ -1701,32 +1714,52 @@ export default function Home() {
             }}
           />
           
-          <div className="relative flex items-center justify-between gap-3">
-            {/* Левая часть - Логотип и название */}
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="relative flex items-center justify-between gap-2 sm:gap-3">
+            {/* Левая часть - Кнопка меню (мобильные) + Логотип */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              {/* Кнопка гамбургер меню для мобильных */}
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`lg:hidden flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg transition-all border ${
+                  theme === "dark"
+                    ? "border-slate-600 text-slate-300 hover:bg-slate-700 active:bg-slate-600"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-100 active:bg-slate-200"
+                }`}
+                aria-label="Меню"
+              >
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {isSidebarOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+
               {userOrganization?.logo_url ? (
                 <img
                   src={userOrganization.logo_url.startsWith('http') ? userOrganization.logo_url : `${API_BASE_URL.replace('/api/v1', '')}${userOrganization.logo_url.startsWith('/') ? '' : '/'}${userOrganization.logo_url}`}
                   alt={userOrganization.name}
-                  className="h-8 w-8 rounded-lg object-cover shadow-sm"
+                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg object-cover shadow-sm flex-shrink-0"
                 />
               ) : (
                 <div 
-                  className="flex items-center justify-center w-8 h-8 rounded-lg shadow-sm"
+                  className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-sm flex-shrink-0"
                   style={{
                     background: userOrganization?.primary_color
                       ? `linear-gradient(to bottom right, ${userOrganization.primary_color}, ${userOrganization.secondary_color || userOrganization.primary_color})`
                       : "linear-gradient(to bottom right, rgb(132 204 22), rgb(16 185 129))",
                   }}
                 >
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
               )}
-              <div className="flex flex-col min-w-0">
+              <div className="hidden sm:flex flex-col min-w-0">
                 <h1 
-                  className={`text-sm font-bold truncate ${
+                  className={`text-xs sm:text-sm font-bold truncate ${
                     theme === 'dark' && !userOrganization?.primary_color 
                       ? 'text-[#eaecef]' 
                       : ''
@@ -1739,16 +1772,16 @@ export default function Home() {
                         : 'rgb(15 23 42)',
                   }}
                 >
-                  {userOrganization?.name || "Планировщик Corestone"}
+                  {userOrganization?.name || "Планировщик"}
                 </h1>
               </div>
             </div>
 
             {/* Правая часть - Статистика и действия */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Часы времени */}
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+              {/* Часы времени - скрыты на мобильных */}
               {false && (
-                <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
+                <div className="hidden md:flex items-center gap-2 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
                   <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -1759,23 +1792,23 @@ export default function Home() {
                 </div>
               )}
               {true && (
-                <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200/60 px-3 py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="hidden md:flex items-center gap-2 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200/60 px-2 sm:px-3 py-1 sm:py-1.5 shadow-sm backdrop-blur-sm animate-fadeIn">
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex flex-col">
-                    <span className="text-[0.65rem] font-medium text-purple-600/70 leading-tight">Москва</span>
-                    <span className="text-xs font-bold text-purple-700 tabular-nums">{currentTime.moscow}</span>
+                    <span className="text-[0.6rem] sm:text-[0.65rem] font-medium text-purple-600/70 leading-tight">Москва</span>
+                    <span className="text-[0.7rem] sm:text-xs font-bold text-purple-700 tabular-nums">{currentTime.moscow}</span>
                   </div>
                 </div>
               )}
               {/* Блоки статистики */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <div className="group relative">
                   <button
                     type="button"
                     onClick={() => setIsProfileSettingsOpen(true)}
-                    className="flex items-center gap-2.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-4 py-1.5 hover:bg-white/80 transition-all cursor-pointer max-w-[200px] no-underline hover:no-underline"
+                    className="flex items-center gap-1 sm:gap-2.5 rounded-lg bg-white/60 backdrop-blur-sm border border-slate-200/60 px-2 sm:px-4 py-1.5 hover:bg-white/80 transition-all cursor-pointer max-w-[180px] sm:max-w-[250px] no-underline hover:no-underline touch-manipulation"
                   >
                     {currentUser?.avatar_url ? (
                       <img
@@ -1808,7 +1841,7 @@ export default function Home() {
                         </span>
                       </div>
                     )}
-                    <span className="text-sm font-semibold text-slate-700 truncate">
+                    <span className="inline text-xs sm:text-sm font-semibold text-slate-700 truncate">
                       {currentUser?.full_name || userEmail?.split("@")[0] || "Пользователь"}
                     </span>
                     <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1819,17 +1852,19 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Онлайн индикатор */}
-              <OnlineUsersIndicator authFetch={authFetch} />
+              {/* Онлайн индикатор - скрыт на мобильных */}
+              <div className="hidden sm:block">
+                <OnlineUsersIndicator authFetch={authFetch} />
+              </div>
 
               {/* Переключатель темы */}
               <ThemeToggle />
 
-              {/* Кнопка выхода */}
+              {/* Кнопка выхода - на мобильных только иконка */}
               <button
                 type="button"
                 onClick={handleManualLogout}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm active:scale-95 whitespace-nowrap ${
+                className={`flex items-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm active:scale-95 whitespace-nowrap touch-manipulation ${
                   theme === "dark"
                     ? "bg-slate-700 border border-slate-600 text-slate-200 hover:bg-slate-600"
                     : "bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/60 text-slate-700 hover:from-slate-200 hover:to-slate-100"
@@ -1838,15 +1873,24 @@ export default function Home() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                <span>Выйти</span>
+                <span className="hidden sm:inline">Выйти</span>
               </button>
             </div>
           </div>
         </header>
 
         <main className="flex flex-1 flex-col gap-3 lg:flex-row overflow-hidden min-h-0 relative">
-          {/* Правая панель с иконками для переключения режимов */}
-          <div className="fixed right-0 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-2 translate-x-[calc(100%-2.875rem)] transition-transform duration-300 ease-in-out hover:-translate-x-4">
+          {/* Оверлей для закрытия сайдбара на мобильных */}
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Закрыть меню"
+            />
+          )}
+
+          {/* Правая панель с иконками для переключения режимов - скрыта на мобильных */}
+          <div className="hidden lg:flex fixed right-0 top-1/2 -translate-y-1/2 z-[100] flex-col gap-2 translate-x-[calc(100%-2.875rem)] transition-transform duration-300 ease-in-out hover:-translate-x-4">
             {availableViewModes.map((mode) => {
               const isActive = viewMode === mode;
               const getIcon = () => {
@@ -1940,7 +1984,9 @@ export default function Home() {
             })}
           </div>
           
-          <aside className="order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[345px] lg:flex-shrink-0 overflow-y-auto">
+          <aside className={`order-2 flex w-full flex-col gap-3 lg:order-1 lg:w-[345px] lg:flex-shrink-0 overflow-y-auto fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto bg-gradient-to-br ${theme === "dark" ? "from-slate-900 to-slate-800" : "from-slate-50 via-lime-50/30 to-slate-50"} transition-all duration-500 ease-in-out max-w-[320px] lg:max-w-none ${
+            isSidebarOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100"
+          } lg:block p-3 lg:p-0`}>
             {/* Мини-календарь - перемещен наверх */}
             <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
@@ -2176,19 +2222,21 @@ export default function Home() {
                         >
                           👥
                         </button>
-                        <button
-                          type="button"
-                          className="rounded-md border border-red-200 bg-white px-1.5 py-0.5 text-[0.6rem] font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-300"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleDeleteCalendar(calendar.id);
-                          }}
-                          title="Удалить календарь"
-                        >
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                        {calendar.name !== "Личный календарь" && (
+                          <button
+                            type="button"
+                            className="rounded-md border border-red-200 bg-white px-1.5 py-0.5 text-[0.6rem] font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-300"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteCalendar(calendar.id);
+                            }}
+                            title="Удалить календарь"
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2434,77 +2482,97 @@ export default function Home() {
           </aside>
 
           <section className="order-1 flex flex-1 flex-col gap-3 lg:order-2 lg:min-w-0 overflow-hidden">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-shrink-0">
+            <div className="rounded-xl sm:rounded-2xl border border-slate-200 bg-white p-1.5 sm:p-3 shadow-lg flex-shrink-0">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                    <h2 className="text-sm sm:text-lg font-semibold truncate">
                 {selectedCalendar ? selectedCalendar.name : "Календарь не выбран"}
               </h2>
                     {selectedRole && (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500">
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-1.5 sm:px-2 py-0.5 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 flex-shrink-0">
                         {ROLE_LABELS[selectedRole]}
                       </span>
                     )}
-                    <span className="text-xs text-slate-500">
+                    <span className="text-[0.65rem] sm:text-xs text-slate-500">
                 {viewMode === "week"
                         ? `${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(weekStart)} – ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: MOSCOW_TIMEZONE }).format(addDaysInMoscow(weekStart, 6))}`
                         : new Intl.DateTimeFormat("ru-RU", { month: "short", year: "numeric", timeZone: MOSCOW_TIMEZONE }).format(selectedDate)}
                     </span>
         </div>
+                  {/* Переключатель режимов просмотра для мобильных */}
+                  <div className="flex lg:hidden items-center gap-1 mt-2">
+                    {["day", "week", "month"].map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setViewMode(mode as ViewMode)}
+                        className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg transition-all touch-manipulation min-h-[40px] ${
+                          viewMode === mode
+                            ? "bg-lime-500 text-white shadow-md"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {mode === "day" ? "День" : mode === "week" ? "Неделя" : "Месяц"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {/* Переключатель показа расписания доступности */}
+                <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
+                  {/* Переключатель показа расписания доступности - компактный */}
                   {selectedCalendar && (viewMode === "month" || viewMode === "week") && (
-                    <label className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition">
+                    <label 
+                      className="hidden md:flex items-center gap-1.5 cursor-pointer px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 transition touch-manipulation text-[0.65rem]"
+                      title="Показать/скрыть мое расписание доступности в календаре."
+                    >
                       <input
                         type="checkbox"
                         checked={showMyAvailability}
                         onChange={(e) => setShowMyAvailability(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
+                        className="h-3 w-3 rounded border-slate-300 text-lime-600 focus:ring-lime-500"
                       />
-                      <span className="text-xs font-medium text-slate-700 whitespace-nowrap">
-                        Доступность
+                      <span className="font-medium text-slate-700 whitespace-nowrap">
+                        Мое расписание доступности
                       </span>
                     </label>
                   )}
-                  {/* Кнопка приглашений */}
+                  {/* Кнопка приглашений - компактная */}
                   <button
                     type="button"
                     onClick={() => setIsInvitationsPanelOpen(true)}
-                    className={`relative rounded-xl border px-4 py-2 text-xs font-semibold transition-all duration-200 flex items-center gap-2 hover:scale-105 hover:shadow-lg active:scale-95 ${
+                    className={`relative rounded-lg border px-1.5 sm:px-2.5 py-1.5 text-[0.65rem] sm:text-xs font-semibold transition-all duration-200 flex items-center gap-1 hover:scale-105 hover:shadow-md active:scale-95 touch-manipulation ${
                       invitationsUnreadCount > 0
-                        ? "border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100 hover:shadow-blue-200 dark:border-blue-500/50 dark:bg-gradient-to-r dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-300 dark:hover:from-blue-900/60 dark:hover:to-indigo-900/60 dark:hover:shadow-blue-900/50"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:shadow-slate-900/50"
+                        ? "border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100 dark:border-blue-500/50 dark:bg-gradient-to-r dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-300"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Приглашения
+                    <span className="hidden sm:inline">Приглашения</span>
                     {invitationsUnreadCount > 0 && (
-                      <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-[0.65rem] font-bold text-white shadow-lg shadow-blue-500/50 animate-bounce">
-                        {invitationsUnreadCount > 99 ? "99+" : invitationsUnreadCount}
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-blue-500 text-[0.55rem] font-bold text-white shadow-md animate-bounce">
+                        {invitationsUnreadCount > 9 ? "9+" : invitationsUnreadCount}
                       </span>
                     )}
                   </button>
-                  {/* Кнопка уведомлений (колокольчик) */}
+                  {/* Кнопка уведомлений - компактная */}
                   <button
                     type="button"
                     onClick={() => setIsNotificationCenterOpen(true)}
-                    className={`relative rounded-xl border px-4 py-2 text-xs font-semibold transition-all duration-200 flex items-center gap-2 hover:scale-105 hover:shadow-lg active:scale-95 ${
+                    className={`relative rounded-lg border px-1.5 sm:px-2.5 py-1.5 text-[0.65rem] sm:text-xs font-semibold transition-all duration-200 flex items-center gap-1 hover:scale-105 hover:shadow-md active:scale-95 touch-manipulation ${
                       otherUnreadCount > 0
-                        ? "border-amber-400 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 hover:from-amber-100 hover:to-orange-100 hover:shadow-amber-200 dark:border-amber-500/50 dark:bg-gradient-to-r dark:from-amber-900/40 dark:to-orange-900/40 dark:text-amber-300 dark:hover:from-amber-900/60 dark:hover:to-orange-900/60 dark:hover:shadow-amber-900/50"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:shadow-slate-900/50"
+                        ? "border-amber-400 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 hover:from-amber-100 hover:to-orange-100 dark:border-amber-500/50 dark:bg-gradient-to-r dark:from-amber-900/40 dark:to-orange-900/40 dark:text-amber-300"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
-                    Уведомления
+                    <span className="hidden sm:inline">Уведомления</span>
                     {otherUnreadCount > 0 && (
-                      <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[0.65rem] font-bold text-white shadow-lg shadow-red-500/50 notification-pulse">
-                        {otherUnreadCount > 99 ? "99+" : otherUnreadCount}
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-red-500 text-[0.55rem] font-bold text-white shadow-md notification-pulse">
+                        {otherUnreadCount > 9 ? "9+" : otherUnreadCount}
                       </span>
                     )}
                   </button>
@@ -2512,30 +2580,40 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => openEventModal()}
-                      className="rounded-xl bg-gradient-to-r from-lime-500 to-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-lime-500/30 transition-all duration-200 hover:from-lime-400 hover:to-emerald-400 hover:shadow-xl hover:shadow-lime-500/40 hover:scale-105 active:scale-95 dark:from-slate-600 dark:to-slate-500 dark:text-slate-100 dark:shadow-slate-500/20 dark:hover:from-slate-500 dark:hover:to-slate-400 dark:hover:shadow-slate-400/30"
+                      style={theme === "dark" ? {
+                        background: '#fcd34d',
+                        color: '#1e293b',
+                        border: '1px solid rgba(252, 211, 77, 0.5)',
+                        boxShadow: '0 4px 6px -1px rgba(252, 211, 77, 0.3), 0 2px 4px -1px rgba(252, 211, 77, 0.2)'
+                      } : {}}
+                      className={`rounded-lg px-2 sm:px-3 py-1.5 text-[0.7rem] sm:text-sm font-bold transition-all duration-200 hover:shadow-xl hover:scale-105 hover:brightness-110 active:scale-95 touch-manipulation whitespace-nowrap ${
+                        theme === "dark" 
+                          ? "" 
+                          : "bg-gradient-to-r from-lime-500 to-emerald-500 text-white shadow-lime-500/30 hover:from-lime-400 hover:to-emerald-400 shadow-md"
+                      }`}
                 >
                       + Событие
                 </button>
               )}
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-0.5 sm:gap-1">
                 <button
                   type="button"
                   onClick={() => handleNavigate("prev")}
-                      className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-md active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-500"
+                      className="rounded-lg border-2 border-slate-200 px-2 sm:px-2.5 py-1.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-sm active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-500 touch-manipulation"
                 >
                   ←
                 </button>
                 <button
                   type="button"
                   onClick={() => handleNavigate("today")}
-                      className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-md active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-500"
+                      className="rounded-lg border-2 border-slate-200 px-2 sm:px-2.5 py-1.5 text-[0.65rem] sm:text-xs font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-sm active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-500 touch-manipulation whitespace-nowrap"
                 >
                   Сегодня
                 </button>
                 <button
                   type="button"
                   onClick={() => handleNavigate("next")}
-                      className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-md active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-500"
+                      className="rounded-lg border-2 border-slate-200 px-2 sm:px-2.5 py-1.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-sm active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-500 touch-manipulation"
                 >
                   →
                 </button>
@@ -2558,7 +2636,7 @@ export default function Home() {
 
           {selectedCalendar && viewMode === "day" && (
               <div 
-                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-1 overflow-auto transition-opacity duration-300"
+                className="rounded-2xl border border-slate-200 bg-white p-1 sm:p-3 shadow-lg flex-1 overflow-auto transition-opacity duration-300"
                 style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
               >
             <DayView
@@ -2596,7 +2674,7 @@ export default function Home() {
 
           {selectedCalendar && viewMode === "week" && (
               <div 
-                className="rounded-2xl bg-slate-100/50 p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex-1 overflow-hidden min-h-0 transition-opacity duration-300"
+                className="rounded-2xl bg-slate-100/50 p-1 sm:p-3 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex-1 overflow-hidden min-h-0 transition-opacity duration-300"
                 style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
               >
             <WeekView
@@ -2635,7 +2713,7 @@ export default function Home() {
 
           {selectedCalendar && viewMode === "month" && (
               <div 
-                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg flex-1 overflow-auto transition-opacity duration-300"
+                className="rounded-2xl border border-slate-200 bg-white p-1 sm:p-3 shadow-lg flex-1 overflow-auto transition-opacity duration-300"
                 style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
               >
             <MonthView

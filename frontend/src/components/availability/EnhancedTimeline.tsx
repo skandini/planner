@@ -457,10 +457,21 @@ export function EnhancedTimeline({
     }
   }, [isSelecting, handleMouseMove, handleMouseUp]);
 
-  const templateColumns = useMemo(
-    () => `150px repeat(${timeSlots.length}, minmax(4px, 1fr))`, // Компактные ячейки для 10-минутных слотов
-    [timeSlots.length],
-  );
+  // Адаптивная ширина слотов: компактная на мобильных, нормальная на десктопах
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  const templateColumns = useMemo(() => {
+    const slotWidth = isMobile ? '14px' : 'minmax(4px, 1fr)'; // На мобильных фиксированная ширина со скроллом, на десктопе - адаптивная
+    const labelWidth = isMobile ? '100px' : '150px'; // Уже колонка имен на мобильных
+    return `${labelWidth} repeat(${timeSlots.length}, ${slotWidth})`;
+  }, [timeSlots.length, isMobile]);
 
   return (
     <div className="space-y-3">
@@ -491,24 +502,27 @@ export function EnhancedTimeline({
       </div>
 
       {/* Легкий воздушный таймлайн */}
-      <div className={`overflow-x-auto rounded-lg border ${isDark ? "border-[#2b3139] bg-[#181a20]" : "border-slate-200 bg-white"}`} ref={timelineRef} style={{ maxHeight: "400px" }}>
-        <div className="min-w-full space-y-1.5 p-2">
+      <div className={`overflow-x-auto overflow-y-auto rounded-lg border ${isDark ? "border-[#2b3139] bg-[#181a20]" : "border-slate-200 bg-white"}`} ref={timelineRef} style={{ maxHeight: isMobile ? "300px" : "400px" }}>
+        <div className="space-y-1 sm:space-y-1.5 p-1 sm:p-2" style={{ minWidth: isMobile ? 'max-content' : 'auto' }}>
           {/* Заголовок времени */}
           <div
-            className={`grid items-center rounded border-b p-1.5 ${isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-200 bg-slate-50"}`}
+            className={`grid items-center rounded border-b p-0.5 sm:p-1.5 ${isDark ? "border-[#2b3139] bg-[#1e2329]" : "border-slate-200 bg-slate-50"}`}
             style={{ gridTemplateColumns: templateColumns }}
           >
-            <div className={`px-2 py-1.5 text-[0.7rem] font-semibold uppercase tracking-wider ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>Ресурс</div>
+            <div className={`px-1 sm:px-2 py-1 sm:py-1.5 text-[0.5rem] sm:text-[0.7rem] font-semibold uppercase tracking-wider ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
+              {isMobile ? "Рес." : "Ресурс"}
+            </div>
             {timeSlots.map((slot) => {
               // Создаем дату для слота в московском времени для правильного отображения времени
               const slotDate = buildSlotTimes(slot.index).slotStart;
               const moscowTime = getTimeInTimeZone(slotDate, MOSCOW_TIMEZONE);
               const timeLabel = `${String(moscowTime.hour).padStart(2, "0")}:${String(moscowTime.minute).padStart(2, "0")}`;
               
-              // Показываем метки времени каждые 30 минут для читаемости при 10-минутных слотах
-              return slot.minute === 0 || slot.minute === 30 ? (
-                <div key={slot.index} className={`text-center text-[0.65rem] font-semibold py-2 ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
-                  {timeLabel}
+              // Показываем метки времени каждые 30 минут для читаемости (на мобильных - каждый час)
+              const showLabel = isMobile ? slot.minute === 0 : (slot.minute === 0 || slot.minute === 30);
+              return showLabel ? (
+                <div key={slot.index} className={`text-center text-[0.45rem] sm:text-[0.65rem] font-semibold py-1 sm:py-2 ${isDark ? "text-[#848e9c]" : "text-slate-600"}`}>
+                  {isMobile ? moscowTime.hour : timeLabel}
                 </div>
               ) : (
                 <div key={slot.index} />
@@ -541,12 +555,12 @@ export function EnhancedTimeline({
                 style={{ gridTemplateColumns: templateColumns }}
               >
                 {/* Название ресурса */}
-                <div className={`flex items-center gap-2 rounded px-2 py-1.5 ${isDark ? "bg-[#1e2329]" : "bg-white"}`}>
+                <div className={`flex items-center gap-1 sm:gap-2 rounded px-1 sm:px-2 py-1 sm:py-1.5 ${isDark ? "bg-[#1e2329]" : "bg-white"}`}>
                   {row.avatarUrl ? (
                     <img
                       src={apiBaseUrl && !row.avatarUrl.startsWith("http") ? `${apiBaseUrl}${row.avatarUrl}` : row.avatarUrl}
                       alt={row.label}
-                      className={`h-6 w-6 rounded-full object-cover border flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-200"}`}
+                      className={`h-4 w-4 sm:h-6 sm:w-6 rounded-full object-cover border flex-shrink-0 ${isDark ? "border-[#2b3139]" : "border-slate-200"}`}
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                         const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
@@ -557,7 +571,7 @@ export function EnhancedTimeline({
                     />
                   ) : null}
                   <div 
-                    className={`h-6 w-6 rounded-full flex items-center justify-center text-[0.65rem] font-semibold text-white flex-shrink-0 ${
+                    className={`h-4 w-4 sm:h-6 sm:w-6 rounded-full flex items-center justify-center text-[0.5rem] sm:text-[0.65rem] font-semibold text-white flex-shrink-0 ${
                       row.type === "room" 
                         ? "bg-blue-500" 
                         : "bg-indigo-500"
@@ -566,7 +580,7 @@ export function EnhancedTimeline({
                     {row.type === "room" ? "🏢" : row.label[0]?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[0.7rem] font-semibold truncate ${
+                    <p className={`text-[0.55rem] sm:text-[0.7rem] font-semibold truncate ${
                       isUnavailable 
                         ? isDark ? "text-orange-400" : "text-orange-900" 
                         : hasConflict 
@@ -575,7 +589,7 @@ export function EnhancedTimeline({
                     }`}>
                       {row.label}
                     </p>
-                    {row.meta && (
+                    {row.meta && !isMobile && (
                       <p className={`text-[0.6rem] truncate mt-0.5 ${
                         isUnavailable 
                           ? isDark ? "text-orange-400/80" : "text-orange-700" 
